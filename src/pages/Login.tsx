@@ -8,14 +8,16 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Mail, KeyRound } from 'lucide-react';
+import { Mail, KeyRound, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const Login = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState<string | null>(null);
   
   useEffect(() => {
     // Check if user is already logged in
@@ -26,17 +28,31 @@ const Login = () => {
       }
     };
     
+    // Check for error in URL parameters (from OAuth redirects)
+    const url = new URL(window.location.href);
+    const error = url.searchParams.get('error');
+    const errorDescription = url.searchParams.get('error_description');
+    
+    if (error) {
+      setLoginError(`Authentication error: ${errorDescription || error}`);
+      console.error("OAuth error:", error, errorDescription);
+    }
+    
     checkSession();
   }, [navigate]);
   
   const handleDiscordLogin = async () => {
     try {
       setIsLoading(true);
+      setLoginError(null);
+      
+      const redirectUrl = `${window.location.origin}/profile`;
+      console.log("Redirect URL:", redirectUrl);
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'discord',
         options: {
-          redirectTo: `${window.location.origin}/profile`
+          redirectTo: redirectUrl
         }
       });
       
@@ -44,6 +60,8 @@ const Login = () => {
 
     } catch (error: any) {
       console.error("Discord login error:", error);
+      setLoginError(error.message || "Es gab ein Problem bei der Anmeldung mit Discord.");
+      
       toast({
         title: "Anmeldefehler",
         description: error.message || "Es gab ein Problem bei der Anmeldung mit Discord.",
@@ -59,6 +77,7 @@ const Login = () => {
     
     try {
       setIsLoading(true);
+      setLoginError(null);
       
       const { error } = await supabase.auth.signInWithPassword({
         email: email,
@@ -75,6 +94,8 @@ const Login = () => {
       navigate('/profile');
     } catch (error: any) {
       console.error("Email login error:", error);
+      setLoginError(error.message || "E-Mail oder Passwort ist ungültig.");
+      
       toast({
         title: "Anmeldefehler",
         description: error.message || "E-Mail oder Passwort ist ungültig.",
@@ -90,6 +111,7 @@ const Login = () => {
     
     try {
       setIsLoading(true);
+      setLoginError(null);
       
       // For now, we only support Discord login
       toast({
@@ -103,6 +125,8 @@ const Login = () => {
       
     } catch (error: any) {
       console.error("Registration error:", error);
+      setLoginError(error.message || "Es gab ein Problem bei der Registrierung.");
+      
       toast({
         title: "Registrierungsfehler",
         description: error.message || "Es gab ein Problem bei der Registrierung.",
@@ -126,6 +150,23 @@ const Login = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
+            {loginError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Anmeldeproblem</AlertTitle>
+                <AlertDescription>{loginError}</AlertDescription>
+              </Alert>
+            )}
+            
+            <div className="bg-blue-50 p-3 rounded-md border border-blue-100 text-blue-700 text-sm mb-2">
+              <p className="font-medium mb-1">Hinweis zur Discord-Anmeldung:</p>
+              <p>Stelle sicher, dass in Supabase die richtigen URL-Konfigurationen eingestellt sind:</p>
+              <ul className="list-disc pl-5 mt-1">
+                <li>Site URL: {window.location.origin}</li>
+                <li>Redirect URL: {window.location.origin}/profile</li>
+              </ul>
+            </div>
+
             <Button
               variant="outline"
               className="flex items-center gap-3 h-12"
