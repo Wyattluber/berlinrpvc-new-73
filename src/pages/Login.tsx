@@ -1,15 +1,27 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 
 const Login = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+  
+  useEffect(() => {
+    // Check if user is already logged in
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      navigate('/profile');
+    }
+  }, [navigate]);
   
   // Mock Google sign-in function (will be replaced with actual Google Auth)
   const handleGoogleSignIn = () => {
@@ -18,19 +30,28 @@ const Login = () => {
     // Simulate API call
     setTimeout(() => {
       setIsLoading(false);
-      // Store user in localStorage (temporary solution)
+      
+      // For now: Store user in localStorage (temporary solution)
+      const isAdminUser = isAdmin && adminPassword === 'admin123';
+      
       localStorage.setItem('user', JSON.stringify({
         id: '12345',
         name: 'Test User',
         email: 'user@example.com',
-        role: 'user'
+        role: isAdminUser ? 'admin' : 'user'
       }));
+      
       toast({
         title: "Erfolgreich angemeldet",
         description: "Willkommen zurück!",
       });
+      
       navigate('/profile');
     }, 1500);
+  };
+
+  const toggleAdminMode = () => {
+    setIsAdmin(!isAdmin);
   };
 
   return (
@@ -46,6 +67,22 @@ const Login = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
+            {isAdmin && (
+              <div className="space-y-2">
+                <Label htmlFor="adminPassword">Admin Passwort</Label>
+                <Input 
+                  id="adminPassword" 
+                  type="password" 
+                  placeholder="Admin Passwort eingeben" 
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                />
+                <p className="text-xs text-gray-500">
+                  Das temporäre Admin-Passwort lautet: admin123
+                </p>
+              </div>
+            )}
+            
             <Button
               variant="outline"
               className="flex items-center gap-3 h-12"
@@ -76,6 +113,16 @@ const Login = () => {
               )}
               Mit Google anmelden
             </Button>
+            
+            <div className="text-center mt-2">
+              <button 
+                type="button" 
+                className="text-sm text-blue-600 hover:underline"
+                onClick={toggleAdminMode}
+              >
+                {isAdmin ? "Normaler Login" : "Admin Login"}
+              </button>
+            </div>
           </CardContent>
           <CardFooter className="flex justify-center">
             <p className="text-sm text-gray-500">

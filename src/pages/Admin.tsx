@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 
 // Example user data (would come from API/database in real app)
@@ -29,9 +31,12 @@ const Admin = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [authError, setAuthError] = useState('');
   
   useEffect(() => {
-    // Check if user is logged in and has admin role
+    // Check if user is logged in
     const storedUser = localStorage.getItem('user');
     if (!storedUser) {
       navigate('/login');
@@ -39,15 +44,32 @@ const Admin = () => {
     }
     
     const userData = JSON.parse(storedUser);
-    if (userData.role !== 'admin') {
-      toast({
-        title: "Zugriff verweigert",
-        description: "Du hast keine Berechtigung für diese Seite.",
-        variant: "destructive"
-      });
-      navigate('/profile');
+    if (userData.role === 'admin') {
+      setIsAuthenticated(true);
     }
   }, [navigate]);
+  
+  const handleAuthenticate = () => {
+    if (adminPassword === 'admin123') {
+      setIsAuthenticated(true);
+      setAuthError('');
+      
+      // Update user role to admin in localStorage
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        userData.role = 'admin';
+        localStorage.setItem('user', JSON.stringify(userData));
+      }
+      
+      toast({
+        title: "Zugriff gewährt",
+        description: "Du hast jetzt Administratorrechte.",
+      });
+    } else {
+      setAuthError('Falsches Passwort');
+    }
+  };
   
   const handleRoleChange = (userId: string, newRole: string) => {
     setIsLoading(true);
@@ -72,6 +94,50 @@ const Admin = () => {
       description: "Das Team-Meeting wurde für Samstag, 19:00 Uhr geplant.",
     });
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Navbar />
+        
+        <main className="flex-grow py-12 bg-gradient-to-b from-gray-50 to-white flex items-center justify-center">
+          <Card className="w-full max-w-md shadow-lg">
+            <CardHeader>
+              <CardTitle>Admin Zugang</CardTitle>
+              <CardDescription>
+                Bitte gib das Admin-Passwort ein, um fortzufahren
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="adminPassword">Passwort</Label>
+                <Input 
+                  id="adminPassword" 
+                  type="password" 
+                  placeholder="Admin-Passwort eingeben" 
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                />
+                {authError && <p className="text-sm text-red-500">{authError}</p>}
+                <p className="text-xs text-gray-500">
+                  Das temporäre Admin-Passwort lautet: admin123
+                </p>
+              </div>
+              
+              <Button 
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-700"
+                onClick={handleAuthenticate}
+              >
+                Einloggen
+              </Button>
+            </CardContent>
+          </Card>
+        </main>
+        
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-screen">

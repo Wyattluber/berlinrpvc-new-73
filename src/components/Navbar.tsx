@@ -1,21 +1,29 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Menu, X, User } from 'lucide-react';
+import { Menu, X, User, LogOut } from 'lucide-react';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  // Temporary state to simulate login (will be replaced with actual Google Auth)
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    // Check if user is logged in
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setIsLoggedIn(true);
+    }
+  }, []);
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
   };
 
-  // This is a temporary login toggle for testing purposes
-  const toggleLogin = () => {
-    setIsLoggedIn(!isLoggedIn);
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    setIsLoggedIn(false);
+    window.location.href = '/';
   };
 
   return (
@@ -36,14 +44,19 @@ const Navbar = () => {
             </Link>
             
             {isLoggedIn ? (
-              <Button variant="ghost" className="hover:text-blue-200 text-white" onClick={toggleLogin}>
-                <Link to="/profile" className="flex items-center gap-2">
-                  <User size={18} />
-                  <span>Profil</span>
+              <>
+                <Link to="/profile" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300">
+                  Profil
                 </Link>
-              </Button>
+                <Button variant="ghost" className="hover:text-blue-200 text-white" onClick={handleLogout}>
+                  <div className="flex items-center gap-2">
+                    <LogOut size={18} />
+                    <span>Logout</span>
+                  </div>
+                </Button>
+              </>
             ) : (
-              <Button variant="ghost" className="hover:text-blue-200 text-white" onClick={toggleLogin}>
+              <Button variant="ghost" className="hover:text-blue-200 text-white">
                 <Link to="/login" className="flex items-center gap-2">
                   <User size={18} />
                   <span>Login</span>
@@ -80,13 +93,24 @@ const Navbar = () => {
               Partner
             </Link>
             {isLoggedIn ? (
-              <Link to="/profile"
-                className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-1"
-                onClick={toggleMenu}
-              >
-                <User size={18} />
-                <span>Profil</span>
-              </Link>
+              <>
+                <Link to="/profile"
+                  className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300"
+                  onClick={toggleMenu}
+                >
+                  Profil
+                </Link>
+                <button
+                  className="block w-full text-left hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-1"
+                  onClick={() => {
+                    handleLogout();
+                    toggleMenu();
+                  }}
+                >
+                  <LogOut size={18} />
+                  <span>Logout</span>
+                </button>
+              </>
             ) : (
               <Link to="/login"
                 className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-1"

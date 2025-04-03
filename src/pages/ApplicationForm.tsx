@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Button } from '@/components/ui/button';
@@ -12,23 +13,57 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { HelpCircle } from 'lucide-react';
 
 const ApplicationForm = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [step, setStep] = useState('identification'); // identification, application
   const [discordUserId, setDiscordUserId] = useState('');
+  const [formData, setFormData] = useState({
+    robloxUsername: '',
+    age: '',
+    experience: '',
+    frpUnderstanding: '',
+    vdmUnderstanding: '',
+    taschenRPUnderstanding: ''
+  });
+  const [discordIdError, setDiscordIdError] = useState('');
+  
+  useEffect(() => {
+    // Check if user is logged in
+    const storedUser = localStorage.getItem('user');
+    if (!storedUser) {
+      toast({
+        title: "Login erforderlich",
+        description: "Bitte logge dich ein, um fortzufahren.",
+        variant: "destructive",
+      });
+      navigate('/login');
+    }
+  }, [navigate, toast]);
+  
+  const validateDiscordId = (id: string) => {
+    // Check if it contains only numbers and is between the correct length (typical Discord IDs are 17-19 digits)
+    const discordIdRegex = /^\d{17,19}$/;
+    if (!discordIdRegex.test(id)) {
+      setDiscordIdError('Discord ID muss aus 17-19 Ziffern bestehen');
+      return false;
+    }
+    
+    setDiscordIdError('');
+    return true;
+  };
   
   const handleContinue = (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!discordUserId.trim()) {
-      toast({
-        title: "Fehler",
-        description: "Bitte gib deine Discord-User-ID ein.",
-        variant: "destructive",
-        duration: 3000,
-      });
+      setDiscordIdError('Bitte gib deine Discord-User-ID ein');
+      return;
+    }
+    
+    if (!validateDiscordId(discordUserId)) {
       return;
     }
     
@@ -40,8 +75,56 @@ const ApplicationForm = () => {
     });
   };
   
+  const handleInputChange = (field: string, value: string) => {
+    setFormData({
+      ...formData,
+      [field]: value
+    });
+  };
+  
+  const validateAge = (age: string) => {
+    // Age should be a number between 1 and 99
+    const ageRegex = /^[1-9][0-9]?$/;
+    return ageRegex.test(age);
+  };
+  
+  const validateTextLength = (text: string) => {
+    return text.length >= 30;
+  };
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Age validation
+    if (!validateAge(formData.age)) {
+      toast({
+        title: "Ungültiges Alter",
+        description: "Bitte gib ein gültiges Alter ein (nur Zahlen von 1-99)",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Text fields validation
+    const textFields = [
+      { name: 'experience', label: 'Erfahrung' },
+      { name: 'frpUnderstanding', label: 'FRP Verständnis' },
+      { name: 'vdmUnderstanding', label: 'VDM Verständnis' },
+      { name: 'taschenRPUnderstanding', label: 'Taschen RP Verständnis' }
+    ];
+    
+    for (const field of textFields) {
+      const value = formData[field.name as keyof typeof formData];
+      if (!validateTextLength(value)) {
+        toast({
+          title: `Zu kurze Antwort: ${field.label}`,
+          description: "Bitte gib mindestens 30 Zeichen ein",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
     // In a real app, this would send the form data to a backend
     toast({
       title: "Bewerbung eingereicht",
@@ -57,6 +140,25 @@ const ApplicationForm = () => {
       <main className="flex-grow py-10">
         <div className="container mx-auto px-4">
           <h1 className="text-3xl font-bold mb-6 text-center bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Bewerbungsformular</h1>
+          
+          <div className="max-w-2xl mx-auto mb-6">
+            <Card className="bg-white/90 shadow-md">
+              <CardContent className="pt-6">
+                <h2 className="text-xl font-bold mb-3">Hier kannst du dich als Moderator bewerben!</h2>
+                <p className="mb-3">Falls alle Plätze bereits vergeben sind, wirst du automatisch auf die Warteliste gesetzt.</p>
+                
+                <h3 className="font-bold mt-4 mb-2">Wichtige Voraussetzung:</h3>
+                <p className="mb-3">Du solltest unser Regelwerk sicher beherrschen. Bitte achte darauf, deine Antworten sorgfältig und authentisch zu formulieren – kopierte oder durch KI generierte Texte können zur Ablehnung deiner Bewerbung führen.</p>
+                
+                <h3 className="font-bold mt-4 mb-2">Hinweis:</h3>
+                <p className="mb-3">Sollten wir deine Bewerbung in Betracht ziehen, laden wir dich zu einem kurzen Videocall auf Discord ein, um dir einige Fragen zu stellen und ggbf. dein Alter zu verifizieren.</p>
+                
+                <p className="mb-3">Bitte halte dafür ein gültiges Ausweisdokument bereit, auf dem nur dein Geburtsdatum und dein Foto sichtbar sind. Alle anderen Daten MÜSSEN abgedeckt sein.</p>
+                
+                <p className="font-medium mb-3">Solltest du das nicht wollen, bitten wir dich diese Bewerbung nicht zu machen.</p>
+              </CardContent>
+            </Card>
+          </div>
           
           {step === 'identification' ? (
             <Card className="max-w-md mx-auto shadow-lg border-0 bg-white/80 backdrop-blur-sm">
@@ -99,10 +201,14 @@ const ApplicationForm = () => {
                       id="discord" 
                       placeholder="z.B. 123456789012345678" 
                       value={discordUserId}
-                      onChange={(e) => setDiscordUserId(e.target.value)}
+                      onChange={(e) => {
+                        setDiscordUserId(e.target.value);
+                        if (e.target.value) validateDiscordId(e.target.value);
+                      }}
+                      className={`border-blue-200 focus:border-blue-500 ${discordIdError ? 'border-red-500' : ''}`}
                       required 
-                      className="border-blue-200 focus:border-blue-500"
                     />
+                    {discordIdError && <p className="text-sm text-red-500">{discordIdError}</p>}
                     <p className="text-sm text-gray-500">
                       Bitte gib deine Discord-User-ID ein, damit wir dich nach deiner Bewerbung kontaktieren können.
                     </p>
@@ -135,94 +241,110 @@ const ApplicationForm = () => {
               <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
                 <CardTitle>Deine Bewerbung</CardTitle>
                 <CardDescription className="text-blue-100">
-                  Bitte fülle alle Felder aus, damit wir deine Bewerbung bearbeiten können.
+                  Bitte beantworte alle Fragen ehrlich und ausführlich.
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="name">Dein Name</Label>
-                      <Input id="name" placeholder="Vor- und Nachname" required className="border-blue-200 focus:border-blue-500" />
+                      <Label htmlFor="robloxUsername">1. Roblox Username</Label>
+                      <Input 
+                        id="robloxUsername"
+                        placeholder="Dein Roblox Username" 
+                        required 
+                        className="border-blue-200 focus:border-blue-500"
+                        value={formData.robloxUsername}
+                        onChange={(e) => handleInputChange('robloxUsername', e.target.value)}
+                      />
                     </div>
                     
                     <div>
-                      <Label htmlFor="age">Alter</Label>
-                      <Input id="age" type="number" min="16" placeholder="Dein Alter" required className="border-blue-200 focus:border-blue-500" />
+                      <Label htmlFor="age">2. Alter</Label>
+                      <p className="text-sm text-gray-500 mb-1">Das Mindestalter für unseren Server beträgt 12 Jahre.</p>
+                      <Input 
+                        id="age" 
+                        type="text" 
+                        placeholder="Dein Alter (nur Zahlen)" 
+                        required 
+                        className="border-blue-200 focus:border-blue-500" 
+                        max="99"
+                        maxLength={2}
+                        value={formData.age}
+                        onChange={(e) => handleInputChange('age', e.target.value)}
+                      />
                     </div>
                     
                     <div>
-                      <Label>Für welche Position bewirbst du dich?</Label>
-                      <Select required>
-                        <SelectTrigger className="border-blue-200 focus:border-blue-500">
-                          <SelectValue placeholder="Position auswählen" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="sanitaet">Sanitätsdienst</SelectItem>
-                          <SelectItem value="feuerwehr">Feuerwehr</SelectItem>
-                          <SelectItem value="polizei">Polizei</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div>
-                      <Label>Hast du bereits Erfahrung in dieser Position?</Label>
-                      <RadioGroup defaultValue="no" className="flex flex-col space-y-1 mt-2">
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="yes" id="exp-yes" />
-                          <Label htmlFor="exp-yes">Ja</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="no" id="exp-no" />
-                          <Label htmlFor="exp-no">Nein</Label>
-                        </div>
-                      </RadioGroup>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="experience">Beschreibe deine bisherige Erfahrung</Label>
+                      <Label htmlFor="experience">3. Warum möchtest du Moderator werden und welche Erfahrungen hast du schon gemacht?</Label>
                       <Textarea 
-                        id="experience" 
-                        placeholder="Beschreibe hier deine Erfahrungen auf ähnlichen Servern oder in ähnlichen Positionen" 
+                        id="experience"
+                        placeholder="Beschreibe deine Motivation und bisherige Erfahrungen (mind. 30 Zeichen)"
+                        required
                         rows={4}
                         className="border-blue-200 focus:border-blue-500"
+                        value={formData.experience}
+                        onChange={(e) => handleInputChange('experience', e.target.value)}
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        {formData.experience.length < 30 ? 
+                          `Noch ${30 - formData.experience.length} Zeichen benötigt` : 
+                          '✓ Ausreichende Länge'}
+                      </p>
                     </div>
                     
                     <div>
-                      <Label htmlFor="motivation">Warum möchtest du Teil unseres Teams werden?</Label>
+                      <Label htmlFor="frpUnderstanding">4. Was versteht man unter FRP?</Label>
                       <Textarea 
-                        id="motivation" 
-                        placeholder="Erzähle uns, warum du dich für diese Position interessierst und was dich motiviert" 
-                        rows={4}
+                        id="frpUnderstanding"
+                        placeholder="Erkläre das Konzept von FRP (mind. 30 Zeichen)"
                         required
+                        rows={3}
                         className="border-blue-200 focus:border-blue-500"
+                        value={formData.frpUnderstanding}
+                        onChange={(e) => handleInputChange('frpUnderstanding', e.target.value)}
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        {formData.frpUnderstanding.length < 30 ? 
+                          `Noch ${30 - formData.frpUnderstanding.length} Zeichen benötigt` : 
+                          '✓ Ausreichende Länge'}
+                      </p>
                     </div>
                     
                     <div>
-                      <Label htmlFor="availability">Wann bist du normalerweise online?</Label>
+                      <Label htmlFor="vdmUnderstanding">5. Was versteht man unter VDM?</Label>
                       <Textarea 
-                        id="availability" 
-                        placeholder="An welchen Tagen und zu welchen Uhrzeiten bist du normalerweise verfügbar?" 
-                        rows={2}
+                        id="vdmUnderstanding"
+                        placeholder="Erkläre das Konzept von VDM (mind. 30 Zeichen)"
                         required
+                        rows={3}
                         className="border-blue-200 focus:border-blue-500"
+                        value={formData.vdmUnderstanding}
+                        onChange={(e) => handleInputChange('vdmUnderstanding', e.target.value)}
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        {formData.vdmUnderstanding.length < 30 ? 
+                          `Noch ${30 - formData.vdmUnderstanding.length} Zeichen benötigt` : 
+                          '✓ Ausreichende Länge'}
+                      </p>
                     </div>
                     
                     <div>
-                      <Label>Hast du ein funktionierendes Mikrofon?</Label>
-                      <RadioGroup defaultValue="yes" className="flex flex-col space-y-1 mt-2">
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="yes" id="mic-yes" />
-                          <Label htmlFor="mic-yes">Ja</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="no" id="mic-no" />
-                          <Label htmlFor="mic-no">Nein</Label>
-                        </div>
-                      </RadioGroup>
+                      <Label htmlFor="taschenRPUnderstanding">6. Was versteht man unter Taschen RP?</Label>
+                      <Textarea 
+                        id="taschenRPUnderstanding"
+                        placeholder="Erkläre das Konzept von Taschen RP (mind. 30 Zeichen)"
+                        required
+                        rows={3}
+                        className="border-blue-200 focus:border-blue-500"
+                        value={formData.taschenRPUnderstanding}
+                        onChange={(e) => handleInputChange('taschenRPUnderstanding', e.target.value)}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        {formData.taschenRPUnderstanding.length < 30 ? 
+                          `Noch ${30 - formData.taschenRPUnderstanding.length} Zeichen benötigt` : 
+                          '✓ Ausreichende Länge'}
+                      </p>
                     </div>
                   </div>
                   
