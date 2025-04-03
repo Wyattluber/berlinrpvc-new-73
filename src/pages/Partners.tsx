@@ -11,14 +11,16 @@ const Partners = () => {
       logo: "/placeholder.svg",
       description: "Discord RP Partner (Die Partnerschaft läuft aus, da der Link nicht mehr gültig ist)",
       website: "https://discord.gg/5P8xcTc3",
-      owner: "aby_got_aim"
+      owner: "aby_got_aim",
+      color: "from-blue-500 to-purple-600" // Added color gradient
     },
     {
       name: "Roleplay Unite 🇩🇪(vc)",
       logo: "/placeholder.svg",
       description: "Discord RP Partner für Voice Chat Roleplay",
       website: "https://discord.gg/pDpDHtSqgU",
-      owner: "lucakautschek"
+      owner: "lucakautschek",
+      color: "from-green-500 to-emerald-600" // Added color gradient
     }
   ];
 
@@ -49,17 +51,24 @@ const Partners = () => {
               {partners.map((partner, index) => (
                 <div 
                   key={index} 
-                  className="group relative overflow-hidden rounded-xl bg-white shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
+                  className="group relative overflow-hidden rounded-xl bg-white shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 border border-gray-100"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-indigo-600/0 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+                  {/* Colorful top border */}
+                  <div className={`h-2 bg-gradient-to-r ${partner.color} w-full`}></div>
+                  
+                  {/* Background gradient effect on hover */}
+                  <div className={`absolute inset-0 bg-gradient-to-br ${partner.color} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}></div>
+                  
                   <div className="p-8">
                     <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-xl font-bold text-gray-800 group-hover:text-blue-700 transition-colors duration-300">{partner.name}</h3>
-                      <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                      <h3 className={`text-xl font-bold bg-gradient-to-r ${partner.color} bg-clip-text text-transparent group-hover:scale-105 transition-transform duration-300`}>
+                        {partner.name}
+                      </h3>
+                      <div className={`w-14 h-14 rounded-full flex items-center justify-center overflow-hidden bg-gradient-to-br ${partner.color} bg-opacity-10 p-1 group-hover:scale-110 transition-transform duration-300`}>
                         <img 
                           src={partner.logo} 
                           alt={partner.name} 
-                          className="w-8 h-8 object-contain transition-transform duration-300 group-hover:scale-110" 
+                          className="w-10 h-10 object-contain" 
                         />
                       </div>
                     </div>
@@ -77,9 +86,9 @@ const Partners = () => {
                         href={partner.website} 
                         target="_blank" 
                         rel="noopener noreferrer" 
-                        className="inline-flex items-center text-blue-600 font-medium relative"
+                        className={`inline-flex items-center font-medium relative bg-gradient-to-r ${partner.color} bg-clip-text text-transparent`}
                       >
-                        <span className="relative z-10 group-hover:text-blue-800 transition-colors duration-300 after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-0 after:bg-blue-600 after:transition-all after:duration-300 group-hover:after:w-full">
+                        <span className="relative z-10 transition-colors duration-300 after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-1 after:w-0 after:bg-gradient-to-r after:from-blue-500 after:to-purple-600 after:transition-all after:duration-300 group-hover:after:w-full">
                           Discord beitreten
                         </span>
                         <svg 
@@ -100,10 +109,10 @@ const Partners = () => {
           </div>
         </section>
 
-        {/* Become a Partner */}
-        <section className="bg-gradient-to-r from-blue-100 to-indigo-100 py-16 rounded-3xl mx-4 md:mx-8 lg:mx-16">
+        {/* Become a Partner - with more vibrant colors */}
+        <section className="bg-gradient-to-r from-blue-100 via-indigo-100 to-purple-100 py-16 rounded-3xl mx-4 md:mx-8 lg:mx-16 shadow-lg border border-blue-200">
           <div className="container mx-auto px-4 text-center">
-            <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
+            <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
               Möchtest du Partner werden?
             </h2>
             <p className="text-gray-700 mb-8 max-w-2xl mx-auto">
@@ -112,7 +121,7 @@ const Partners = () => {
             </p>
             <a 
               href="mailto:info@berlinrpvc.de" 
-              className="inline-block px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-medium hover:from-blue-700 hover:to-indigo-800 transition-all duration-300 hover:shadow-lg hover:scale-105 transform"
+              className="inline-block px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-300 hover:shadow-lg hover:scale-105 transform"
             >
               Kontaktiere uns
             </a>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -26,40 +25,73 @@ import {
 
 // Example user data (would come from API/database in real app)
 const initialUsers = [
-  { id: '1', name: 'Max Mustermann', email: 'max@example.com', discordId: '123456789012345678', role: 'user' },
+  { id: '1', name: 'Admin', email: 'info@berlinrpvc.de', discordId: '123456789012345678', role: 'admin' },
   { id: '2', name: 'Anna Schmidt', email: 'anna@example.com', discordId: '234567890123456789', role: 'moderator' },
   { id: '3', name: 'Tom Meyer', email: 'tom@example.com', discordId: '345678901234567890', role: 'user' },
   { id: '4', name: 'Lisa Bauer', email: 'lisa@example.com', discordId: '456789012345678901', role: 'user' }
 ];
 
-// Example applications data
+// Example applications data with properly typed status
 const initialApplications = [
   { 
     id: '1', 
     name: 'Max Mustermann', 
     discordId: '123456789012345678', 
     submitted: '2025-04-01', 
-    status: 'pending',
+    status: 'pending' as const,
     robloxUsername: 'MaxMuster',
-    age: '16'
+    age: '16',
+    whyModerator: 'Ich möchte dem Server helfen und habe bereits Erfahrung als Moderator auf anderen Servern...',
+    frpExplanation: 'Fail Roleplay ist, wenn man nicht seiner Rolle entsprechend handelt...',
+    vdmExplanation: 'Vehicle Deathmatch bedeutet, dass man mit einem Fahrzeug andere absichtlich tötet...',
+    taschenRpExplanation: 'Taschen-RP bezieht sich auf das unrealistische Tragen vieler Gegenstände...',
+    serverMinAge: '12',
+    situationHandling: 'Ich würde das Team kontaktieren und nach einer Entscheidung fragen...',
+    bodycamExplanation: 'Die Bodycam-Pflicht bedeutet, dass Polizisten ihre Interaktionen aufzeichnen müssen...',
+    otherServers: [{ name: 'RP Example', link: 'https://discord.gg/example' }],
+    adminExperience: 'Ja, ich war Administrator auf mehreren Discord-Servern mit über 500 Mitgliedern...',
+    activity: 8,
+    notes: 'Ich bin sehr motiviert und habe flexible Zeiten...'
   },
   { 
     id: '2', 
     name: 'Julia Weber', 
     discordId: '987654321098765432', 
     submitted: '2025-04-02', 
-    status: 'accepted',
+    status: 'accepted' as const,
     robloxUsername: 'JuliaW',
-    age: '18'
+    age: '18',
+    whyModerator: 'Ich bin sehr engagiert und möchte meine Fähigkeiten einbringen...',
+    frpExplanation: 'Fail Roleplay bedeutet, dass man sich nicht realistisch verhält...',
+    vdmExplanation: 'Vehicle Deathmatch ist eine Regelverstoß, bei dem...',
+    taschenRpExplanation: 'Beim Taschen-RP versucht man, unrealistisch viele Items zu tragen...',
+    serverMinAge: '12',
+    situationHandling: 'In diesem Fall würde ich zunächst die Regeln prüfen und dann...',
+    bodycamExplanation: 'Die Bodycam-Pflicht gilt für alle Beamten im Dienst und...',
+    otherServers: [{ name: 'RP Unite', link: 'https://discord.gg/rpunite' }],
+    adminExperience: 'Ja, ich habe bereits 2 Jahre Erfahrung als Moderator...',
+    activity: 9,
+    notes: 'Ich kann besonders am Wochenende aktiv sein...'
   },
   { 
     id: '3', 
     name: 'Felix Krause', 
     discordId: '567890123456789012', 
     submitted: '2025-04-01', 
-    status: 'waitlisted',
+    status: 'waitlisted' as const,
     robloxUsername: 'FelixK',
-    age: '15' 
+    age: '15',
+    whyModerator: 'Ich spiele sehr gerne Roleplay und möchte dem Team helfen...',
+    frpExplanation: 'FRP ist wenn man aus seiner Rolle fällt und nicht realistisch handelt...',
+    vdmExplanation: 'VDM bedeutet, dass man mit einem Fahrzeug jemanden absichtlich überfährt...',
+    taschenRpExplanation: 'Taschen-RP ist, wenn man zu viele Gegenstände mit sich führt...',
+    serverMinAge: '12',
+    situationHandling: 'Ich würde mir überlegen, was in dieser Situation am realistischsten wäre...',
+    bodycamExplanation: 'Bei der Bodycam-Pflicht müssen alle Beamten ihre Kamera eingeschaltet haben...',
+    otherServers: [],
+    adminExperience: 'Nein, aber ich lerne schnell und bin motiviert...',
+    activity: 7,
+    notes: ''
   }
 ];
 
@@ -79,6 +111,18 @@ type User = {
   role: string;
 };
 
+type ServerStats = {
+  discordMembers: number;
+  partnerServers: number;
+  servers: number;
+  lastUpdated: string;
+};
+
+type OtherServer = {
+  name: string;
+  link: string;
+};
+
 type Application = {
   id: string;
   name: string;
@@ -87,13 +131,17 @@ type Application = {
   status: 'pending' | 'accepted' | 'rejected' | 'waitlisted';
   robloxUsername: string;
   age: string;
-};
-
-type ServerStats = {
-  discordMembers: number;
-  partnerServers: number;
-  servers: number;
-  lastUpdated: string;
+  whyModerator: string;
+  frpExplanation: string;
+  vdmExplanation: string;
+  taschenRpExplanation: string;
+  serverMinAge: string;
+  situationHandling: string;
+  bodycamExplanation: string;
+  otherServers: OtherServer[];
+  adminExperience: string;
+  activity: number;
+  notes: string;
 };
 
 const Admin = () => {

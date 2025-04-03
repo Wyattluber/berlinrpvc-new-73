@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Share, Server, HelpCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -12,7 +12,7 @@ const stats = {
   lastUpdated: '2025-04-03 14:30'
 };
 
-const StatCard = ({ title, value, icon: Icon, className = "", lastUpdated }) => {
+const StatCard = ({ title, value, icon: Icon, className = "", lastUpdated, color }) => {
   return (
     <Card className={`hover:shadow-lg transition-all duration-300 ${className} relative group`}>
       <TooltipProvider>
@@ -27,9 +27,9 @@ const StatCard = ({ title, value, icon: Icon, className = "", lastUpdated }) => 
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
+      <CardHeader className={`flex flex-row items-center justify-between pb-2 ${color}`}>
+        <CardTitle className="text-sm font-medium text-white">{title}</CardTitle>
+        <Icon className="h-4 w-4 text-white/80" />
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
@@ -52,21 +52,24 @@ const ServerStats = () => {
             value={stats.discordMembers} 
             icon={Users} 
             lastUpdated={stats.lastUpdated}
-            className="border-t-4 border-t-blue-500 bg-gradient-to-br from-white to-blue-50"
+            className="border-t-4 border-t-blue-500 hover:translate-y-[-5px]"
+            color="bg-gradient-to-r from-blue-500 to-blue-600"
           />
           <StatCard 
             title="Partner Server" 
             value={stats.partnerServers} 
             icon={Share}
             lastUpdated={stats.lastUpdated}
-            className="border-t-4 border-t-indigo-500 bg-gradient-to-br from-white to-indigo-50"
+            className="border-t-4 border-t-indigo-500 hover:translate-y-[-5px]"
+            color="bg-gradient-to-r from-indigo-500 to-indigo-600"
           />
           <StatCard 
             title="Server" 
             value={stats.servers} 
             icon={Server}
             lastUpdated={stats.lastUpdated}
-            className="border-t-4 border-t-purple-500 bg-gradient-to-br from-white to-purple-50"
+            className="border-t-4 border-t-purple-500 hover:translate-y-[-5px]"
+            color="bg-gradient-to-r from-purple-500 to-purple-600"
           />
         </div>
       </div>

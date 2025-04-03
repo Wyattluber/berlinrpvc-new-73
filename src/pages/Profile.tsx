@@ -73,6 +73,18 @@ const Profile = () => {
     navigate('/');
   };
 
+  // Function to display the proper role name
+  const getRoleName = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'Administrator';
+      case 'moderator':
+        return 'Moderator';
+      default:
+        return 'Benutzer';
+    }
+  };
+
   if (!user) return null;
 
   return (
@@ -187,6 +199,12 @@ const Profile = () => {
                               <span className="text-sm font-medium">Discord ID:</span>
                               <span className="text-sm">{discordId ? "✓ Eingegeben" : "✗ Fehlt"}</span>
                             </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Rolle:</span>
+                              <span className="text-sm font-medium px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                                {getRoleName(user.role)}
+                              </span>
+                            </div>
                             {!discordId && (
                               <Button 
                                 size="sm"
@@ -238,7 +256,7 @@ const Profile = () => {
                     
                     <div className="space-y-2">
                       <Label htmlFor="role">Rolle</Label>
-                      <Input id="role" value={user.role === 'admin' ? 'Administrator' : 'Benutzer'} disabled />
+                      <Input id="role" value={getRoleName(user.role)} disabled />
                     </div>
                     
                     <div className="space-y-2">
