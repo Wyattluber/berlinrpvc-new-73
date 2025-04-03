@@ -1,20 +1,27 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Menu, X, User, LogOut } from 'lucide-react';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     // Check if user is logged in
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setIsLoggedIn(true);
+      const user = JSON.parse(storedUser);
+      setIsAdmin(user.role === 'admin');
+    } else {
+      setIsLoggedIn(false);
+      setIsAdmin(false);
     }
-  }, []);
+  }, [location]); // Re-check when location changes
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
@@ -23,6 +30,7 @@ const Navbar = () => {
   const handleLogout = () => {
     localStorage.removeItem('user');
     setIsLoggedIn(false);
+    setIsAdmin(false);
     window.location.href = '/';
   };
 
@@ -48,6 +56,11 @@ const Navbar = () => {
                 <Link to="/profile" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300">
                   Profil
                 </Link>
+                {isAdmin && (
+                  <Link to="/admin" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300">
+                    Admin
+                  </Link>
+                )}
                 <Button variant="ghost" className="hover:text-blue-200 text-white" onClick={handleLogout}>
                   <div className="flex items-center gap-2">
                     <LogOut size={18} />
@@ -100,6 +113,14 @@ const Navbar = () => {
                 >
                   Profil
                 </Link>
+                {isAdmin && (
+                  <Link to="/admin"
+                    className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300"
+                    onClick={toggleMenu}
+                  >
+                    Admin
+                  </Link>
+                )}
                 <button
                   className="block w-full text-left hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-1"
                   onClick={() => {

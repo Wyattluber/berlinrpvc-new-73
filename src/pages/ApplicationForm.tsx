@@ -4,13 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Button } from '@/components/ui/button';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { HelpCircle } from 'lucide-react';
@@ -29,6 +27,7 @@ const ApplicationForm = () => {
     taschenRPUnderstanding: ''
   });
   const [discordIdError, setDiscordIdError] = useState('');
+  const [userFromStorage, setUserFromStorage] = useState<any>(null);
   
   useEffect(() => {
     // Check if user is logged in
@@ -40,6 +39,15 @@ const ApplicationForm = () => {
         variant: "destructive",
       });
       navigate('/login');
+      return;
+    }
+
+    const userData = JSON.parse(storedUser);
+    setUserFromStorage(userData);
+    
+    // If user already has a Discord ID saved in profile, use it
+    if (userData.discordId) {
+      setDiscordUserId(userData.discordId);
     }
   }, [navigate, toast]);
   
@@ -65,6 +73,15 @@ const ApplicationForm = () => {
     
     if (!validateDiscordId(discordUserId)) {
       return;
+    }
+    
+    // If the user doesn't have a Discord ID saved yet, save it
+    if (userFromStorage && !userFromStorage.discordId) {
+      const updatedUser = {
+        ...userFromStorage,
+        discordId: discordUserId
+      };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
     }
     
     setStep('application');
@@ -131,6 +148,10 @@ const ApplicationForm = () => {
       description: "Deine Bewerbung wurde erfolgreich gesendet. Wir werden dich über Discord kontaktieren.",
       duration: 5000,
     });
+    
+    setTimeout(() => {
+      navigate('/profile');
+    }, 2000);
   };
   
   return (
@@ -165,7 +186,7 @@ const ApplicationForm = () => {
               <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
                 <CardTitle>Identifikation</CardTitle>
                 <CardDescription className="text-blue-100">
-                  Bitte gib deine Discord-User-ID ein, damit wir dich kontaktieren können.
+                  Bitte bestätige deine Discord-User-ID, damit wir dich kontaktieren können.
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
@@ -197,20 +218,31 @@ const ApplicationForm = () => {
                         </PopoverContent>
                       </Popover>
                     </div>
-                    <Input 
-                      id="discord" 
-                      placeholder="z.B. 123456789012345678" 
-                      value={discordUserId}
-                      onChange={(e) => {
-                        setDiscordUserId(e.target.value);
-                        if (e.target.value) validateDiscordId(e.target.value);
-                      }}
-                      className={`border-blue-200 focus:border-blue-500 ${discordIdError ? 'border-red-500' : ''}`}
-                      required 
-                    />
+                    {userFromStorage && userFromStorage.discordId ? (
+                      <Input 
+                        id="discord" 
+                        value={discordUserId}
+                        className="border-blue-200 bg-gray-50 text-gray-600"
+                        readOnly
+                      />
+                    ) : (
+                      <Input 
+                        id="discord" 
+                        placeholder="z.B. 123456789012345678" 
+                        value={discordUserId}
+                        onChange={(e) => {
+                          setDiscordUserId(e.target.value);
+                          if (e.target.value) validateDiscordId(e.target.value);
+                        }}
+                        className={`border-blue-200 focus:border-blue-500 ${discordIdError ? 'border-red-500' : ''}`}
+                        required 
+                      />
+                    )}
                     {discordIdError && <p className="text-sm text-red-500">{discordIdError}</p>}
                     <p className="text-sm text-gray-500">
-                      Bitte gib deine Discord-User-ID ein, damit wir dich nach deiner Bewerbung kontaktieren können.
+                      {userFromStorage && userFromStorage.discordId 
+                        ? "Diese Discord ID wurde aus deinem Profil übernommen."
+                        : "Bitte gib deine Discord-User-ID ein, damit wir dich nach deiner Bewerbung kontaktieren können."}
                     </p>
                   </div>
                   

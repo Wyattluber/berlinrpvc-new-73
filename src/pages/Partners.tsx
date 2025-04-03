@@ -23,6 +23,20 @@ const Partners = () => {
       logo: "/placeholder.svg",
       description: "Zusammenarbeit bei der Simulation von Polizeieinsätzen und Verkehrskontrollen.",
       website: "https://example.com/polizei"
+    },
+    {
+      name: "RP DE VC",
+      logo: "/placeholder.svg",
+      description: "Discord RP Partner (Die Partnerschaft läuft aus, da der Link nicht mehr gültig ist)",
+      website: "https://discord.gg/5P8xcTc3",
+      owner: "aby_got_aim"
+    },
+    {
+      name: "Roleplay Unite 🇩🇪(vc)",
+      logo: "/placeholder.svg",
+      description: "Discord RP Partner für Voice Chat Roleplay",
+      website: "https://discord.gg/pDpDHtSqgU",
+      owner: "lucakautschek"
     }
   ];
 
@@ -98,6 +112,9 @@ const Partners = () => {
                   <div className="p-6 flex-grow">
                     <h3 className="text-xl font-bold mb-3 text-gray-800">{partner.name}</h3>
                     <p className="text-gray-600 mb-4">{partner.description}</p>
+                    {partner.owner && (
+                      <p className="text-sm text-gray-500 mb-4">Owner: {partner.owner}</p>
+                    )}
                   </div>
                   <div className="px-6 pb-6">
                     <a 
@@ -106,7 +123,7 @@ const Partners = () => {
                       rel="noopener noreferrer" 
                       className="partner-link inline-flex items-center text-blue-600 hover:text-blue-800 font-medium"
                     >
-                      Besuche Website
+                      {partner.website.includes('discord') ? 'Discord beitreten' : 'Besuche Website'}
                       <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                       </svg>
