@@ -34,12 +34,16 @@ const Navbar = () => {
               href="https://discord.gg/berlinrpvc" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="hover:text-blue-200 py-2 px-3 rounded transition duration-300 flex items-center gap-1"
+              className="group relative overflow-hidden py-2 px-4 rounded transition-all duration-300 bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg hover:scale-105 flex items-center gap-2"
             >
-              <MessageSquare size={18} />
-              <span>Discord</span>
+              <MessageSquare size={18} className="transition-transform duration-300 group-hover:rotate-12" />
+              <span className="transition-all duration-300 group-hover:translate-x-1">
+                <span className="group-hover:hidden">Join Us Now</span>
+                <span className="hidden group-hover:inline">Join Us</span>
+              </span>
+              <div className="absolute inset-0 w-full h-full bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out"></div>
             </a>
-            <Button variant="default" className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-md border-0 transition-all duration-300">
+            <Button variant="default" className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-md border-0 transition-all duration-300 hover:scale-105 hover:shadow-md">
               <Link to="/apply/form">Jetzt Bewerben</Link>
             </Button>
           </div>
@@ -77,11 +81,11 @@ const Navbar = () => {
               href="https://discord.gg/berlinrpvc" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-1"
+              className="block hover:bg-indigo-600 py-2 px-3 rounded transition duration-300 flex items-center gap-1"
               onClick={toggleMenu}
             >
               <MessageSquare size={18} />
-              <span>Discord</span>
+              <span>Join Us Now</span>
             </a>
             <Button 
               variant="default" 

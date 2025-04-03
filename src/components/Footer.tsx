@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Facebook, Instagram, MessageSquare, Mail } from 'lucide-react';
+import { Facebook, Instagram, MessageSquare, Mail, Youtube, Music } from 'lucide-react';
 
 const Footer = () => {
   return (
@@ -38,18 +38,24 @@ const Footer = () => {
           
           <div>
             <h3 className="text-xl font-bold mb-4 bg-gradient-to-r from-blue-300 to-indigo-300 bg-clip-text text-transparent">Folge Uns</h3>
-            <div className="flex space-x-4">
+            <div className="flex space-x-4 mb-3">
               <a href="https://discord.gg/berlinrpvc" target="_blank" rel="noopener noreferrer" aria-label="Discord" className="text-blue-100 hover:text-white transition duration-300 transform hover:scale-110">
                 <MessageSquare size={24} />
               </a>
-              <a href="#" aria-label="Instagram" className="text-blue-100 hover:text-white transition duration-300 transform hover:scale-110">
+              <a href="https://www.instagram.com/berlin.rp.vc" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="text-blue-100 hover:text-white transition duration-300 transform hover:scale-110">
                 <Instagram size={24} />
               </a>
-              <a href="#" aria-label="Facebook" className="text-blue-100 hover:text-white transition duration-300 transform hover:scale-110">
-                <Facebook size={24} />
+              <a href="https://www.tiktok.com/@berlin_rp_vc" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="text-blue-100 hover:text-white transition duration-300 transform hover:scale-110">
+                <Music size={24} />
               </a>
-              <a href="mailto:info@example.com" aria-label="Email" className="text-blue-100 hover:text-white transition duration-300 transform hover:scale-110">
-                <Mail size={24} />
+              <a href="https://www.youtube.com/@BerlinRP-VC" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="text-blue-100 hover:text-white transition duration-300 transform hover:scale-110">
+                <Youtube size={24} />
+              </a>
+            </div>
+            <div className="mt-2">
+              <a href="mailto:info@berlinrpvc.de" aria-label="Email" className="text-blue-100 hover:text-white transition duration-300 flex items-center gap-2">
+                <Mail size={20} />
+                <span>info@berlinrpvc.de</span>
               </a>
             </div>
           </div>

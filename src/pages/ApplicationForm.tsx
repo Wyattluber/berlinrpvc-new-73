@@ -11,18 +11,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { CircleQuestion } from 'lucide-react';
 
 const ApplicationForm = () => {
   const { toast } = useToast();
   const [step, setStep] = useState('identification'); // identification, application
-  const [discordUsername, setDiscordUsername] = useState('');
+  const [discordUserId, setDiscordUserId] = useState('');
   
   const handleContinue = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!discordUsername.trim()) {
+    if (!discordUserId.trim()) {
       toast({
         title: "Fehler",
-        description: "Bitte gib deinen Discord-Benutzernamen ein.",
+        description: "Bitte gib deine Discord-User-ID ein.",
         variant: "destructive",
         duration: 3000,
       });
@@ -60,31 +63,65 @@ const ApplicationForm = () => {
               <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-lg">
                 <CardTitle>Identifikation</CardTitle>
                 <CardDescription className="text-blue-100">
-                  Bitte gib deinen Discord-Benutzernamen ein, damit wir dich kontaktieren können.
+                  Bitte gib deine Discord-User-ID ein, damit wir dich kontaktieren können.
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6">
                 <form onSubmit={handleContinue} className="space-y-6">
                   <div className="space-y-2">
-                    <Label htmlFor="discord">Discord Benutzername</Label>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="discord">Discord User-ID</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 w-6 p-0 rounded-full"
+                          >
+                            <CircleQuestion className="h-4 w-4 text-blue-500" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80 text-sm">
+                          <div className="space-y-2">
+                            <h4 className="font-medium">So findest du deine Discord User-ID:</h4>
+                            <ol className="list-decimal ml-4 space-y-1">
+                              <li>Öffne die Discord-Einstellungen (Zahnrad-Symbol)</li>
+                              <li>Gehe zu "Erweitert" und aktiviere "Entwicklermodus"</li>
+                              <li>Klicke mit der rechten Maustaste auf deinen Benutzernamen</li>
+                              <li>Wähle "ID kopieren" und füge sie hier ein</li>
+                            </ol>
+                            <p className="text-muted-foreground">Die User-ID ist eine lange Zahl wie z.B. 123456789012345678</p>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                     <Input 
                       id="discord" 
-                      placeholder="z.B. username#1234 oder username" 
-                      value={discordUsername}
-                      onChange={(e) => setDiscordUsername(e.target.value)}
+                      placeholder="z.B. 123456789012345678" 
+                      value={discordUserId}
+                      onChange={(e) => setDiscordUserId(e.target.value)}
                       required 
                       className="border-blue-200 focus:border-blue-500"
                     />
                     <p className="text-sm text-gray-500">
-                      Bitte gib deinen vollständigen Discord-Benutzernamen ein, damit wir dich nach deiner Bewerbung kontaktieren können.
+                      Bitte gib deine Discord-User-ID ein, damit wir dich nach deiner Bewerbung kontaktieren können.
                     </p>
                   </div>
                   
-                  <div className="flex items-start space-x-2">
-                    <Checkbox id="terms" required />
-                    <Label htmlFor="terms" className="text-sm">
-                      Ich stimme zu, dass meine Daten für den Bewerbungsprozess gespeichert werden dürfen.
-                    </Label>
+                  <div className="space-y-3">
+                    <div className="flex items-start space-x-2">
+                      <Checkbox id="terms" required />
+                      <Label htmlFor="terms" className="text-sm">
+                        Ich stimme zu, dass meine Daten für den Bewerbungsprozess gespeichert werden dürfen.
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-start space-x-2">
+                      <Checkbox id="accuracy" required />
+                      <Label htmlFor="accuracy" className="text-sm">
+                        Ich bestätige, dass alle von mir gemachten Angaben wahrheitsgemäß und nach bestem Wissen ausgefüllt wurden.
+                      </Label>
+                    </div>
                   </div>
                   
                   <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition-all duration-300">
