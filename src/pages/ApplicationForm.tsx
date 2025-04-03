@@ -27,7 +27,7 @@ const Step1 = () => {
     const value = parseInt(e.target.value) || '';
     updateApplicationData({ age: value });
     
-    if (typeof age === 'number' && age < 12) {
+    if (typeof value === 'number' && value < 12) {
       setShowAgeWarning(true);
     } else {
       setShowAgeWarning(false);
@@ -511,8 +511,9 @@ const ApplicationForm = () => {
       case 1:
         const isDiscordIdValid = /^\d{17,19}$/.test(applicationData.discordId || '');
         const isRobloxIdValid = /^\d+$/.test(applicationData.robloxId || '');
+        const currentAge = typeof applicationData.age === 'number' ? applicationData.age : 0;
         
-        if (typeof age === 'number' && age < 12 && !ageBlocked) {
+        if (currentAge < 12 && !ageBlocked) {
           toast({
             title: "Altersbeschränkung",
             description: "Du musst mindestens 12 Jahre alt sein, um dich zu bewerben.",
@@ -686,7 +687,7 @@ const ApplicationForm = () => {
                 
                 <Button
                   onClick={handleNextStep}
-                  disabled={(typeof age === 'number' && age < 12) && !ageConfirmed}
+                  disabled={applicationData.age < 12 && !ageConfirmed}
                   className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
                 >
                   {currentStep === totalSteps ? (

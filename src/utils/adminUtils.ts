@@ -62,7 +62,7 @@ export const checkAdminAccount = async (email: string) => {
       .from('admin_users')
       .select('*')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
       
     return { exists: !!data && !error, data };
   } catch (error) {
@@ -83,7 +83,7 @@ export const isUserAdmin = async () => {
       .from('admin_users')
       .select('*')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
       
     return !!data && !error;
   } catch (error) {
