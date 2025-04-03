@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Mail, KeyRound, AlertTriangle } from 'lucide-react';
+import { Mail, KeyRound, AlertTriangle, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -18,6 +18,7 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [showDetailedError, setShowDetailedError] = useState(false);
   
   useEffect(() => {
     // Check if user is already logged in
@@ -34,8 +35,14 @@ const Login = () => {
     const errorDescription = url.searchParams.get('error_description');
     
     if (error) {
-      setLoginError(`Authentication error: ${errorDescription || error}`);
+      const errorMsg = `Authentication error: ${errorDescription || error}`;
+      setLoginError(errorMsg);
       console.error("OAuth error:", error, errorDescription);
+
+      // Show more detailed error message for specific errors
+      if (error.includes('discord') || errorDescription?.includes('discord')) {
+        setShowDetailedError(true);
+      }
     }
     
     checkSession();
@@ -47,12 +54,13 @@ const Login = () => {
       setLoginError(null);
       
       const redirectUrl = `${window.location.origin}/profile`;
-      console.log("Redirect URL:", redirectUrl);
+      console.log("Redirect URL for Discord OAuth:", redirectUrl);
       
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'discord',
         options: {
-          redirectTo: redirectUrl
+          redirectTo: redirectUrl,
+          scopes: 'identify email'
         }
       });
       
@@ -61,6 +69,7 @@ const Login = () => {
     } catch (error: any) {
       console.error("Discord login error:", error);
       setLoginError(error.message || "Es gab ein Problem bei der Anmeldung mit Discord.");
+      setShowDetailedError(true);
       
       toast({
         title: "Anmeldefehler",
@@ -166,6 +175,33 @@ const Login = () => {
                 <li>Redirect URL: {window.location.origin}/profile</li>
               </ul>
             </div>
+
+            {showDetailedError && (
+              <Alert className="bg-amber-50 border-amber-200 text-amber-800 mb-4">
+                <AlertTitle className="text-amber-800">Fehlerbehebung für Discord-Anmeldung:</AlertTitle>
+                <AlertDescription className="space-y-2">
+                  <p>1. Überprüfe in Supabase unter <strong>Authentication &gt; URL Configuration</strong>:</p>
+                  <ul className="list-disc pl-5">
+                    <li>Site URL: <code>{window.location.origin}</code></li>
+                    <li>Redirect URLs: <code>{window.location.origin}/profile</code></li>
+                  </ul>
+                  
+                  <p>2. Überprüfe in Supabase unter <strong>Authentication &gt; Providers &gt; Discord</strong>:</p>
+                  <ul className="list-disc pl-5">
+                    <li>Client ID und Client Secret korrekt eingetragen</li>
+                    <li>"identify" und "email" Scopes aktiviert</li>
+                  </ul>
+                  
+                  <p>3. Im Discord Developer Portal überprüfe:</p>
+                  <ul className="list-disc pl-5">
+                    <li>Redirect URL: <code>https://aaqhxeiesnphwhazvkck.supabase.co/auth/v1/callback</code></li>
+                    <li>Scopes: identify, email</li>
+                  </ul>
+                  
+                  <p>4. Bestätige, dass deine App im Discord Developer Portal aktiviert ist.</p>
+                </AlertDescription>
+              </Alert>
+            )}
 
             <Button
               variant="outline"
