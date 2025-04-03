@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { CircleQuestion } from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
 
 const ApplicationForm = () => {
   const { toast } = useToast();
@@ -78,7 +78,7 @@ const ApplicationForm = () => {
                             size="sm" 
                             className="h-6 w-6 p-0 rounded-full"
                           >
-                            <CircleQuestion className="h-4 w-4 text-blue-500" />
+                            <HelpCircle className="h-4 w-4 text-blue-500" />
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80 text-sm">
