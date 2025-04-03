@@ -9,13 +9,110 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      admin_users: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      applications: {
+        Row: {
+          activity_level: number
+          admin_experience: string | null
+          age: number
+          bodycam_understanding: string
+          created_at: string
+          discord_id: string
+          friend_rule_violation: string
+          frp_understanding: string
+          id: string
+          notes: string | null
+          other_servers: string | null
+          roblox_id: string
+          roblox_username: string
+          server_age_understanding: string
+          situation_handling: string
+          status: string
+          taschen_rp_understanding: string
+          updated_at: string
+          user_id: string
+          vdm_understanding: string
+        }
+        Insert: {
+          activity_level: number
+          admin_experience?: string | null
+          age: number
+          bodycam_understanding: string
+          created_at?: string
+          discord_id: string
+          friend_rule_violation: string
+          frp_understanding: string
+          id?: string
+          notes?: string | null
+          other_servers?: string | null
+          roblox_id: string
+          roblox_username: string
+          server_age_understanding: string
+          situation_handling: string
+          status?: string
+          taschen_rp_understanding: string
+          updated_at?: string
+          user_id: string
+          vdm_understanding: string
+        }
+        Update: {
+          activity_level?: number
+          admin_experience?: string | null
+          age?: number
+          bodycam_understanding?: string
+          created_at?: string
+          discord_id?: string
+          friend_rule_violation?: string
+          frp_understanding?: string
+          id?: string
+          notes?: string | null
+          other_servers?: string | null
+          roblox_id?: string
+          roblox_username?: string
+          server_age_understanding?: string
+          situation_handling?: string
+          status?: string
+          taschen_rp_understanding?: string
+          updated_at?: string
+          user_id?: string
+          vdm_understanding?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      add_admin_user: {
+        Args: {
+          discord_id_param: string
+        }
+        Returns: string
+      }
+      is_admin: {
+        Args: {
+          user_uuid: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
