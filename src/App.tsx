@@ -9,6 +9,9 @@ import Apply from "./pages/Apply";
 import Partners from "./pages/Partners";
 import ApplicationForm from "./pages/ApplicationForm";
 import NotFound from "./pages/NotFound";
+import Login from "./pages/Login";
+import Profile from "./pages/Profile";
+import Admin from "./pages/Admin";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +26,9 @@ const App = () => (
           <Route path="/apply" element={<Apply />} />
           <Route path="/partners" element={<Partners />} />
           <Route path="/apply/form" element={<ApplicationForm />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/admin" element={<Admin />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

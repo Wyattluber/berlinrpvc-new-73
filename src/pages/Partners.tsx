@@ -2,158 +2,168 @@
 import React from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
-import { ExternalLink, Users } from 'lucide-react';
-
-// Updated data for partner servers with real information
-const partnerServers = [
-  {
-    name: "RP DE",
-    description: "Deutscher Roleplay Discord-Server mit Fokus auf realistische Simulationen.",
-    owner: "aby_got_aim",
-    discordLink: "https://discord.gg/qd5TqNUs",
-    serverImage: "/placeholder.svg"
-  },
-  {
-    name: "Roleplay Unite 🇩🇪(vc)",
-    description: "Community für deutschsprachigen Roleplay mit Voice-Chat Funktionen.",
-    owner: "lucakautschek",
-    discordLink: "https://discord.gg/pDpDHtSqgU",
-    serverImage: "/placeholder.svg"
-  },
-];
 
 const Partners = () => {
+  // Partner logos and information
+  const partners = [
+    {
+      name: "Rettungsdienst Berlin",
+      logo: "/lovable-uploads/dd1f41c8-840e-4e30-a847-665d1ef1d0b1.png",
+      description: "Offizieller Partner für Rettungsdienst-Simulationen und Notfalltraining.",
+      website: "https://example.com/rettungsdienst"
+    },
+    {
+      name: "Berliner Feuerwehr Simulation",
+      logo: "/lovable-uploads/facc787d-f5d9-4ce8-9d2b-2c329ba5f0cd.png",
+      description: "Partner für realistische Feuerwehr-Einsatzszenarien und Ausbildung.",
+      website: "https://example.com/feuerwehr"
+    },
+    {
+      name: "Polizei Berlin RP",
+      logo: "/placeholder.svg",
+      description: "Zusammenarbeit bei der Simulation von Polizeieinsätzen und Verkehrskontrollen.",
+      website: "https://example.com/polizei"
+    }
+  ];
+
+  // Custom styles for partner cards with hover effects
+  const style = `
+    .partner-card {
+      transition: all 0.3s ease;
+      transform-origin: center;
+    }
+    .partner-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    .partner-logo {
+      transition: all 0.5s ease;
+    }
+    .partner-card:hover .partner-logo {
+      transform: scale(1.05);
+    }
+    .partner-link {
+      position: relative;
+      overflow: hidden;
+    }
+    .partner-link::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: linear-gradient(to right, #3b82f6, #6366f1);
+      transition: width 0.3s ease;
+    }
+    .partner-card:hover .partner-link::after {
+      width: 100%;
+    }
+  `;
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
       
       <main className="flex-grow">
-        {/* Header Section with New Gradient */}
+        {/* Add the custom CSS */}
+        <style>{style}</style>
+        
+        {/* Header Section */}
         <section className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white py-16">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-4xl font-bold mb-4">Unsere Partner</h1>
             <p className="text-xl mb-6 max-w-3xl mx-auto">
-              Wir arbeiten mit verschiedenen Discord-Servern zusammen, um ein besseres Erlebnis für alle zu schaffen.
+              BerlinRP-VC arbeitet mit verschiedenen Partnern zusammen, um das bestmögliche Roleplay-Erlebnis zu bieten.
             </p>
-            
-            {/* Discord Join Button with Hover Effect */}
-            <a 
-              href="https://discord.gg/berlinrpvc" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="group relative inline-flex items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 p-0.5 text-sm font-medium text-white hover:text-white focus:outline-none focus:ring-4 focus:ring-blue-300 group-hover:from-purple-600 group-hover:to-blue-500"
-            >
-              <span className="relative rounded-md bg-gray-900 bg-opacity-50 px-5 py-2.5 transition-all duration-300 ease-in-out group-hover:bg-opacity-0">
-                <span className="flex items-center gap-2">
-                  <span className="block group-hover:hidden">Join us now</span>
-                  <span className="hidden group-hover:block">Join us</span>
-                  <ExternalLink size={18} className="transition-transform duration-300 group-hover:translate-x-1" />
-                </span>
-              </span>
-            </a>
           </div>
         </section>
-        
-        {/* Logo Section */}
-        <section className="py-10 bg-gradient-to-b from-gray-900 to-gray-800">
-          <div className="container mx-auto px-4 flex flex-col items-center justify-center">
-            <div className="w-full max-w-3xl">
-              <img 
-                src="/lovable-uploads/facc787d-f5d9-4ce8-9d2b-2c329ba5f0cd.png" 
-                alt="BerlinRP-VC Logo" 
-                className="w-full h-auto object-contain mx-auto mb-8 glow-effect"
-              />
-            </div>
-            <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-blue-400 shadow-lg shadow-blue-500/50">
-              <img 
-                src="/lovable-uploads/dd1f41c8-840e-4e30-a847-665d1ef1d0b1.png" 
-                alt="BerlinRP-VC Logo Icon" 
-                className="w-full h-full object-cover"
-              />
-            </div>
-          </div>
-        </section>
-        
-        {/* Partner Servers Section with Improved Cards */}
-        <section className="py-16 bg-gradient-to-b from-gray-800 to-gray-900">
+
+        {/* Partners Section */}
+        <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold mb-10 text-center bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">
-              Partner Server
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {partners.map((partner, index) => (
+                <div 
+                  key={index} 
+                  className="partner-card bg-white rounded-lg overflow-hidden shadow-md border border-gray-100 flex flex-col"
+                >
+                  <div className="h-48 bg-gray-50 flex items-center justify-center p-6">
+                    <img 
+                      src={partner.logo} 
+                      alt={partner.name} 
+                      className="partner-logo max-h-full max-w-full object-contain"
+                    />
+                  </div>
+                  <div className="p-6 flex-grow">
+                    <h3 className="text-xl font-bold mb-3 text-gray-800">{partner.name}</h3>
+                    <p className="text-gray-600 mb-4">{partner.description}</p>
+                  </div>
+                  <div className="px-6 pb-6">
+                    <a 
+                      href={partner.website} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="partner-link inline-flex items-center text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Besuche Website
+                      <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                      </svg>
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Partnership CTA */}
+            <div className="mt-16 text-center">
+              <h2 className="text-2xl font-bold mb-4 bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
+                Interessiert an einer Partnerschaft?
+              </h2>
+              <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
+                Wir sind immer auf der Suche nach neuen Partnerschaften, um unsere Community zu erweitern und 
+                das Spielerlebnis zu verbessern.
+              </p>
+              <a 
+                href="mailto:info@berlinrpvc.de" 
+                className="inline-block px-6 py-3 rounded-md bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-medium hover:from-blue-700 hover:to-indigo-800 transition-colors duration-300"
+              >
+                Kontaktiere uns
+              </a>
+            </div>
+          </div>
+        </section>
+
+        {/* Testimonials Section */}
+        <section className="py-16 bg-gradient-to-b from-white to-gray-50">
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="text-3xl font-bold mb-10 bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
+              Was unsere Partner sagen
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              {partnerServers.map((server, index) => (
-                <Card key={index} className="flex flex-col h-full overflow-hidden border-0 bg-gradient-to-br from-gray-800 to-gray-900 hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-300 transform hover:-translate-y-1">
-                  <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-700 pb-8 relative">
-                    <div className="absolute -bottom-6 left-6 w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg">
-                      <Users className="h-6 w-6 text-white" />
-                    </div>
-                    <CardTitle className="text-white">{server.name}</CardTitle>
-                    <CardDescription className="text-blue-100">{server.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-grow text-gray-300 pt-8">
-                    <p className="text-sm mb-3">
-                      <span className="font-semibold text-blue-300">Discord-Owner:</span> {server.owner}
-                    </p>
-                  </CardContent>
-                  <CardFooter className="border-t border-gray-700 bg-gradient-to-r from-gray-800 to-gray-900">
-                    <Button 
-                      className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 group relative overflow-hidden border-0"
-                    >
-                      <a 
-                        href={server.discordLink} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="w-full flex items-center justify-center gap-2"
-                      >
-                        <span>Discord Beitreten</span>
-                        <ExternalLink size={16} className="transition-transform duration-300 group-hover:translate-x-1" />
-                      </a>
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
+              <div className="bg-white p-6 rounded-lg shadow-md border border-gray-100">
+                <p className="italic text-gray-600 mb-4">
+                  "Die Zusammenarbeit mit BerlinRP-VC hat unsere Community enorm bereichert. 
+                  Die Professionalität und Leidenschaft des Teams sind wirklich beeindruckend."
+                </p>
+                <p className="font-bold">- Leiter des Rettungsdienstes Berlin</p>
+              </div>
+              
+              <div className="bg-white p-6 rounded-lg shadow-md border border-gray-100">
+                <p className="italic text-gray-600 mb-4">
+                  "Durch unsere Partnerschaft mit BerlinRP-VC können wir realistische Einsatzszenarien 
+                  simulieren und unsere Mitglieder optimal trainieren."
+                </p>
+                <p className="font-bold">- Koordinator der Berliner Feuerwehr Simulation</p>
+              </div>
             </div>
-          </div>
-        </section>
-        
-        {/* Become a Partner Section with Improved Design */}
-        <section className="py-16 bg-gradient-to-t from-blue-900 to-gray-900 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-500 via-transparent to-transparent opacity-20"></div>
-          </div>
-          <div className="container mx-auto px-4 text-center relative z-10">
-            <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">
-              Partner werden
-            </h2>
-            <p className="text-xl mb-8 max-w-3xl mx-auto text-blue-100">
-              Hast du einen Discord-Server und möchtest mit uns zusammenarbeiten? 
-              Wir freuen uns über neue Partnerschaften!
-            </p>
-            <Button 
-              size="lg" 
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 border-0 shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 transition-all duration-300 group"
-            >
-              <a href="https://discord.gg/berlinrpvc" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                <span>Partnerschaft anfragen</span>
-                <ExternalLink size={18} className="transition-transform duration-300 group-hover:translate-x-1" />
-              </a>
-            </Button>
           </div>
         </section>
       </main>
       
       <Footer />
-
-      {/* CSS for glow effect */}
-      <style jsx>{`
-        .glow-effect {
-          filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.5));
-        }
-      `}</style>
     </div>
   );
 };
