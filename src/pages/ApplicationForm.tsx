@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ApplicationProvider, useApplication } from '../contexts/ApplicationContext';
@@ -17,10 +16,32 @@ import { toast } from '@/hooks/use-toast';
 import { HelpCircle, ArrowLeft, ArrowRight, Send, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-// Sub-components for each step
 const Step1 = () => {
   const { applicationData, updateApplicationData } = useApplication();
   const [showRobloxIdHelp, setShowRobloxIdHelp] = useState(false);
+  const [showDiscordIdHelp, setShowDiscordIdHelp] = useState(false);
+  const [showAgeWarning, setShowAgeWarning] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
+
+  const handleAgeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value) || '';
+    updateApplicationData({ age: value });
+    
+    if (value && value < 12) {
+      setShowAgeWarning(true);
+    } else {
+      setShowAgeWarning(false);
+      setAgeConfirmed(true);
+    }
+  };
+
+  const validateRobloxId = (value: string) => {
+    return /^\d+$/.test(value);
+  };
+
+  const validateDiscordId = (value: string) => {
+    return /^\d{17,19}$/.test(value);
+  };
 
   return (
     <div className="space-y-6">
@@ -53,12 +74,22 @@ const Step1 = () => {
           <Input
             id="robloxId"
             value={applicationData.robloxId}
-            onChange={(e) => updateApplicationData({ robloxId: e.target.value })}
+            onChange={(e) => {
+              const value = e.target.value;
+              updateApplicationData({ robloxId: value });
+              if (value && !validateRobloxId(value)) {
+                toast({
+                  title: "Ungültige Roblox ID",
+                  description: "Bitte gib eine gültige numerische Roblox ID ein",
+                  variant: "destructive"
+                });
+              }
+            }}
             placeholder="Deine Roblox ID"
             required
           />
           {showRobloxIdHelp && (
-            <div className="text-sm bg-blue-50 p-3 rounded-md border border-blue-100 text-blue-700 mt-2">
+            <div className="text-sm bg-blue-50 p-3 rounded-md border border-blue-100 text-blue-700 mt-2 overflow-auto">
               <p>Um deine Roblox ID zu finden:</p>
               <ol className="list-decimal ml-4 mt-1">
                 <li>Gehe zu deinem Roblox Profil</li>
@@ -71,14 +102,45 @@ const Step1 = () => {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="discordId">Discord ID</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="discordId">Discord ID</Label>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-6 px-2 text-blue-600" 
+            onClick={() => setShowDiscordIdHelp(!showDiscordIdHelp)}
+          >
+            <HelpCircle size={16} />
+          </Button>
+        </div>
         <Input
           id="discordId"
           value={applicationData.discordId}
-          onChange={(e) => updateApplicationData({ discordId: e.target.value })}
+          onChange={(e) => {
+            const value = e.target.value;
+            updateApplicationData({ discordId: value });
+            if (value && !validateDiscordId(value) && value.length > 10) {
+              toast({
+                title: "Ungültige Discord ID",
+                description: "Eine Discord ID besteht aus 17-19 Ziffern",
+                variant: "destructive"
+              });
+            }
+          }}
           placeholder="Deine Discord ID"
           required
         />
+        {showDiscordIdHelp && (
+          <div className="text-sm bg-blue-50 p-3 rounded-md border border-blue-100 text-blue-700 mt-2">
+            <p>Um deine Discord ID zu finden:</p>
+            <ol className="list-decimal ml-4 mt-1">
+              <li>Öffne Discord und gehe zu den Einstellungen</li>
+              <li>Wähle "Erweitert" und aktiviere den "Entwicklermodus"</li>
+              <li>Klicke mit der rechten Maustaste auf deinen Namen und wähle "ID kopieren"</li>
+              <li>Die Discord ID besteht aus 17-19 Ziffern</li>
+            </ol>
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -86,13 +148,42 @@ const Step1 = () => {
         <Input
           id="age"
           type="number"
-          min="13"
+          min="12"
           max="99"
           value={applicationData.age}
-          onChange={(e) => updateApplicationData({ age: parseInt(e.target.value) || '' })}
+          onChange={handleAgeChange}
           placeholder="Dein Alter"
           required
         />
+        
+        {showAgeWarning && (
+          <div className="text-sm bg-amber-50 p-3 rounded-md border border-amber-200 text-amber-800 mt-2">
+            <p className="font-medium">Altershinweis</p>
+            <p>Das Mindestalter für unseren Server beträgt 12 Jahre. Bist du sicher, dass du dein Alter korrekt eingegeben hast?</p>
+            <div className="mt-2 flex justify-end space-x-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  updateApplicationData({ age: 12 });
+                  setShowAgeWarning(false);
+                  setAgeConfirmed(true);
+                }}
+              >
+                Korrigieren
+              </Button>
+              <Button 
+                size="sm" 
+                onClick={() => {
+                  setShowAgeWarning(false);
+                  setAgeConfirmed(true);
+                }}
+              >
+                Bestätigen
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -101,39 +192,91 @@ const Step1 = () => {
 const Step2 = () => {
   const { applicationData, updateApplicationData } = useApplication();
 
+  const validateMinLength = (value: string, minLength: number = 30) => {
+    return value.length >= minLength;
+  };
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <Label htmlFor="frpUnderstanding">Was versteht man unter FRP?</Label>
+        <Label htmlFor="frpUnderstanding">
+          Was versteht man unter FRP?
+          <span className="text-xs text-gray-500 ml-2">(min. 30 Zeichen)</span>
+        </Label>
         <Textarea
           id="frpUnderstanding"
           value={applicationData.frpUnderstanding}
-          onChange={(e) => updateApplicationData({ frpUnderstanding: e.target.value })}
+          onChange={(e) => {
+            const value = e.target.value;
+            updateApplicationData({ frpUnderstanding: value });
+            
+            if (value && value.length < 30) {
+              e.target.classList.add('border-red-300');
+            } else {
+              e.target.classList.remove('border-red-300');
+            }
+          }}
           placeholder="Erläutere dein Verständnis von Failed Roleplay (FRP)"
           required
+          className={applicationData.frpUnderstanding && !validateMinLength(applicationData.frpUnderstanding) ? 'border-red-300' : ''}
         />
+        {applicationData.frpUnderstanding && !validateMinLength(applicationData.frpUnderstanding) && (
+          <p className="text-xs text-red-500">Bitte schreibe mindestens 30 Zeichen</p>
+        )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="vdmUnderstanding">Was versteht man unter VDM?</Label>
+        <Label htmlFor="vdmUnderstanding">
+          Was versteht man unter VDM?
+          <span className="text-xs text-gray-500 ml-2">(min. 30 Zeichen)</span>
+        </Label>
         <Textarea
           id="vdmUnderstanding"
           value={applicationData.vdmUnderstanding}
-          onChange={(e) => updateApplicationData({ vdmUnderstanding: e.target.value })}
+          onChange={(e) => {
+            const value = e.target.value;
+            updateApplicationData({ vdmUnderstanding: value });
+            
+            if (value && value.length < 30) {
+              e.target.classList.add('border-red-300');
+            } else {
+              e.target.classList.remove('border-red-300');
+            }
+          }}
           placeholder="Erläutere dein Verständnis von Vehicle Deathmatch (VDM)"
           required
+          className={applicationData.vdmUnderstanding && !validateMinLength(applicationData.vdmUnderstanding) ? 'border-red-300' : ''}
         />
+        {applicationData.vdmUnderstanding && !validateMinLength(applicationData.vdmUnderstanding) && (
+          <p className="text-xs text-red-500">Bitte schreibe mindestens 30 Zeichen</p>
+        )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="taschenRpUnderstanding">Was versteht man unter Taschen RP?</Label>
+        <Label htmlFor="taschenRpUnderstanding">
+          Was versteht man unter Taschen RP?
+          <span className="text-xs text-gray-500 ml-2">(min. 30 Zeichen)</span>
+        </Label>
         <Textarea
           id="taschenRpUnderstanding"
           value={applicationData.taschenRpUnderstanding}
-          onChange={(e) => updateApplicationData({ taschenRpUnderstanding: e.target.value })}
+          onChange={(e) => {
+            const value = e.target.value;
+            updateApplicationData({ taschenRpUnderstanding: value });
+            
+            if (value && value.length < 30) {
+              e.target.classList.add('border-red-300');
+            } else {
+              e.target.classList.remove('border-red-300');
+            }
+          }}
           placeholder="Erläutere dein Verständnis von Taschen Roleplay"
           required
+          className={applicationData.taschenRpUnderstanding && !validateMinLength(applicationData.taschenRpUnderstanding) ? 'border-red-300' : ''}
         />
+        {applicationData.taschenRpUnderstanding && !validateMinLength(applicationData.taschenRpUnderstanding) && (
+          <p className="text-xs text-red-500">Bitte schreibe mindestens 30 Zeichen</p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -152,44 +295,92 @@ const Step2 = () => {
 
 const Step3 = () => {
   const { applicationData, updateApplicationData } = useApplication();
+  
+  const validateMinLength = (value: string, minLength: number = 30) => {
+    return value.length >= minLength;
+  };
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <Label htmlFor="situationHandling">
           Es passiert eine Situation, die nicht im Regelwerk abgedeckt ist. Wie gehst du vor?
+          <span className="text-xs text-gray-500 ml-2">(min. 30 Zeichen)</span>
         </Label>
         <Textarea
           id="situationHandling"
           value={applicationData.situationHandling}
-          onChange={(e) => updateApplicationData({ situationHandling: e.target.value })}
+          onChange={(e) => {
+            const value = e.target.value;
+            updateApplicationData({ situationHandling: value });
+            
+            if (value && value.length < 30) {
+              e.target.classList.add('border-red-300');
+            } else {
+              e.target.classList.remove('border-red-300');
+            }
+          }}
           placeholder="Beschreibe deinen Umgang mit unklaren Situationen"
           required
+          className={applicationData.situationHandling && !validateMinLength(applicationData.situationHandling) ? 'border-red-300' : ''}
         />
+        {applicationData.situationHandling && !validateMinLength(applicationData.situationHandling) && (
+          <p className="text-xs text-red-500">Bitte schreibe mindestens 30 Zeichen</p>
+        )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="bodycamUnderstanding">Was verstehen wir unter der Bodycam Pflicht?</Label>
+        <Label htmlFor="bodycamUnderstanding">
+          Was verstehen wir unter der Bodycam Pflicht?
+          <span className="text-xs text-gray-500 ml-2">(min. 30 Zeichen)</span>
+        </Label>
         <Textarea
           id="bodycamUnderstanding"
           value={applicationData.bodycamUnderstanding}
-          onChange={(e) => updateApplicationData({ bodycamUnderstanding: e.target.value })}
+          onChange={(e) => {
+            const value = e.target.value;
+            updateApplicationData({ bodycamUnderstanding: value });
+            
+            if (value && value.length < 30) {
+              e.target.classList.add('border-red-300');
+            } else {
+              e.target.classList.remove('border-red-300');
+            }
+          }}
           placeholder="Erläutere dein Verständnis der Bodycam Pflicht"
           required
+          className={applicationData.bodycamUnderstanding && !validateMinLength(applicationData.bodycamUnderstanding) ? 'border-red-300' : ''}
         />
+        {applicationData.bodycamUnderstanding && !validateMinLength(applicationData.bodycamUnderstanding) && (
+          <p className="text-xs text-red-500">Bitte schreibe mindestens 30 Zeichen</p>
+        )}
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="friendRuleViolation">
           Ein Freund von dir verstößt gegen die Regeln. Was machst du?
+          <span className="text-xs text-gray-500 ml-2">(min. 30 Zeichen)</span>
         </Label>
         <Textarea
           id="friendRuleViolation"
           value={applicationData.friendRuleViolation}
-          onChange={(e) => updateApplicationData({ friendRuleViolation: e.target.value })}
+          onChange={(e) => {
+            const value = e.target.value;
+            updateApplicationData({ friendRuleViolation: value });
+            
+            if (value && value.length < 30) {
+              e.target.classList.add('border-red-300');
+            } else {
+              e.target.classList.remove('border-red-300');
+            }
+          }}
           placeholder="Beschreibe wie du mit Regelverstößen von Freunden umgehen würdest"
           required
+          className={applicationData.friendRuleViolation && !validateMinLength(applicationData.friendRuleViolation) ? 'border-red-300' : ''}
         />
+        {applicationData.friendRuleViolation && !validateMinLength(applicationData.friendRuleViolation) && (
+          <p className="text-xs text-red-500">Bitte schreibe mindestens 30 Zeichen</p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -262,7 +453,6 @@ const Step3 = () => {
   );
 };
 
-// Main Form with Step Navigation
 const ApplicationForm = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
@@ -270,23 +460,24 @@ const ApplicationForm = () => {
   const [showLoginAlert, setShowLoginAlert] = useState(false);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [ageBlocked, setAgeBlocked] = useState(false);
+  
   const { 
     applicationData, 
     currentStep, 
     goToNextStep, 
     goToPreviousStep, 
     totalSteps,
-    resetForm
+    resetForm,
+    updateApplicationData
   } = useApplication();
 
   useEffect(() => {
-    // Check if user is logged in via Supabase
     const getUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setUser(session.user);
         
-        // Pre-fill discord ID if available in user metadata
         if (session.user.user_metadata?.provider_id) {
           updateApplicationData({ discordId: session.user.user_metadata.provider_id });
         }
@@ -297,7 +488,6 @@ const ApplicationForm = () => {
     
     getUser();
 
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user || null);
@@ -315,26 +505,62 @@ const ApplicationForm = () => {
   }, []);
 
   const validateCurrentStep = () => {
+    const validateTextLength = (text: string) => text && text.length >= 30;
+    
     switch (currentStep) {
       case 1:
+        const isDiscordIdValid = /^\d{17,19}$/.test(applicationData.discordId || '');
+        const isRobloxIdValid = /^\d+$/.test(applicationData.robloxId || '');
+        
+        if (applicationData.age < 12 && !ageBlocked) {
+          toast({
+            title: "Altersbeschränkung",
+            description: "Du musst mindestens 12 Jahre alt sein, um dich zu bewerben.",
+            variant: "destructive"
+          });
+          setAgeBlocked(true);
+          return false;
+        }
+        
+        if (!isDiscordIdValid && applicationData.discordId) {
+          toast({
+            title: "Ungültige Discord ID",
+            description: "Bitte gib eine gültige Discord ID ein (17-19 Ziffern)",
+            variant: "destructive"
+          });
+          return false;
+        }
+        
+        if (!isRobloxIdValid && applicationData.robloxId) {
+          toast({
+            title: "Ungültige Roblox ID",
+            description: "Bitte gib eine gültige numerische Roblox ID ein",
+            variant: "destructive"
+          });
+          return false;
+        }
+        
         return Boolean(
           applicationData.robloxUsername &&
           applicationData.robloxId &&
           applicationData.discordId &&
-          applicationData.age
+          applicationData.age &&
+          isDiscordIdValid &&
+          isRobloxIdValid &&
+          !ageBlocked
         );
       case 2:
         return Boolean(
-          applicationData.frpUnderstanding &&
-          applicationData.vdmUnderstanding &&
-          applicationData.taschenRpUnderstanding &&
+          validateTextLength(applicationData.frpUnderstanding) &&
+          validateTextLength(applicationData.vdmUnderstanding) &&
+          validateTextLength(applicationData.taschenRpUnderstanding) &&
           applicationData.serverAgeUnderstanding
         );
       case 3:
         return Boolean(
-          applicationData.situationHandling &&
-          applicationData.bodycamUnderstanding &&
-          applicationData.friendRuleViolation &&
+          validateTextLength(applicationData.situationHandling) &&
+          validateTextLength(applicationData.bodycamUnderstanding) &&
+          validateTextLength(applicationData.friendRuleViolation) &&
           applicationData.activityLevel &&
           applicationData.acceptTerms
         );
@@ -353,7 +579,7 @@ const ApplicationForm = () => {
     } else {
       toast({
         title: "Fehlende Informationen",
-        description: "Bitte fülle alle erforderlichen Felder aus.",
+        description: "Bitte fülle alle erforderlichen Felder korrekt aus.",
         variant: "destructive"
       });
     }
@@ -368,7 +594,6 @@ const ApplicationForm = () => {
     setIsLoading(true);
     
     try {
-      // Insert application into Supabase
       const { data, error } = await supabase
         .from('applications')
         .insert({
@@ -388,7 +613,8 @@ const ApplicationForm = () => {
           admin_experience: applicationData.adminExperience,
           activity_level: applicationData.activityLevel,
           notes: applicationData.notes,
-          status: 'pending'
+          status: 'pending',
+          age_blocked: ageBlocked
         })
         .select();
 
@@ -399,7 +625,6 @@ const ApplicationForm = () => {
       setShowSubmitConfirm(false);
       setShowSuccessDialog(true);
       
-      // Reset form data
       resetForm();
 
     } catch (error: any) {
@@ -414,10 +639,6 @@ const ApplicationForm = () => {
     }
   };
 
-  // For auto-updating the discord ID field
-  const { updateApplicationData } = useApplication();
-
-  // Handle login redirection
   const handleLogin = () => {
     navigate('/login');
   };
@@ -426,9 +647,9 @@ const ApplicationForm = () => {
     <div className="flex flex-col min-h-screen">
       <Navbar />
       
-      <main className="flex-grow py-8 bg-gradient-to-b from-gray-50 to-white">
+      <main className="flex-grow py-8 bg-gradient-to-b from-indigo-50 to-purple-50">
         <div className="container mx-auto px-4 max-w-3xl">
-          <Card className="shadow-lg border-t-4 border-blue-600">
+          <Card className="shadow-lg border-t-4 border-indigo-600">
             <CardContent className="p-6">
               <div className="mb-6">
                 <h1 className="text-2xl font-bold text-center mb-2">Bewerbung</h1>
@@ -465,7 +686,8 @@ const ApplicationForm = () => {
                 
                 <Button
                   onClick={handleNextStep}
-                  disabled={isLoading}
+                  disabled={isLoading || (applicationData.age < 12 && currentStep === 1 && !ageBlocked)}
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
                 >
                   {currentStep === totalSteps ? (
                     <>
@@ -487,13 +709,12 @@ const ApplicationForm = () => {
       
       <Footer />
       
-      {/* Login Alert Dialog */}
       <AlertDialog open={showLoginAlert}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Anmeldung erforderlich</AlertDialogTitle>
             <AlertDialogDescription>
-              Du musst angemeldet sein, um eine Bewerbung einzureichen. Bitte melde dich mit deinem Discord-Account an.
+              Du musst angemeldet sein, um eine Bewerbung einzureichen. Bitte melde dich an.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -504,7 +725,6 @@ const ApplicationForm = () => {
         </AlertDialogContent>
       </AlertDialog>
       
-      {/* Confirm Submit Dialog */}
       <AlertDialog open={showSubmitConfirm} onOpenChange={setShowSubmitConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -525,7 +745,6 @@ const ApplicationForm = () => {
         </AlertDialogContent>
       </AlertDialog>
       
-      {/* Success Dialog */}
       <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -550,7 +769,6 @@ const ApplicationForm = () => {
   );
 };
 
-// Wrapper component that provides the ApplicationContext
 const ApplicationFormWrapper = () => {
   return (
     <ApplicationProvider>

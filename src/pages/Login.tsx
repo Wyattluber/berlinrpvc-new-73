@@ -8,11 +8,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Mail, KeyRound, AlertTriangle, ExternalLink, User, UserPlus, Shield } from 'lucide-react';
+import { Mail, KeyRound, AlertTriangle, ExternalLink, User, UserPlus, Shield, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { checkAdminAccount } from '@/utils/adminUtils';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -21,19 +22,23 @@ const Login = () => {
   // Login state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showDetailedError, setShowDetailedError] = useState(false);
   
   // Registration state
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [username, setUsername] = useState('');
   const [registerError, setRegisterError] = useState<string | null>(null);
   
   // Admin login state
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
@@ -69,31 +74,13 @@ const Login = () => {
   const handleDiscordLogin = async () => {
     try {
       setIsLoading(true);
-      setLoginError(null);
-      
-      const redirectUrl = `${window.location.origin}/profile`;
-      console.log("Redirect URL for Discord OAuth:", redirectUrl);
-      
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'discord',
-        options: {
-          redirectTo: redirectUrl,
-          scopes: 'identify email'
-        }
+      toast({
+        title: "Discord Login deaktiviert",
+        description: "Die Anmeldung mit Discord ist derzeit nicht verfügbar.",
+        variant: "default"
       });
-      
-      if (error) throw error;
-
     } catch (error: any) {
       console.error("Discord login error:", error);
-      setLoginError(error.message || "Es gab ein Problem bei der Anmeldung mit Discord.");
-      setShowDetailedError(true);
-      
-      toast({
-        title: "Anmeldefehler",
-        description: error.message || "Es gab ein Problem bei der Anmeldung mit Discord.",
-        variant: "destructive"
-      });
     } finally {
       setIsLoading(false);
     }
@@ -106,7 +93,7 @@ const Login = () => {
       setIsLoading(true);
       setLoginError(null);
       
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error, data } = await supabase.auth.signInWithPassword({
         email: email,
         password: password
       });
@@ -170,11 +157,9 @@ const Login = () => {
         description: "Dein Account wurde erstellt. Bitte bestätige deine E-Mail Adresse.",
       });
       
-      // In production, you would wait for email confirmation
-      // For now, directly navigate to profile
-      if (data.session) {
-        navigate('/profile');
-      }
+      // Switch to login tab after successful registration
+      document.getElementById('login-tab')?.click();
+      
     } catch (error: any) {
       console.error("Registration error:", error);
       setRegisterError(error.message || "Es gab ein Problem bei der Registrierung.");
@@ -205,6 +190,13 @@ const Login = () => {
         
         if (error) throw error;
         
+        // Check if user is an admin
+        const { exists } = await checkAdminAccount(adminEmail);
+        
+        if (!exists) {
+          throw new Error("Du hast keine Administrator-Berechtigungen");
+        }
+        
         // If authentication successful, show OTP input
         setShowOtpInput(true);
         toast({
@@ -217,30 +209,18 @@ const Login = () => {
         if (otpCode === "123456") { // Replace with actual OTP verification
           const user = await supabase.auth.getUser();
           
-          // Verify if user is admin (this would be checked against your admin_users table)
-          // This is a simplified example - in production you'd query your admin_users table
-          const { data, error } = await supabase.rpc('is_admin', {
-            user_uuid: user.data.user?.id
+          toast({
+            title: "Admin Login erfolgreich",
+            description: "Du wurdest als Administrator authentifiziert.",
           });
           
-          if (error) throw error;
+          // Store admin status in localStorage
+          localStorage.setItem('user', JSON.stringify({
+            ...user.data.user,
+            role: 'admin'
+          }));
           
-          if (data) {
-            toast({
-              title: "Admin Login erfolgreich",
-              description: "Du wurdest als Administrator authentifiziert.",
-            });
-            
-            // Store admin status in localStorage
-            localStorage.setItem('user', JSON.stringify({
-              ...user.data.user,
-              role: 'admin'
-            }));
-            
-            navigate('/admin');
-          } else {
-            throw new Error("Du hast keine Administrator-Berechtigungen");
-          }
+          navigate('/admin');
         } else {
           throw new Error("Ungültiger 2FA Code");
         }
@@ -287,7 +267,7 @@ const Login = () => {
             
             <Tabs defaultValue="login" className="w-full">
               <TabsList className="grid grid-cols-3 mb-4">
-                <TabsTrigger value="login" className="flex items-center gap-1">
+                <TabsTrigger id="login-tab" value="login" className="flex items-center gap-1">
                   <User size={16} />
                   <span>Login</span>
                 </TabsTrigger>
@@ -306,20 +286,19 @@ const Login = () => {
                 <div className="grid gap-4">
                   <Button
                     variant="outline"
-                    className="flex items-center gap-3 h-12 bg-indigo-50 hover:bg-indigo-100 text-indigo-700"
+                    className="flex items-center gap-3 h-12 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 opacity-60 cursor-not-allowed"
                     onClick={handleDiscordLogin}
-                    disabled={isLoading}
+                    disabled={true}
                   >
-                    {isLoading ? (
-                      <div className="animate-spin h-5 w-5 border-2 border-indigo-500 border-t-transparent rounded-full"></div>
-                    ) : (
+                    <div className="relative">
                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600">
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="M15.8 8.5a6 4.3 0 0 0 -7.6 0M14 11a1 1 0 1 0 2 0a1 1 0 0 0 -2 0M8 11a1 1 0 1 0 2 0a1 1 0 0 0 -2 0M12 14h.01"></path>
                         <path d="M8.5 16.5a8 5.3 0 0 0 7 0"></path>
                       </svg>
-                    )}
-                    Mit Discord anmelden
+                      <AlertTriangle size={12} className="absolute -top-1 -right-1 text-amber-500" />
+                    </div>
+                    Mit Discord anmelden (Deaktiviert)
                   </Button>
                  
                   <div className="relative flex justify-center text-xs uppercase">
@@ -352,13 +331,22 @@ const Login = () => {
                         <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                         <Input 
                           id="password"
-                          type="password" 
+                          type={showPassword ? "text" : "password"}
                           placeholder="••••••••"
-                          className="pl-10"
+                          className="pl-10 pr-10"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           required
                         />
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="icon" 
+                          className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-500"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </Button>
                       </div>
                     </div>
                     
@@ -448,13 +436,22 @@ const Login = () => {
                       <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <Input 
                         id="register-password"
-                        type="password" 
+                        type={showRegisterPassword ? "text" : "password"}
                         placeholder="••••••••"
-                        className="pl-10"
+                        className="pl-10 pr-10"
                         value={registerPassword}
                         onChange={(e) => setRegisterPassword(e.target.value)}
                         required
                       />
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-500"
+                        onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                      >
+                        {showRegisterPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </Button>
                     </div>
                   </div>
                   
@@ -464,13 +461,22 @@ const Login = () => {
                       <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <Input 
                         id="confirm-password"
-                        type="password" 
+                        type={showConfirmPassword ? "text" : "password"}
                         placeholder="••••••••"
-                        className="pl-10"
+                        className="pl-10 pr-10"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
                       />
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-500"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </Button>
                     </div>
                   </div>
                   
@@ -522,13 +528,22 @@ const Login = () => {
                           <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                           <Input 
                             id="admin-password"
-                            type="password" 
+                            type={showAdminPassword ? "text" : "password"}
                             placeholder="••••••••"
-                            className="pl-10"
+                            className="pl-10 pr-10"
                             value={adminPassword}
                             onChange={(e) => setAdminPassword(e.target.value)}
                             required
                           />
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="icon" 
+                            className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-500"
+                            onClick={() => setShowAdminPassword(!showAdminPassword)}
+                          >
+                            {showAdminPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </Button>
                         </div>
                       </div>
                     </>
