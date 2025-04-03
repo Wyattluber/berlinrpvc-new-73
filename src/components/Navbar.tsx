@@ -12,25 +12,25 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="bg-hamburg-blue text-white shadow-md">
+    <nav className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-md">
       <div className="container mx-auto px-4 py-3">
         <div className="flex justify-between items-center">
           <Link to="/" className="flex items-center">
-            <span className="font-bold text-xl">Notruf Hamburg</span>
+            <span className="font-bold text-xl bg-gradient-to-r from-blue-200 to-indigo-200 bg-clip-text text-transparent">BerlinRP-VC</span>
           </Link>
 
           {/* Desktop Menu */}
           <div className="hidden md:flex space-x-4">
-            <Link to="/" className="hover:text-hamburg-red py-2 px-3 rounded transition duration-300">
+            <Link to="/" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300">
               Home
             </Link>
-            <Link to="/apply" className="hover:text-hamburg-red py-2 px-3 rounded transition duration-300">
+            <Link to="/apply" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300">
               Bewerben
             </Link>
-            <Link to="/partners" className="hover:text-hamburg-red py-2 px-3 rounded transition duration-300">
+            <Link to="/partners" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300">
               Partner
             </Link>
-            <Button variant="default" className="bg-hamburg-red hover:bg-red-700 text-white rounded-md">
+            <Button variant="default" className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-md border-0 transition-all duration-300">
               <Link to="/apply/form">Jetzt Bewerben</Link>
             </Button>
           </div>
@@ -47,26 +47,26 @@ const Navbar = () => {
         {isOpen && (
           <div className="md:hidden mt-2 py-2">
             <Link to="/" 
-              className="block hover:bg-hamburg-red py-2 px-3 rounded transition duration-300"
+              className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300"
               onClick={toggleMenu}
             >
               Home
             </Link>
             <Link to="/apply" 
-              className="block hover:bg-hamburg-red py-2 px-3 rounded transition duration-300"
+              className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300"
               onClick={toggleMenu}
             >
               Bewerben
             </Link>
             <Link to="/partners" 
-              className="block hover:bg-hamburg-red py-2 px-3 rounded transition duration-300"
+              className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300"
               onClick={toggleMenu}
             >
               Partner
             </Link>
             <Button 
               variant="default" 
-              className="w-full mt-2 bg-hamburg-red hover:bg-red-700 text-white rounded-md"
+              className="w-full mt-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-md border-0"
               onClick={toggleMenu}
             >
               <Link to="/apply/form" className="w-full">Jetzt Bewerben</Link>

@@ -25,12 +25,14 @@ export default {
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
-				hamburg: {
-					red: "#D50C2D",
-					blue: "#13294B",
-					lightblue: "#3A7FBC",
-					gray: "#F0F0F0",
-					dark: "#222222",
+				berlin: {
+					blue: "#3A7FBC",
+					indigo: "#4F46E5",
+					purple: "#7C3AED",
+					pink: "#EC4899",
+					lightblue: "#7DD3FC", 
+					gray: "#F3F4F6",
+					dark: "#1F2937",
 				},
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
@@ -92,11 +94,31 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'pulse': {
+					'0%, 100%': {
+						opacity: '1'
+					},
+					'50%': {
+						opacity: '0.5'
+					}
+				},
+				'fade-in': {
+					'0%': {
+						opacity: '0',
+						transform: 'translateY(10px)'
+					},
+					'100%': {
+						opacity: '1',
+						transform: 'translateY(0)'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'pulse': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+				'fade-in': 'fade-in 0.3s ease-out'
 			}
 		}
 	},
