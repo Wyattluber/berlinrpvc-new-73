@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Facebook, Instagram, Discord, Mail } from 'lucide-react';
+import { Facebook, Instagram, MessageSquare, Mail } from 'lucide-react';
 
 const Footer = () => {
   return (
@@ -40,7 +40,7 @@ const Footer = () => {
             <h3 className="text-xl font-bold mb-4">Folge Uns</h3>
             <div className="flex space-x-4">
               <a href="#" aria-label="Discord" className="text-gray-300 hover:text-hamburg-red transition duration-300">
-                <Discord size={24} />
+                <MessageSquare size={24} />
               </a>
               <a href="#" aria-label="Instagram" className="text-gray-300 hover:text-hamburg-red transition duration-300">
                 <Instagram size={24} />
