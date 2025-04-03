@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, MessageSquare } from 'lucide-react';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -20,7 +20,7 @@ const Navbar = () => {
           </Link>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex space-x-4">
+          <div className="hidden md:flex space-x-4 items-center">
             <Link to="/" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300">
               Home
             </Link>
@@ -30,6 +30,15 @@ const Navbar = () => {
             <Link to="/partners" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300">
               Partner
             </Link>
+            <a 
+              href="https://discord.gg/berlinrpvc" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:text-blue-200 py-2 px-3 rounded transition duration-300 flex items-center gap-1"
+            >
+              <MessageSquare size={18} />
+              <span>Discord</span>
+            </a>
             <Button variant="default" className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-md border-0 transition-all duration-300">
               <Link to="/apply/form">Jetzt Bewerben</Link>
             </Button>
@@ -64,6 +73,16 @@ const Navbar = () => {
             >
               Partner
             </Link>
+            <a 
+              href="https://discord.gg/berlinrpvc" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-1"
+              onClick={toggleMenu}
+            >
+              <MessageSquare size={18} />
+              <span>Discord</span>
+            </a>
             <Button 
               variant="default" 
               className="w-full mt-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-md border-0"

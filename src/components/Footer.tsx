@@ -39,16 +39,16 @@ const Footer = () => {
           <div>
             <h3 className="text-xl font-bold mb-4 bg-gradient-to-r from-blue-300 to-indigo-300 bg-clip-text text-transparent">Folge Uns</h3>
             <div className="flex space-x-4">
-              <a href="#" aria-label="Discord" className="text-blue-100 hover:text-white transition duration-300">
+              <a href="https://discord.gg/berlinrpvc" target="_blank" rel="noopener noreferrer" aria-label="Discord" className="text-blue-100 hover:text-white transition duration-300 transform hover:scale-110">
                 <MessageSquare size={24} />
               </a>
-              <a href="#" aria-label="Instagram" className="text-blue-100 hover:text-white transition duration-300">
+              <a href="#" aria-label="Instagram" className="text-blue-100 hover:text-white transition duration-300 transform hover:scale-110">
                 <Instagram size={24} />
               </a>
-              <a href="#" aria-label="Facebook" className="text-blue-100 hover:text-white transition duration-300">
+              <a href="#" aria-label="Facebook" className="text-blue-100 hover:text-white transition duration-300 transform hover:scale-110">
                 <Facebook size={24} />
               </a>
-              <a href="mailto:info@example.com" aria-label="Email" className="text-blue-100 hover:text-white transition duration-300">
+              <a href="mailto:info@example.com" aria-label="Email" className="text-blue-100 hover:text-white transition duration-300 transform hover:scale-110">
                 <Mail size={24} />
               </a>
             </div>
