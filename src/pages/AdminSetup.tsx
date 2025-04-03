@@ -7,6 +7,7 @@ import { toast } from '@/hooks/use-toast';
 import { createAdminAccount, checkAdminAccount } from '@/utils/adminUtils';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminSetup = () => {
   const navigate = useNavigate();
@@ -22,13 +23,23 @@ const AdminSetup = () => {
     // Check if the admin account already exists
     const checkExistingAccount = async () => {
       try {
-        const { exists } = await checkAdminAccount(adminEmail);
-        if (exists) {
+        // Check if user with this email exists in admin_users table
+        const { data, error } = await supabase
+          .from('admin_users')
+          .select('*')
+          .eq('email', adminEmail);
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          console.log("Admin account exists:", data);
           setIsSuccess(true);
           toast({
             title: "Admin-Konto existiert bereits",
             description: "Das Admin-Konto ist bereits eingerichtet.",
           });
+        } else {
+          console.log("Admin account does not exist yet");
         }
       } catch (err) {
         console.error("Error checking admin account:", err);
@@ -43,13 +54,17 @@ const AdminSetup = () => {
     setError(null);
     
     try {
-      await createAdminAccount(adminEmail, adminPassword);
+      console.log("Creating admin account with email:", adminEmail);
+      const result = await createAdminAccount(adminEmail, adminPassword);
+      console.log("Admin account creation result:", result);
+      
       setIsSuccess(true);
       toast({
         title: "Admin-Konto erstellt",
         description: "Das Admin-Konto wurde erfolgreich eingerichtet!",
       });
     } catch (err: any) {
+      console.error("Error creating admin account:", err);
       setError(err.message || "Fehler bei der Erstellung des Admin-Kontos");
       toast({
         title: "Fehler",
@@ -85,7 +100,7 @@ const AdminSetup = () => {
               <AlertTitle className="text-green-800">Admin-Konto eingerichtet</AlertTitle>
               <AlertDescription className="text-green-700">
                 Das Admin-Konto mit der E-Mail {adminEmail} wurde erfolgreich erstellt.
-                Du kannst dich jetzt mit diesen Zugangsdaten einloggen.
+                Du kannst dich jetzt mit diesen Zugangsdaten im Admin-Bereich einloggen.
               </AlertDescription>
             </Alert>
           ) : (

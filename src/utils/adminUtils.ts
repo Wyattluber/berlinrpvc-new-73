@@ -7,7 +7,7 @@ export const createAdminAccount = async (email: string, password: string) => {
     // Step 1: Check if a user with this email already exists
     const { data: existingUsers, error: userCheckError } = await supabase
       .from('admin_users')
-      .select('*')
+      .select('email')
       .eq('email', email);
 
     if (userCheckError) throw userCheckError;

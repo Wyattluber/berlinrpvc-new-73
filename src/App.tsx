@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
+import { isUserAdmin } from '@/utils/adminUtils';
 import Index from "./pages/Index";
 import Apply from "./pages/Apply";
 import Partners from "./pages/Partners";
@@ -22,17 +23,35 @@ const queryClient = new QueryClient();
 const App = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     // Check current auth status
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setLoading(false);
+      
+      // Check if user is admin
+      if (session?.user) {
+        isUserAdmin().then(adminStatus => {
+          setIsAdmin(adminStatus);
+          setLoading(false);
+        });
+      } else {
+        setLoading(false);
+      }
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
+      
+      // Update admin status when auth changes
+      if (session?.user) {
+        const adminStatus = await isUserAdmin();
+        setIsAdmin(adminStatus);
+      } else {
+        setIsAdmin(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -64,7 +83,7 @@ const App = () => {
             />
             <Route 
               path="/admin" 
-              element={<Admin />} 
+              element={isAdmin ? <Admin /> : <Navigate to={session ? "/profile" : "/login"} />} 
             />
             <Route path="/subservers" element={<SubServers />} />
             <Route path="/admin-setup" element={<AdminSetup />} />

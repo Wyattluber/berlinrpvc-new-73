@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -181,21 +180,44 @@ const Login = () => {
       setIsLoading(true);
       setAdminError(null);
       
+      // For debugging
+      console.log("Admin login attempt with:", adminEmail);
+      
       if (!showOtpInput) {
-        // First step: Authenticate with email/password
-        const { error } = await supabase.auth.signInWithPassword({
+        // First step: Standard authentication with email/password
+        const { data, error } = await supabase.auth.signInWithPassword({
           email: adminEmail,
           password: adminPassword
         });
         
-        if (error) throw error;
+        if (error) {
+          console.error("Admin auth error:", error);
+          throw error;
+        }
+        
+        if (!data.user) {
+          throw new Error("Authentifizierung fehlgeschlagen");
+        }
+        
+        console.log("User authenticated, checking if admin:", data.user.id);
         
         // Check if user is an admin
-        const { exists } = await checkAdminAccount(adminEmail);
+        const { data: adminData, error: adminError } = await supabase
+          .from('admin_users')
+          .select('*')
+          .eq('user_id', data.user.id);
         
-        if (!exists) {
+        if (adminError) {
+          console.error("Admin check error:", adminError);
+          throw adminError;
+        }
+        
+        if (!adminData || adminData.length === 0) {
+          console.error("Not an admin:", data.user.id);
           throw new Error("Du hast keine Administrator-Berechtigungen");
         }
+        
+        console.log("Admin verified, showing 2FA input");
         
         // If authentication successful, show OTP input
         setShowOtpInput(true);
@@ -204,21 +226,18 @@ const Login = () => {
           description: "Ein zweiter Faktor ist für Admin-Logins erforderlich.",
         });
       } else {
-        // Second step: Verify OTP (in a real app, this would check against a real 2FA system)
-        // Here we're just simulating - in a real app you would use TOTP verification
-        if (otpCode === "123456") { // Replace with actual OTP verification
-          const user = await supabase.auth.getUser();
+        // Second step: Verify OTP
+        console.log("Verifying 2FA code:", otpCode);
+        
+        // For testing, accept any 6-digit code
+        // In production, implement real 2FA
+        if (otpCode.length === 6) {
+          console.log("2FA verified, redirecting to admin");
           
           toast({
             title: "Admin Login erfolgreich",
             description: "Du wurdest als Administrator authentifiziert.",
           });
-          
-          // Store admin status in localStorage
-          localStorage.setItem('user', JSON.stringify({
-            ...user.data.user,
-            role: 'admin'
-          }));
           
           navigate('/admin');
         } else {
@@ -571,7 +590,7 @@ const Login = () => {
                           </InputOTP>
                         </div>
                         <div className="text-center text-xs text-gray-500 mt-2">
-                          <p>Testcode: 123456</p>
+                          <p>Für Test-Zwecke: Beliebiger 6-stelliger Code</p>
                         </div>
                       </div>
                     </div>
