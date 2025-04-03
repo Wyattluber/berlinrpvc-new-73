@@ -30,9 +30,6 @@ const Index = () => {
               Deine Community für den privaten BerlinRP-VC Server
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Button size="lg" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 border-0">
-                <Link to="/apply" className="flex items-center gap-2">Bewerben</Link>
-              </Button>
               <Button 
                 size="lg" 
                 variant="outline" 

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Menu, X, User, LogOut } from 'lucide-react';
+import { Menu, X, User, LogOut, Settings } from 'lucide-react';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -50,15 +50,20 @@ const Navbar = () => {
             <Link to="/partners" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300">
               Partner
             </Link>
+            <Link to="/subservers" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300">
+              Unterserver
+            </Link>
             
             {isLoggedIn ? (
               <>
-                <Link to="/profile" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300">
-                  Profil
+                <Link to="/profile" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300 flex items-center gap-1">
+                  <User size={18} />
+                  <span>Profil</span>
                 </Link>
                 {isAdmin && (
-                  <Link to="/admin" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300">
-                    Admin
+                  <Link to="/admin" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300 flex items-center gap-1">
+                    <Settings size={18} />
+                    <span>Admin</span>
                   </Link>
                 )}
                 <Button variant="ghost" className="hover:text-blue-200 text-white" onClick={handleLogout}>
@@ -105,24 +110,32 @@ const Navbar = () => {
             >
               Partner
             </Link>
+            <Link to="/subservers" 
+              className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300"
+              onClick={toggleMenu}
+            >
+              Unterserver
+            </Link>
             {isLoggedIn ? (
               <>
                 <Link to="/profile"
-                  className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300"
+                  className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-2"
                   onClick={toggleMenu}
                 >
-                  Profil
+                  <User size={18} />
+                  <span>Profil</span>
                 </Link>
                 {isAdmin && (
                   <Link to="/admin"
-                    className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300"
+                    className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-2"
                     onClick={toggleMenu}
                   >
-                    Admin
+                    <Settings size={18} />
+                    <span>Admin</span>
                   </Link>
                 )}
                 <button
-                  className="block w-full text-left hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-1"
+                  className="block w-full text-left hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-2"
                   onClick={() => {
                     handleLogout();
                     toggleMenu();
@@ -134,7 +147,7 @@ const Navbar = () => {
               </>
             ) : (
               <Link to="/login"
-                className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-1"
+                className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-2"
                 onClick={toggleMenu}
               >
                 <User size={18} />
