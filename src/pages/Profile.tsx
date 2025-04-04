@@ -74,6 +74,7 @@ const Profile = () => {
   const [emailUpdateMessage, setEmailUpdateMessage] = useState('');
   const [emailUpdateSuccess, setEmailUpdateSuccess] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isModerator, setIsModerator] = useState(false); // Added moderator state
   const [activeSeasonApplications, setActiveSeasonApplications] = useState<Application[]>([]);
   const [previousSeasonApplications, setPreviousSeasonApplications] = useState<Application[]>([]);
   const [teamSettings, setTeamSettings] = useState<any>(null);
@@ -165,8 +166,20 @@ const Profile = () => {
           setRobloxId(profileData.roblox_id || '');
         }
         
+        // Check for admin status
         const adminStatus = await checkIsAdmin();
         setIsAdmin(adminStatus);
+        
+        // Check for moderator status by querying admin_users with role = 'moderator'
+        const { data: modData, error: modError } = await supabase
+          .from('admin_users')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .eq('role', 'moderator');
+          
+        if (!modError && modData && modData.length > 0) {
+          setIsModerator(true);
+        }
         
         refetchApplications();
       } catch (error: any) {
@@ -391,7 +404,7 @@ const Profile = () => {
   };
 
   const isAdminOrModerator = () => {
-    return isAdmin;
+    return isAdmin || isModerator;
   };
   
   const handleAddUserRole = async () => {
@@ -415,6 +428,9 @@ const Profile = () => {
     setRoleUserEmail('');
     setRoleType('moderator');
   };
+
+  // Determine if the Bewerbungen tab should be shown
+  const showApplicationsTab = !isAdminOrModerator();
 
   if (loading) {
     return (
@@ -473,7 +489,9 @@ const Profile = () => {
                 <TabsList className="w-full rounded-none border-b">
                   <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
                   <TabsTrigger value="account">Konto</TabsTrigger>
-                  <TabsTrigger value="applications">Bewerbungen</TabsTrigger>
+                  {showApplicationsTab && (
+                    <TabsTrigger value="applications">Bewerbungen</TabsTrigger>
+                  )}
                   <TabsTrigger value="security">Sicherheit</TabsTrigger>
                   {(isAdmin || session?.user?.email === 'admin@berlinrpvc.de') && (
                     <TabsTrigger value="admin">Admin Dashboard</TabsTrigger>
@@ -496,49 +514,51 @@ const Profile = () => {
                       </CardContent>
                     </Card>
 
-                    <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between items-center">
-                          <CardTitle className="text-lg font-medium text-purple-800">Deine Bewerbungen</CardTitle>
-                          <Bell className="h-5 w-5 text-purple-500" />
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        {isApplicationsLoading ? (
-                          <div className="text-sm text-gray-600">Lade Bewerbungen...</div>
-                        ) : activeSeasonApplications.length > 0 ? (
-                          <div className="space-y-2">
-                            <div className="text-sm mb-2">
-                              <span className="font-medium">Anzahl: </span> 
-                              {activeSeasonApplications.length}
-                            </div>
-                            {activeSeasonApplications.slice(0, 3).map((app) => (
-                              <div key={app.id} className="text-sm p-2 bg-white rounded-md border border-purple-200 shadow-sm">
-                                <p className="font-medium">Status: {app.status}</p>
-                                <p className="text-xs text-gray-500">
-                                  {new Date(app.created_at).toLocaleDateString('de-DE')}
-                                </p>
+                    {!isAdminOrModerator() && (
+                      <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                        <CardHeader className="pb-2">
+                          <div className="flex justify-between items-center">
+                            <CardTitle className="text-lg font-medium text-purple-800">Deine Bewerbungen</CardTitle>
+                            <Bell className="h-5 w-5 text-purple-500" />
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          {isApplicationsLoading ? (
+                            <div className="text-sm text-gray-600">Lade Bewerbungen...</div>
+                          ) : activeSeasonApplications.length > 0 ? (
+                            <div className="space-y-2">
+                              <div className="text-sm mb-2">
+                                <span className="font-medium">Anzahl: </span> 
+                                {activeSeasonApplications.length}
                               </div>
-                            ))}
-                            {activeSeasonApplications.length > 3 && (
-                              <Button 
-                                variant="link" 
-                                className="text-purple-600 p-0 h-auto text-sm"
-                                onClick={() => handleTabChange('applications')}
-                              >
-                                Alle {activeSeasonApplications.length} Bewerbungen anzeigen
-                              </Button>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-gray-600">
-                            Du hast noch keine Bewerbungen eingereicht.
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
+                              {activeSeasonApplications.slice(0, 3).map((app) => (
+                                <div key={app.id} className="text-sm p-2 bg-white rounded-md border border-purple-200 shadow-sm">
+                                  <p className="font-medium">Status: {app.status}</p>
+                                  <p className="text-xs text-gray-500">
+                                    {new Date(app.created_at).toLocaleDateString('de-DE')}
+                                  </p>
+                                </div>
+                              ))}
+                              {activeSeasonApplications.length > 3 && (
+                                <Button 
+                                  variant="link" 
+                                  className="text-purple-600 p-0 h-auto text-sm"
+                                  onClick={() => handleTabChange('applications')}
+                                >
+                                  Alle {activeSeasonApplications.length} Bewerbungen anzeigen
+                                </Button>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-sm text-gray-600">
+                              Du hast noch keine Bewerbungen eingereicht.
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
 
-                    <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                    <Card className={`bg-gradient-to-br from-green-50 to-green-100 border-green-200 ${isAdminOrModerator() ? "md:col-span-2" : ""}`}>
                       <CardHeader className="pb-2">
                         <div className="flex justify-between items-center">
                           <CardTitle className="text-lg font-medium text-green-800">Account Status</CardTitle>
@@ -570,6 +590,14 @@ const Profile = () => {
                               <span className="text-sm">Rolle</span>
                               <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
                                 Administrator
+                              </span>
+                            </div>
+                          )}
+                          {isModerator && !isAdmin && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm">Rolle</span>
+                              <span className="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full">
+                                Moderator
                               </span>
                             </div>
                           )}
@@ -746,76 +774,78 @@ const Profile = () => {
                   </div>
                 </TabsContent>
                 
-                <TabsContent value="applications" className="p-6 space-y-4">
-                  <CardTitle>Deine Bewerbungen</CardTitle>
-                  <CardDescription>Hier findest du eine Übersicht deiner bisherigen Bewerbungen.</CardDescription>
-                  
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold">Aktuelle Saison</h3>
-                      <p className="text-sm text-gray-500">
-                        Anzahl Bewerbungen: {activeSeasonApplications.length}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {isApplicationsLoading ? (
-                    <div className="flex items-center justify-center">
-                      <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
-                      Lade Bewerbungen...
-                    </div>
-                  ) : applicationsError ? (
-                    <p className="text-red-500">Fehler beim Laden der Bewerbungen.</p>
-                  ) : activeSeasonApplications.length === 0 ? (
-                    <p>Du hast noch keine Bewerbungen in der aktuellen Saison eingereicht.</p>
-                  ) : (
-                    <Accordion type="single" collapsible>
-                      {activeSeasonApplications.map((app) => (
-                        <AccordionItem key={app.id} value={app.id}>
-                          <AccordionTrigger>
-                            {new Date(app.created_at).toLocaleDateString()} - {app.status}
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <p>
-                              Bewerbungsstatus: {app.status}
-                              <br />
-                              Erstellt am: {new Date(app.created_at).toLocaleString()}
-                              <br />
-                              Zuletzt aktualisiert: {new Date(app.updated_at).toLocaleString()}
-                            </p>
-                          </AccordionContent>
-                        </AccordionItem>
-                      ))}
-                    </Accordion>
-                  )}
-                  
-                  {previousSeasonApplications.length > 0 && (
-                    <>
-                      <Separator className="my-6" />
-                      <div className="mt-8">
-                        <h3 className="text-lg font-semibold mb-4">Vorherige Saisons</h3>
-                        <Accordion type="single" collapsible>
-                          {previousSeasonApplications.map((app) => (
-                            <AccordionItem key={app.id} value={app.id}>
-                              <AccordionTrigger>
-                                {new Date(app.created_at).toLocaleDateString()} - {app.status}
-                              </AccordionTrigger>
-                              <AccordionContent>
-                                <p>
-                                  Bewerbungsstatus: {app.status}
-                                  <br />
-                                  Erstellt am: {new Date(app.created_at).toLocaleString()}
-                                  <br />
-                                  Zuletzt aktualisiert: {new Date(app.updated_at).toLocaleString()}
-                                </p>
-                              </AccordionContent>
-                            </AccordionItem>
-                          ))}
-                        </Accordion>
+                {showApplicationsTab && (
+                  <TabsContent value="applications" className="p-6 space-y-4">
+                    <CardTitle>Deine Bewerbungen</CardTitle>
+                    <CardDescription>Hier findest du eine Übersicht deiner bisherigen Bewerbungen.</CardDescription>
+                    
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold">Aktuelle Saison</h3>
+                        <p className="text-sm text-gray-500">
+                          Anzahl Bewerbungen: {activeSeasonApplications.length}
+                        </p>
                       </div>
-                    </>
-                  )}
-                </TabsContent>
+                    </div>
+                    
+                    {isApplicationsLoading ? (
+                      <div className="flex items-center justify-center">
+                        <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
+                        Lade Bewerbungen...
+                      </div>
+                    ) : applicationsError ? (
+                      <p className="text-red-500">Fehler beim Laden der Bewerbungen.</p>
+                    ) : activeSeasonApplications.length === 0 ? (
+                      <p>Du hast noch keine Bewerbungen in der aktuellen Saison eingereicht.</p>
+                    ) : (
+                      <Accordion type="single" collapsible>
+                        {activeSeasonApplications.map((app) => (
+                          <AccordionItem key={app.id} value={app.id}>
+                            <AccordionTrigger>
+                              {new Date(app.created_at).toLocaleDateString()} - {app.status}
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              <p>
+                                Bewerbungsstatus: {app.status}
+                                <br />
+                                Erstellt am: {new Date(app.created_at).toLocaleString()}
+                                <br />
+                                Zuletzt aktualisiert: {new Date(app.updated_at).toLocaleString()}
+                              </p>
+                            </AccordionContent>
+                          </AccordionItem>
+                        ))}
+                      </Accordion>
+                    )}
+                    
+                    {previousSeasonApplications.length > 0 && (
+                      <>
+                        <Separator className="my-6" />
+                        <div className="mt-8">
+                          <h3 className="text-lg font-semibold mb-4">Vorherige Saisons</h3>
+                          <Accordion type="single" collapsible>
+                            {previousSeasonApplications.map((app) => (
+                              <AccordionItem key={app.id} value={app.id}>
+                                <AccordionTrigger>
+                                  {new Date(app.created_at).toLocaleDateString()} - {app.status}
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                  <p>
+                                    Bewerbungsstatus: {app.status}
+                                    <br />
+                                    Erstellt am: {new Date(app.created_at).toLocaleString()}
+                                    <br />
+                                    Zuletzt aktualisiert: {new Date(app.updated_at).toLocaleString()}
+                                  </p>
+                                </AccordionContent>
+                              </AccordionItem>
+                            ))}
+                          </Accordion>
+                        </div>
+                      </>
+                    )}
+                  </TabsContent>
+                )}
                 
                 <TabsContent value="security" className="p-6 space-y-4">
                   <CardTitle>Sicherheitseinstellungen</CardTitle>
