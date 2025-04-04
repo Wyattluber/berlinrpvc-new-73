@@ -45,13 +45,21 @@ export async function fetchApplications() {
     }
     
     // Transform data to include username from profiles
-    const transformedData = data.map(app => ({
-      ...app,
-      // Check if profiles exists and has a valid shape before accessing username
-      username: app.profiles && typeof app.profiles === 'object' && 'username' in app.profiles 
-        ? (app.profiles as { username: string | null }).username 
-        : null
-    }));
+    const transformedData = data.map(app => {
+      // Safely handle profiles data which might be null
+      const profileData = app.profiles;
+      let username = null;
+      
+      if (profileData && typeof profileData === 'object') {
+        // Use type assertion after checking the object structure
+        username = 'username' in profileData ? (profileData as { username: string | null }).username : null;
+      }
+      
+      return {
+        ...app,
+        username
+      };
+    });
     
     // Cache the result
     applicationsCache = { 
