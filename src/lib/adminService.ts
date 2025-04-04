@@ -567,62 +567,63 @@ export async function createApplicationSeason(name: string) {
 /**
  * Add a user to admin users with a specific role
  */
-export async function addAdminUserRole(userId: string, role: 'admin' | 'moderator') {
+export async function addAdminUserRole(userId: string, role: 'admin' | 'moderator' = 'admin') {
   const isAdmin = await checkIsAdmin();
   if (!isAdmin) {
-    return { success: false, message: 'Nur Admins können Benutzerrollen vergeben' };
+    return { success: false, message: 'Keine Berechtigung' };
   }
   
   try {
+    // Check if user exists
+    const { data: userData, error: userError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .single();
+      
+    if (userError || !userData) {
+      return { success: false, message: 'Benutzer nicht gefunden' };
+    }
+    
     // Check if user already has a role
-    const { data: existingRole, error: checkError } = await supabase
+    const { data: existingRole, error: roleError } = await supabase
       .from('admin_users')
       .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
+      .eq('user_id', userId);
       
-    if (checkError) {
-      throw checkError;
-    }
-    
-    let result;
-    
-    if (existingRole) {
+    if (!roleError && existingRole && existingRole.length > 0) {
       // Update existing role
-      result = await supabase
+      const { error: updateError } = await supabase
         .from('admin_users')
         .update({ role })
-        .eq('user_id', userId)
-        .select();
-    } else {
-      // Insert new role
-      result = await supabase
-        .from('admin_users')
-        .insert([{
-          user_id: userId,
-          role
-        }])
-        .select();
+        .eq('user_id', userId);
+        
+      if (updateError) {
+        throw updateError;
+      }
+      
+      return { 
+        success: true, 
+        message: `Benutzerrolle wurde auf ${role === 'admin' ? 'Administrator' : 'Moderator'} aktualisiert.` 
+      };
     }
     
-    if (result.error) {
-      throw result.error;
+    // Add new role
+    const { error: insertError } = await supabase
+      .from('admin_users')
+      .insert({ user_id: userId, role });
+      
+    if (insertError) {
+      throw insertError;
     }
-    
-    // Invalidate cache
-    adminUsersCache = null;
     
     return { 
       success: true, 
-      message: 'Benutzerrolle erfolgreich aktualisiert',
-      data: result.data
+      message: `${role === 'admin' ? 'Administrator' : 'Moderator'}-Rolle wurde erfolgreich zugewiesen.` 
     };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error adding admin user role:', error);
-    return { 
-      success: false, 
-      message: error.message || 'Fehler beim Hinzufügen der Benutzerrolle' 
-    };
+    return { success: false, message: 'Fehler beim Hinzufügen der Benutzerrolle' };
   }
 }
 
@@ -632,7 +633,7 @@ export async function addAdminUserRole(userId: string, role: 'admin' | 'moderato
 export async function findUserByEmailOrUsername(query: string) {
   const isAdmin = await checkIsAdmin();
   if (!isAdmin) {
-    return { success: false, message: 'Nur Admins können Benutzer suchen' };
+    return { success: false, message: 'Keine Berechtigung' };
   }
   
   try {
@@ -646,7 +647,7 @@ export async function findUserByEmailOrUsername(query: string) {
       // If it looks like a UUID, search by ID
       queryBuilder = queryBuilder.eq('id', query);
     } else {
-      // Otherwise search by username
+      // Otherwise search by username or patterns
       queryBuilder = queryBuilder.or(`username.ilike.%${query}%`);
     }
     
@@ -655,17 +656,11 @@ export async function findUserByEmailOrUsername(query: string) {
     if (error) {
       throw error;
     }
-    
-    return { 
-      success: true, 
-      data 
-    };
-  } catch (error: any) {
+
+    return { success: true, data };
+  } catch (error) {
     console.error('Error finding user:', error);
-    return { 
-      success: false, 
-      message: error.message || 'Fehler beim Suchen des Benutzers' 
-    };
+    return { success: false, message: 'Fehler beim Suchen des Benutzers' };
   }
 }
 
