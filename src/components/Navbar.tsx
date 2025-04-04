@@ -1,7 +1,7 @@
 
 import { useState, useContext, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, ChevronDown, LogOut, User, ShieldCheck } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User } from 'lucide-react';
 import { SessionContext } from '@/App';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -121,12 +121,6 @@ const Navbar = () => {
                     <User className="mr-2 h-4 w-4" />
                     <span>Mein Profil</span>
                   </DropdownMenuItem>
-                  {(isAdmin || isModerator) && (
-                    <DropdownMenuItem onClick={() => navigate('/profile?tab=admin')}>
-                      <ShieldCheck className="mr-2 h-4 w-4" />
-                      <span>Admin-Bereich</span>
-                    </DropdownMenuItem>
-                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />
@@ -222,20 +216,6 @@ const Navbar = () => {
               >
                 Mein Profil
               </Link>
-              
-              {(isAdmin || isModerator) && (
-                <Link
-                  to="/profile?tab=admin"
-                  className={`block px-3 py-2 rounded-md text-base font-medium ${
-                    location.pathname === '/profile' && location.search.includes('tab=admin')
-                    ? 'bg-blue-800 text-white' 
-                    : 'text-blue-100 hover:bg-blue-700 hover:text-white'
-                  }`}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Admin-Bereich
-                </Link>
-              )}
               
               <button
                 onClick={() => {
