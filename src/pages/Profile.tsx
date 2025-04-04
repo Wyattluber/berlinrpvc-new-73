@@ -7,12 +7,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Settings, User, Calendar, BarChart, AlertCircle, CheckCircle, Clock, KeyRound, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Settings, User, Calendar, BarChart, AlertCircle, CheckCircle, Clock, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AdminContext } from '@/App';
+import { SessionContext } from '@/App';
 
 interface UserProfile {
   id: string;
@@ -38,7 +38,7 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [applications, setApplications] = useState<Application[]>([]);
   const [isLoadingApplications, setIsLoadingApplications] = useState(false);
-  const isAdmin = useContext(AdminContext);
+  const session = useContext(SessionContext);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -78,8 +78,6 @@ const Profile = () => {
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
       if (!session) {
         navigate('/login');
         return;
@@ -96,7 +94,7 @@ const Profile = () => {
         id: user.id,
         name: user.user_metadata?.full_name || user.user_metadata?.name || user.user_metadata?.username || 'User',
         email: user.email || '',
-        role: isAdmin ? 'admin' : 'user',
+        role: 'user',
         discordId: user.user_metadata?.discord_id || '',
         avatar_url: user.user_metadata?.avatar_url || '',
       };
@@ -108,19 +106,7 @@ const Profile = () => {
     };
 
     checkUser();
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        if (!session) {
-          navigate('/login');
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate, isAdmin]);
+  }, [navigate, session]);
 
   const fetchApplications = async (userId: string) => {
     setIsLoadingApplications(true);
@@ -248,10 +234,6 @@ const Profile = () => {
 
   const getRoleName = (role: string) => {
     switch (role) {
-      case 'admin':
-        return 'Administrator';
-      case 'moderator':
-        return 'Moderator';
       default:
         return 'Benutzer';
     }
@@ -331,12 +313,6 @@ const Profile = () => {
                       <CardDescription className="text-xs truncate">{user.email}</CardDescription>
                     </div>
                   </div>
-                  {isAdmin && (
-                    <Badge className="mt-2 bg-red-500 text-white border-red-600 flex items-center justify-center gap-1">
-                      <ShieldCheck size={14} />
-                      Administrator
-                    </Badge>
-                  )}
                 </CardHeader>
                 <CardContent className="py-2">
                   <nav className="space-y-1">
@@ -458,16 +434,7 @@ const Profile = () => {
                             </div>
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium">Rolle:</span>
-                              {isAdmin ? (
-                                <Badge className="bg-red-500 text-white border-red-600 flex items-center gap-1">
-                                  <ShieldCheck size={12} />
-                                  Administrator
-                                </Badge>
-                              ) : (
-                                <span className="text-sm font-medium px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
-                                  {getRoleName(user.role)}
-                                </span>
-                              )}
+                              {getRoleName(user.role)}
                             </div>
                             {!discordId && (
                               <Button 

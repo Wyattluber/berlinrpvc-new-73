@@ -2,35 +2,22 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Menu, X, User, LogOut, ShieldCheck, Shield, Settings } from 'lucide-react';
+import { Menu, X, User, LogOut } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { AdminContext, ModeratorContext, UserRoleContext } from '@/App';
-import { Badge } from './ui/badge';
+import { SessionContext } from '@/App';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const isAdmin = useContext(AdminContext);
-  const isModerator = useContext(ModeratorContext);
-  const userRole = useContext(UserRoleContext);
+  const session = useContext(SessionContext);
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
     // Check auth status when component mounts or location changes
-    const checkAuthStatus = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session) {
-        setIsLoggedIn(true);
-      } else {
-        setIsLoggedIn(false);
-      }
-    };
-    
-    checkAuthStatus();
-  }, [location]);
+    setIsLoggedIn(!!session);
+  }, [session, location]);
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
@@ -61,25 +48,6 @@ const Navbar = () => {
     }
   };
 
-  const getUserRoleBadge = () => {
-    if (isAdmin) {
-      return (
-        <Badge variant="outline" className="ml-1 bg-red-500 text-white border-red-600 flex items-center gap-1">
-          <ShieldCheck size={12} />
-          Admin
-        </Badge>
-      );
-    } else if (isModerator) {
-      return (
-        <Badge variant="outline" className="ml-1 bg-blue-500 text-white border-blue-600 flex items-center gap-1">
-          <Shield size={12} />
-          Moderator
-        </Badge>
-      );
-    }
-    return null;
-  };
-
   return (
     <nav className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-md">
       <div className="container mx-auto px-4 py-3">
@@ -105,15 +73,7 @@ const Navbar = () => {
                 <Link to="/profile" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300 flex items-center gap-1">
                   <User size={18} />
                   <span>Profil</span>
-                  {getUserRoleBadge()}
                 </Link>
-                
-                {isAdmin && (
-                  <Link to="/admin" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300 flex items-center gap-1">
-                    <Settings size={18} />
-                    <span>Admin</span>
-                  </Link>
-                )}
                 
                 <Button variant="ghost" className="hover:text-blue-200 text-white" onClick={handleLogout}>
                   <div className="flex items-center gap-2">
@@ -173,18 +133,7 @@ const Navbar = () => {
                 >
                   <User size={18} />
                   <span>Profil</span>
-                  {getUserRoleBadge()}
                 </Link>
-                
-                {isAdmin && (
-                  <Link to="/admin"
-                    className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-2"
-                    onClick={toggleMenu}
-                  >
-                    <Settings size={18} />
-                    <span>Admin</span>
-                  </Link>
-                )}
                 
                 <button
                   className="block w-full text-left hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-2"

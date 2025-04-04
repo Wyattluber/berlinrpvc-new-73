@@ -7,7 +7,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect, createContext } from "react";
 import { supabase } from '@/integrations/supabase/client';
-import { checkIsAdmin, checkIsModerator, getUserRole } from '@/lib/admin';
 import Index from "./pages/Index";
 import Apply from "./pages/Apply";
 import Partners from "./pages/Partners";
@@ -16,12 +15,9 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import SubServers from "./pages/SubServers";
-import AdminPanel from "./pages/AdminPanel";
 
-// Create contexts for user roles
-export const AdminContext = createContext<boolean>(false);
-export const ModeratorContext = createContext<boolean>(false);
-export const UserRoleContext = createContext<string | null>(null);
+// Create context for session
+export const SessionContext = createContext<any>(null);
 
 const queryClient = new QueryClient();
 
@@ -62,9 +58,6 @@ class ErrorFallback extends React.Component<{ children: React.ReactNode }> {
 
 const App = () => {
   const [session, setSession] = useState<any>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  const [isModerator, setIsModerator] = useState<boolean>(false);
-  const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingError, setLoadingError] = useState<string | null>(null);
 
@@ -78,43 +71,16 @@ const App = () => {
         setLoading(false);
         setLoadingError("Loading timed out. Some features may not be available.");
       }
-    }, 3000); // Reduced from 5000ms to 3000ms for faster fallback
+    }, 2000); // Reduced to 2 seconds for faster fallback
 
     // Check current auth status
     const initializeAuth = async () => {
       try {
         // First, set up auth state change listener
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
           console.log("Auth state changed:", _event);
           if (!isMounted) return;
-          
           setSession(session);
-          
-          if (session) {
-            try {
-              // Check user roles when session changes
-              const [adminStatus, moderatorStatus, role] = await Promise.all([
-                checkIsAdmin(),
-                checkIsModerator(),
-                getUserRole()
-              ]);
-              
-              if (isMounted) {
-                setIsAdmin(adminStatus);
-                setIsModerator(moderatorStatus);
-                setUserRole(role);
-              }
-            } catch (error) {
-              console.error("Error during auth state change:", error);
-              if (isMounted) {
-                setLoadingError("Error updating user permissions");
-              }
-            }
-          } else if (isMounted) {
-            setIsAdmin(false);
-            setIsModerator(false);
-            setUserRole(null);
-          }
         });
 
         // Then check current session
@@ -123,23 +89,6 @@ const App = () => {
         if (isMounted) {
           console.log("Initial session check:", session ? "Logged in" : "Not logged in");
           setSession(session);
-          
-          if (session) {
-            // Perform role checks in parallel
-            const [adminStatus, moderatorStatus, role] = await Promise.all([
-              checkIsAdmin(),
-              checkIsModerator(),
-              getUserRole()
-            ]);
-            
-            if (isMounted) {
-              setIsAdmin(adminStatus);
-              setIsModerator(moderatorStatus);
-              setUserRole(role);
-            }
-          }
-          
-          // Complete loading regardless of session state
           setLoading(false);
         }
 
@@ -175,52 +124,44 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AdminContext.Provider value={isAdmin}>
-        <ModeratorContext.Provider value={isModerator}>
-          <UserRoleContext.Provider value={userRole}>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              {loadingError && (
-                <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 fixed top-0 left-0 right-0 z-50">
-                  <p>{loadingError}</p>
-                  <button 
-                    className="underline ml-2"
-                    onClick={() => setLoadingError(null)}
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              )}
-              <ErrorFallback>
-                <BrowserRouter>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/apply" element={<Apply />} />
-                    <Route path="/partners" element={<Partners />} />
-                    <Route path="/apply/form" element={<ApplicationForm />} />
-                    <Route 
-                      path="/login" 
-                      element={session ? <Navigate to="/profile" /> : <Login />} 
-                    />
-                    <Route 
-                      path="/profile" 
-                      element={session ? <Profile /> : <Navigate to="/login" />} 
-                    />
-                    <Route 
-                      path="/admin" 
-                      element={session && isAdmin ? <AdminPanel /> : <Navigate to="/profile" />} 
-                    />
-                    <Route path="/subservers" element={<SubServers />} />
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </BrowserRouter>
-              </ErrorFallback>
-            </TooltipProvider>
-          </UserRoleContext.Provider>
-        </ModeratorContext.Provider>
-      </AdminContext.Provider>
+      <SessionContext.Provider value={session}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          {loadingError && (
+            <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 fixed top-0 left-0 right-0 z-50">
+              <p>{loadingError}</p>
+              <button 
+                className="underline ml-2"
+                onClick={() => setLoadingError(null)}
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+          <ErrorFallback>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/apply" element={<Apply />} />
+                <Route path="/partners" element={<Partners />} />
+                <Route path="/apply/form" element={<ApplicationForm />} />
+                <Route 
+                  path="/login" 
+                  element={session ? <Navigate to="/profile" /> : <Login />} 
+                />
+                <Route 
+                  path="/profile" 
+                  element={session ? <Profile /> : <Navigate to="/login" />} 
+                />
+                <Route path="/subservers" element={<SubServers />} />
+                {/* Catch-all route */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </ErrorFallback>
+        </TooltipProvider>
+      </SessionContext.Provider>
     </QueryClientProvider>
   );
 };
