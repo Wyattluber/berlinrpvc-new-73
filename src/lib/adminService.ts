@@ -50,9 +50,10 @@ export async function fetchApplications() {
       const profileData = app.profiles;
       let username = null;
       
-      // Fix: Use explicit null check without optional chaining
+      // Fix: Use explicit type assertion after null check
       if (profileData !== null && typeof profileData === 'object') {
-        username = profileData.username || null;
+        // Use type assertion to tell TypeScript this is safe
+        username = (profileData as { username?: string | null }).username || null;
       }
       
       return {
