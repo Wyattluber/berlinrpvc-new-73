@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -73,7 +74,7 @@ interface AdminUser {
 const Profile = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { session } = useContext(SessionContext);
+  const session = useContext(SessionContext);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isModerator, setIsModerator] = useState(false);
@@ -123,6 +124,11 @@ const Profile = () => {
     }
   }, [searchParams]);
 
+  // Set greeting based on time of day
+  useEffect(() => {
+    setGreeting(getTimeBasedGreeting());
+  }, []);
+
   // Fetch user data on mount
   useEffect(() => {
     const fetchUserData = async () => {
@@ -139,35 +145,29 @@ const Profile = () => {
           return;
         }
 
-        // Get user profile data
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (error) throw error;
-
+        // Get user profile data from auth metadata first
         const userData: UserProfile = {
           id: user.id,
-          name: profile.full_name || user.email?.split('@')[0] || 'User',
+          name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
           email: user.email || '',
-          avatar_url: user.user_metadata?.avatar_url || profile.avatar_url,
-          discord_id: profile.discord_id || '',
-          roblox_id: profile.roblox_id || '',
-          username_changed_at: profile.username_changed_at,
+          avatar_url: user.user_metadata?.avatar_url,
+          discord_id: user.user_metadata?.discord_id,
+          roblox_id: user.user_metadata?.roblox_id,
+          username_changed_at: user.user_metadata?.username_changed_at,
         };
 
         setUser(userData);
-        setUsername(profile.username || user.email?.split('@')[0] || 'User');
-        setDiscordId(profile.discord_id || '');
-        setRobloxId(profile.roblox_id || '');
-        setVerifiedDiscordId(profile.discord_id || '');
-        setVerifiedRobloxId(profile.roblox_id || '');
+        setUsername(userData.name);
+        setDiscordId(userData.discord_id || '');
+        setRobloxId(userData.roblox_id || '');
+        setVerifiedDiscordId(userData.discord_id || '');
+        setVerifiedRobloxId(userData.roblox_id || '');
 
         // Check username cooldown
-        const cooldownData = await checkUsernameCooldown(profile.username_changed_at);
-        setUsernameCooldown(cooldownData);
+        if (userData.username_changed_at) {
+          const cooldownData = await checkUsernameCooldown(new Date(userData.username_changed_at));
+          setUsernameCooldown(cooldownData);
+        }
 
         // Check if user is admin or moderator
         const adminStatus = await checkIsAdmin();
@@ -214,7 +214,23 @@ const Profile = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setApplications(data || []);
+      
+      // Transform the data to match the Application interface
+      const formattedApplications = data.map(app => ({
+        id: app.id,
+        user_id: app.user_id,
+        roblox_username: app.roblox_username,
+        discord_username: app.discord_id,
+        age: app.age,
+        experience: app.admin_experience || '',
+        motivation: app.notes || '',
+        status: app.status as 'pending' | 'approved' | 'rejected',
+        created_at: app.created_at,
+        updated_at: app.updated_at,
+        admin_notes: app.notes
+      }));
+      
+      setApplications(formattedApplications);
     } catch (error) {
       console.error('Error fetching applications:', error);
     }
@@ -229,7 +245,23 @@ const Profile = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setAllApplications(data || []);
+      
+      // Transform the data to match the Application interface
+      const formattedApplications = data.map(app => ({
+        id: app.id,
+        user_id: app.user_id,
+        roblox_username: app.roblox_username,
+        discord_username: app.discord_id,
+        age: app.age,
+        experience: app.admin_experience || '',
+        motivation: app.notes || '',
+        status: app.status as 'pending' | 'approved' | 'rejected',
+        created_at: app.created_at,
+        updated_at: app.updated_at,
+        admin_notes: app.notes
+      }));
+      
+      setAllApplications(formattedApplications);
     } catch (error) {
       console.error('Error fetching all applications:', error);
     } finally {
@@ -272,13 +304,12 @@ const Profile = () => {
     
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
+      const { error } = await supabase.auth.updateUser({
+        data: {
           discord_id: discordId,
           roblox_id: robloxId,
-        })
-        .eq('id', user.id);
+        }
+      });
 
       if (error) throw error;
 
@@ -314,7 +345,7 @@ const Profile = () => {
     if (!validation.valid) {
       toast({
         title: "Ungültiger Benutzername",
-        description: validation.message,
+        description: validation.reason || "Der Benutzername ist ungültig",
         variant: "destructive"
       });
       return;
@@ -334,14 +365,13 @@ const Profile = () => {
         return;
       }
 
-      // Update username
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          username: newUsername,
+      // Update username in auth metadata
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          name: newUsername,
           username_changed_at: new Date().toISOString(),
-        })
-        .eq('id', user.id);
+        }
+      });
 
       if (error) throw error;
 
@@ -349,7 +379,7 @@ const Profile = () => {
       setIsUsernameDialogOpen(false);
       
       // Update cooldown
-      const cooldownData = await checkUsernameCooldown(new Date().toISOString());
+      const cooldownData = await checkUsernameCooldown(new Date());
       setUsernameCooldown(cooldownData);
 
       toast({
@@ -505,7 +535,7 @@ const Profile = () => {
         .from('applications')
         .update({
           status,
-          admin_notes: adminNotes,
+          notes: adminNotes,
           updated_at: new Date().toISOString()
         })
         .eq('id', selectedApplication.id);
@@ -746,14 +776,6 @@ const Profile = () => {
 
       if (signInError) throw signInError;
 
-      // Delete user data from profiles table
-      const { error: deleteProfileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', user.id);
-
-      if (deleteProfileError) throw deleteProfileError;
-
       // Delete user from auth
       const { error: deleteUserError } = await supabase.auth.admin.deleteUser(
         user.id
@@ -828,15 +850,9 @@ const Profile = () => {
     return userId.substring(0, 8) + '...';
   };
 
-  const get30DaysAgo = () => {
-    const date = new Date();
-    date.setDate(date.getDate() - 30);
-    return date.toISOString();
-  };
-
   const hasModifiedIds = discordId !== verifiedDiscordId || robloxId !== verifiedRobloxId;
 
-  // Replace handleFileUpload and handleFileChange with the new component integration
+  // Profile image update handler
   const handleProfileImageUpdated = (newAvatarUrl: string) => {
     if (user) {
       setUser({
@@ -1620,7 +1636,7 @@ const Profile = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <Alert variant="destructive">
+            <Alert variant="default" className="border-red-200 bg-red-50 text-red-700">
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Achtung</AlertTitle>
               <AlertDescription>
