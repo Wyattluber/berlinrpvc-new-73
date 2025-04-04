@@ -340,6 +340,8 @@ export async function getTotalUserCount(): Promise<number> {
     // First try to get the count from the RPC function
     // Check if the RPC function exists by doing a safe call
     try {
+      // We need to use any here because the RPC function is not in the TypeScript types
+      // @ts-ignore - Ignore the TypeScript error for the RPC function
       const { data, error } = await supabase.rpc('get_auth_user_count');
       
       if (!error && data !== null && typeof data === 'number') {
