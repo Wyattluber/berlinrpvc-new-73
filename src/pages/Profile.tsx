@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -1282,7 +1281,18 @@ const Profile = () => {
                   {/* Team Members Management */}
                   <Card>
                     <CardHeader>
-                      <CardTitle>Teammitglieder</CardTitle>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                          <Users className="h-5 w-5 text-blue-500" />
+                          Teamverwaltung
+                        </h3>
+                        <div className="flex items-center">
+                          <div className="bg-blue-100 text-blue-800 text-xs font-medium px-3 py-1 rounded-full flex items-center">
+                            <Users className="h-3.5 w-3.5 mr-1" />
+                            {userCount} Mitglieder
+                          </div>
+                        </div>
+                      </div>
                       <CardDescription>Verwalte Admin- und Moderatorenrechte</CardDescription>
                     </CardHeader>
                     <CardContent>

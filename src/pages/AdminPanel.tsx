@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -60,14 +60,22 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(true);
   const [editUserId, setEditUserId] = useState<string | null>(null);
   const [editRole, setEditRole] = useState('');
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = useState(false);
   const [userCount, setUserCount] = useState(0);
   const [usernames, setUsernames] = useState<Record<string, string>>({});
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+
+  // Use useMemo to prevent unnecessary re-renders
+  const memoizedUsers = useMemo(() => users, [users]);
 
   useEffect(() => {
-    fetchUsers();
-    fetchUserCount();
-  }, []);
+    // Only fetch data once during initial load
+    if (!initialLoadComplete) {
+      fetchUsers();
+      fetchUserCount();
+      setInitialLoadComplete(true);
+    }
+  }, [initialLoadComplete]);
 
   const fetchUserCount = async () => {
     try {
@@ -149,7 +157,13 @@ const AdminPanel = () => {
         title: "Erfolgreich",
         description: "Benutzer erfolgreich aktualisiert.",
       });
-      fetchUsers();
+      
+      // Update the local state to avoid a full refetch
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === editUserId ? { ...user, role: editRole } : user
+        )
+      );
     } catch (error) {
       console.error('Error updating user:', error);
       toast({
@@ -180,7 +194,9 @@ const AdminPanel = () => {
           title: "Erfolgreich",
           description: "Benutzer erfolgreich gelöscht.",
         });
-        fetchUsers();
+        
+        // Update local state instead of refetching
+        setUsers(prevUsers => prevUsers.filter(user => user.id !== id));
       } catch (error) {
         console.error('Error deleting user:', error);
         toast({
@@ -247,7 +263,7 @@ const AdminPanel = () => {
                     <CardDescription>Benutzer mit Admin-Rechten</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-4xl font-bold text-green-600">{users.length}</div>
+                    <div className="text-4xl font-bold text-green-600">{memoizedUsers.length}</div>
                   </CardContent>
                   <CardFooter className="text-sm text-gray-500">
                     Teamverwaltung unten ansehen
@@ -301,7 +317,7 @@ const AdminPanel = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {users.map((user) => (
+                        {memoizedUsers.map((user) => (
                           <TableRow key={user.id}>
                             <TableCell className="font-medium">{user.id.substring(0, 6)}...</TableCell>
                             <TableCell className="flex items-center gap-2">

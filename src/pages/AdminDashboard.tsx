@@ -1,5 +1,5 @@
 
-import React, { useEffect, useContext } from 'react';
+import React, { useEffect, useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SessionContext } from '@/App';
 import { checkIsAdmin } from '@/lib/admin';
@@ -10,8 +10,11 @@ import Footer from '@/components/Footer';
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const session = useContext(SessionContext);
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const checkAdminStatus = async () => {
       try {
         if (!session?.user) {
@@ -21,20 +24,33 @@ const AdminDashboard = () => {
 
         const adminStatus = await checkIsAdmin();
         
-        if (adminStatus) {
-          // Redirect to the new admin section in the profile page
-          navigate('/profile');
-        } else {
+        // Only navigate if the component is still mounted
+        if (isMounted) {
+          setIsChecking(false);
+          // Always redirect to profile page with admin section
           navigate('/profile');
         }
       } catch (error) {
         console.error("Error checking admin status:", error);
-        navigate('/profile');
+        if (isMounted) {
+          setIsChecking(false);
+          navigate('/profile');
+        }
       }
     };
     
     checkAdminStatus();
+    
+    // Cleanup function to prevent navigation after unmount
+    return () => {
+      isMounted = false;
+    };
   }, [session, navigate]);
+
+  // Only show loading indicator if still checking
+  if (!isChecking) {
+    return null;
+  }
 
   return (
     <div className="flex flex-col min-h-screen">

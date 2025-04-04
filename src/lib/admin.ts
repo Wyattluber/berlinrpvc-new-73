@@ -334,17 +334,27 @@ export async function hasSubmittedApplication(userId: string) {
 
 /**
  * Get count of all users in the Supabase auth system
+ * Improved with caching to prevent excessive requests
  */
+let userCountCache: { count: number; timestamp: number } | null = null;
+const CACHE_TTL = 60 * 1000; // 1 minute in milliseconds
+
 export async function getTotalUserCount(): Promise<number> {
   try {
+    // Check if we have a valid cache
+    const now = Date.now();
+    if (userCountCache && (now - userCountCache.timestamp) < CACHE_TTL) {
+      return userCountCache.count;
+    }
+
     // First try to get the count from the RPC function
-    // Check if the RPC function exists by doing a safe call
     try {
-      // We need to use any here because the RPC function is not in the TypeScript types
       // @ts-ignore - Ignore the TypeScript error for the RPC function
       const { data, error } = await supabase.rpc('get_auth_user_count');
       
       if (!error && data !== null && typeof data === 'number') {
+        // Cache the result
+        userCountCache = { count: data, timestamp: now };
         return data;
       }
     } catch (rpcError) {
@@ -360,13 +370,16 @@ export async function getTotalUserCount(): Promise<number> {
     
     if (fallbackError) {
       console.error('Error getting admin_users count:', fallbackError);
-      return 0;
+      return userCountCache?.count || 0; // Return cached count if available
     }
     
-    return fallbackCount || 0;
+    // Cache the fallback result
+    const count = fallbackCount || 0;
+    userCountCache = { count, timestamp: now };
+    return count;
   } catch (error) {
     console.error('Error getting user count:', error);
-    return 0;
+    return userCountCache?.count || 0; // Return cached count if available
   }
 }
 
