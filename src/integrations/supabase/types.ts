@@ -185,6 +185,45 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_servers: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          logo_url: string | null
+          members: number | null
+          name: string
+          owner: string | null
+          type: string | null
+          updated_at: string
+          website: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          members?: number | null
+          name: string
+          owner?: string | null
+          type?: string | null
+          updated_at?: string
+          website: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          logo_url?: string | null
+          members?: number | null
+          name?: string
+          owner?: string | null
+          type?: string | null
+          updated_at?: string
+          website?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

@@ -1,24 +1,24 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { LoaderIcon, PlusCircle, Edit, Trash2, ExternalLink, Upload, ImageIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { toast } from '@/hooks/use-toast';
-import { Pencil, Trash2, Plus, Upload, ExternalLink, Info } from 'lucide-react';
-import { useDropzone } from 'react-dropzone';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface Partner {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   website: string;
-  owner: string;
+  owner: string | null;
   members: number;
   type: string;
   logo_url: string;
@@ -26,268 +26,320 @@ interface Partner {
   updated_at: string;
 }
 
-const defaultPartner: Omit<Partner, 'id' | 'created_at' | 'updated_at'> = {
-  name: '',
-  description: '',
-  website: '',
-  owner: '',
-  members: 0,
-  type: 'small',
-  logo_url: '/placeholder.svg'
-};
+interface PartnerFormData {
+  name: string;
+  description: string;
+  website: string;
+  owner: string;
+  members: number;
+  type: string;
+  logo_url: string;
+  logo_file: File | null;
+}
 
 const PartnerServersManagement = () => {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
-  const [formData, setFormData] = useState<Omit<Partner, 'id' | 'created_at' | 'updated_at'>>(defaultPartner);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
-  const { getRootProps, getInputProps } = useDropzone({
-    accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.svg']
-    },
-    multiple: false,
-    onDrop: handleImageDrop
+  const [formOpen, setFormOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [currentPartnerId, setCurrentPartnerId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<PartnerFormData>({
+    name: '',
+    description: '',
+    website: '',
+    owner: '',
+    members: 0,
+    type: 'small',
+    logo_url: '',
+    logo_file: null
   });
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [partnerToDelete, setPartnerToDelete] = useState<string | null>(null);
+  const [uploadLoading, setUploadLoading] = useState(false);
 
   useEffect(() => {
     fetchPartners();
   }, []);
 
-  async function fetchPartners() {
+  const fetchPartners = async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from('partner_servers')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('name', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(error.message);
+      }
+
       setPartners(data || []);
     } catch (error: any) {
       console.error('Error fetching partners:', error);
       toast({
         title: 'Fehler',
-        description: `Partner konnten nicht geladen werden: ${error.message}`,
-        variant: 'destructive'
+        description: 'Partner konnten nicht geladen werden: ' + error.message,
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  async function handleImageDrop(acceptedFiles: File[]) {
-    if (acceptedFiles.length === 0) return;
-    
-    const file = acceptedFiles[0];
-    setUploading(true);
-    
-    try {
-      // Create preview URL for immediate display
-      const objectUrl = URL.createObjectURL(file);
-      setPreviewUrl(objectUrl);
-      
-      // Upload to Supabase Storage
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-      const filePath = `partner_logos/${fileName}`;
-      
-      const { data, error } = await supabase.storage
-        .from('partners')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-        
-      if (error) throw error;
-      
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('partners')
-        .getPublicUrl(filePath);
-        
-      setFormData({
-        ...formData,
-        logo_url: urlData.publicUrl
-      });
-      
-      toast({
-        title: 'Erfolg',
-        description: 'Logo wurde erfolgreich hochgeladen.'
-      });
-      
-    } catch (error: any) {
-      console.error('Error uploading image:', error);
-      toast({
-        title: 'Fehler beim Hochladen',
-        description: error.message,
-        variant: 'destructive'
-      });
-    } finally {
-      setUploading(false);
-    }
-  }
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      description: '',
+      website: '',
+      owner: '',
+      members: 0,
+      type: 'small',
+      logo_url: '',
+      logo_file: null
+    });
+    setLogoPreview(null);
+    setIsEditMode(false);
+    setCurrentPartnerId(null);
+  };
 
-  function startAdd() {
-    setFormData(defaultPartner);
-    setPreviewUrl(null);
-    setIsAdding(true);
-  }
+  const openAddDialog = () => {
+    resetForm();
+    setFormOpen(true);
+  };
 
-  function startEdit(partner: Partner) {
-    setSelectedPartner(partner);
+  const openEditDialog = (partner: Partner) => {
     setFormData({
       name: partner.name,
-      description: partner.description,
+      description: partner.description || '',
       website: partner.website,
-      owner: partner.owner,
+      owner: partner.owner || '',
       members: partner.members,
       type: partner.type,
-      logo_url: partner.logo_url
+      logo_url: partner.logo_url,
+      logo_file: null
     });
-    setPreviewUrl(partner.logo_url);
-    setIsEditing(true);
-  }
+    setLogoPreview(partner.logo_url);
+    setIsEditMode(true);
+    setCurrentPartnerId(partner.id);
+    setFormOpen(true);
+  };
 
-  function confirmDelete(partner: Partner) {
-    setSelectedPartner(partner);
-    setIsDeleteDialogOpen(true);
-  }
-
-  async function handleSave() {
-    if (!formData.name || !formData.website) {
-      toast({
-        title: 'Fehler',
-        description: 'Name und Website sind erforderlich.',
-        variant: 'destructive'
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFormData({
+        ...formData,
+        logo_file: file
       });
-      return;
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
+  };
 
+  const uploadLogo = async (file: File, partnerId: string): Promise<string> => {
+    setUploadLoading(true);
     try {
-      if (isAdding) {
-        // Add new partner
-        const { data, error } = await supabase
-          .from('partner_servers')
-          .insert([
-            {
-              name: formData.name,
-              description: formData.description,
-              website: formData.website,
-              owner: formData.owner,
-              members: formData.members,
-              type: formData.type,
-              logo_url: formData.logo_url
-            }
-          ])
-          .select();
-
-        if (error) throw error;
-
-        toast({
-          title: 'Erfolg',
-          description: 'Partner wurde erfolgreich hinzugefügt.'
+      const fileExt = file.name.split('.').pop();
+      const filePath = `partner_logos/${partnerId}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('partners')
+        .upload(filePath, file, {
+          upsert: true,
+          contentType: file.type
         });
-      } else if (isEditing && selectedPartner) {
+      
+      if (uploadError) {
+        throw new Error(`Fehler beim Hochladen des Logos: ${uploadError.message}`);
+      }
+      
+      const { data } = supabase.storage.from('partners').getPublicUrl(filePath);
+      return data.publicUrl;
+    } catch (error: any) {
+      console.error('Error uploading logo:', error);
+      throw error;
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      // Validate form
+      if (!formData.name || !formData.website) {
+        toast({
+          title: 'Fehler',
+          description: 'Name und Website sind Pflichtfelder.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Process website URL
+      let website = formData.website;
+      if (!website.startsWith('http://') && !website.startsWith('https://')) {
+        website = 'https://' + website;
+      }
+      
+      let logo_url = formData.logo_url;
+      
+      // Handle logo upload if there's a new file
+      if (formData.logo_file) {
+        try {
+          // For new partners, we need a temporary ID for the file name
+          const tempId = isEditMode ? currentPartnerId! : crypto.randomUUID();
+          logo_url = await uploadLogo(formData.logo_file, tempId);
+        } catch (error: any) {
+          toast({
+            title: 'Fehler beim Hochladen',
+            description: error.message,
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+      
+      if (isEditMode && currentPartnerId) {
         // Update existing partner
         const { error } = await supabase
           .from('partner_servers')
           .update({
             name: formData.name,
-            description: formData.description,
-            website: formData.website,
-            owner: formData.owner,
+            description: formData.description || null,
+            website: website,
+            owner: formData.owner || null,
             members: formData.members,
             type: formData.type,
-            logo_url: formData.logo_url,
+            logo_url: logo_url,
             updated_at: new Date().toISOString()
           })
-          .eq('id', selectedPartner.id);
-
+          .eq('id', currentPartnerId);
+        
         if (error) throw error;
-
+        
         toast({
           title: 'Erfolg',
-          description: 'Partner wurde erfolgreich aktualisiert.'
+          description: 'Partner erfolgreich aktualisiert.',
+        });
+      } else {
+        // Create new partner
+        const { data, error } = await supabase
+          .from('partner_servers')
+          .insert({
+            name: formData.name,
+            description: formData.description || null,
+            website: website,
+            owner: formData.owner || null,
+            members: formData.members,
+            type: formData.type,
+            logo_url: logo_url
+          })
+          .select();
+        
+        if (error) throw error;
+        
+        // If we have a new partner and a logo file, we need to re-upload with the correct ID
+        if (formData.logo_file && data && data.length > 0) {
+          const partnerId = data[0].id;
+          try {
+            const finalLogoUrl = await uploadLogo(formData.logo_file, partnerId);
+            
+            // Update the partner with the final logo URL
+            await supabase
+              .from('partner_servers')
+              .update({ logo_url: finalLogoUrl })
+              .eq('id', partnerId);
+          } catch (error) {
+            console.error('Error re-uploading logo with final ID:', error);
+          }
+        }
+        
+        toast({
+          title: 'Erfolg',
+          description: 'Neuer Partner erfolgreich hinzugefügt.',
         });
       }
-
-      // Reset state and fetch updated list
-      setIsAdding(false);
-      setIsEditing(false);
-      setSelectedPartner(null);
-      setPreviewUrl(null);
+      
+      // Refresh partner list and close dialog
       fetchPartners();
+      setFormOpen(false);
+      resetForm();
     } catch (error: any) {
-      console.error('Error saving partner:', error);
+      console.error('Error submitting partner:', error);
       toast({
         title: 'Fehler',
-        description: error.message,
-        variant: 'destructive'
+        description: error.message || 'Es ist ein Fehler aufgetreten.',
+        variant: 'destructive',
       });
     }
-  }
+  };
 
-  async function handleDelete() {
-    if (!selectedPartner) return;
+  const confirmDelete = (id: string) => {
+    setPartnerToDelete(id);
+    setDeleteDialogOpen(true);
+  };
 
+  const handleDelete = async () => {
+    if (!partnerToDelete) return;
+    
     try {
+      // Get the partner to get the logo URL
+      const { data: partner } = await supabase
+        .from('partner_servers')
+        .select('logo_url')
+        .eq('id', partnerToDelete)
+        .single();
+      
+      // Delete the partner
       const { error } = await supabase
         .from('partner_servers')
         .delete()
-        .eq('id', selectedPartner.id);
-
+        .eq('id', partnerToDelete);
+      
       if (error) throw error;
-
-      // If logo is not the placeholder, delete it from storage
-      if (selectedPartner.logo_url && !selectedPartner.logo_url.includes('placeholder')) {
-        const logoPath = selectedPartner.logo_url.split('/').pop();
-        if (logoPath) {
+      
+      // Try to delete the logo if it exists and is not the default
+      if (partner && partner.logo_url && !partner.logo_url.includes('/placeholder.svg')) {
+        try {
+          // Extract the file path from the URL
+          const urlParts = partner.logo_url.split('/');
+          const fileName = urlParts[urlParts.length - 1];
+          const filePath = `partner_logos/${fileName}`;
+          
           await supabase.storage
             .from('partners')
-            .remove([`partner_logos/${logoPath}`]);
+            .remove([filePath]);
+        } catch (storageError) {
+          console.error('Error deleting logo file:', storageError);
         }
       }
-
+      
       toast({
         title: 'Erfolg',
-        description: 'Partner wurde erfolgreich gelöscht.'
+        description: 'Partner erfolgreich gelöscht.',
       });
-
-      setIsDeleteDialogOpen(false);
-      setSelectedPartner(null);
+      
+      // Refresh list and close dialog
       fetchPartners();
+      setDeleteDialogOpen(false);
+      setPartnerToDelete(null);
     } catch (error: any) {
       console.error('Error deleting partner:', error);
       toast({
         title: 'Fehler',
-        description: error.message,
-        variant: 'destructive'
+        description: error.message || 'Es ist ein Fehler aufgetreten.',
+        variant: 'destructive',
       });
     }
-  }
+  };
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'members' ? parseInt(value) || 0 : value
-    }));
-  }
-
-  function handleSelectChange(value: string) {
-    setFormData(prev => ({
-      ...prev,
-      type: value
-    }));
-  }
-
-  function getPartnerTypeLabel(type: string) {
+  const getPartnerTypeLabel = (type: string) => {
     switch (type) {
       case 'small':
         return 'Kleiner Server';
@@ -298,287 +350,269 @@ const PartnerServersManagement = () => {
       default:
         return type;
     }
-  }
+  };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Partner Server</CardTitle>
-            <CardDescription>Verwalte die Partner Server deines Projekts</CardDescription>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+        <div>
+          <CardTitle>Partner Server</CardTitle>
+          <CardDescription>Verwalte deine Partner Server und Kooperationen</CardDescription>
+        </div>
+        <Button onClick={openAddDialog} className="flex items-center space-x-2">
+          <PlusCircle className="h-4 w-4 mr-2" />
+          Neuen Partner hinzufügen
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex items-center justify-center p-8">
+            <LoaderIcon className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-          <Button onClick={startAdd}>
-            <Plus className="mr-2 h-4 w-4" />
-            Neuer Partner
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center items-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-            </div>
-          ) : partners.length === 0 ? (
-            <div className="text-center p-8 border rounded-md">
-              <Info className="mx-auto h-12 w-12 text-gray-400 mb-3" />
-              <p className="text-gray-500">Keine Partner gefunden.</p>
-              <p className="text-sm text-gray-400 mt-1">
-                Füge deinen ersten Partner Server mit dem "Neuer Partner" Button hinzu.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[50px]">Logo</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Beschreibung</TableHead>
+                  <TableHead>Owner</TableHead>
+                  <TableHead>Mitglieder</TableHead>
+                  <TableHead>Art</TableHead>
+                  <TableHead className="text-right">Aktionen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {partners.length === 0 ? (
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Typ</TableHead>
-                    <TableHead>Owner</TableHead>
-                    <TableHead>Mitglieder</TableHead>
-                    <TableHead>Website</TableHead>
-                    <TableHead className="w-[120px]">Aktionen</TableHead>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      Keine Partner gefunden. Füge deinen ersten Partner hinzu!
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {partners.map((partner) => (
+                ) : (
+                  partners.map((partner) => (
                     <TableRow key={partner.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0">
+                      <TableCell>
+                        <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                          {partner.logo_url ? (
                             <img 
-                              src={partner.logo_url || '/placeholder.svg'} 
-                              alt={partner.name} 
+                              src={partner.logo_url} 
+                              alt={`${partner.name} Logo`} 
                               className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = '/placeholder.svg';
+                              }}
                             />
-                          </div>
-                          <span>{partner.name}</span>
+                          ) : (
+                            <ImageIcon className="h-5 w-5 text-gray-400" />
+                          )}
                         </div>
                       </TableCell>
-                      <TableCell>{getPartnerTypeLabel(partner.type)}</TableCell>
-                      <TableCell>{partner.owner}</TableCell>
+                      <TableCell className="font-medium">{partner.name}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">
+                        {partner.description || '-'}
+                      </TableCell>
+                      <TableCell>{partner.owner || '-'}</TableCell>
                       <TableCell>{partner.members}</TableCell>
                       <TableCell>
-                        <a 
-                          href={partner.website} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center text-blue-500 hover:text-blue-700"
-                        >
-                          <ExternalLink className="h-4 w-4 mr-1" />
-                          Link
-                        </a>
+                        <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                          {getPartnerTypeLabel(partner.type)}
+                        </span>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
+                      <TableCell className="text-right">
+                        <div className="flex justify-end space-x-2">
                           <Button 
                             variant="outline" 
-                            size="sm" 
-                            onClick={() => startEdit(partner)}
+                            size="icon"
+                            asChild
                           >
-                            <Pencil className="h-4 w-4" />
+                            <a href={partner.website} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="icon"
+                            onClick={() => openEditDialog(partner)}
+                          >
+                            <Edit className="h-4 w-4" />
                           </Button>
                           <Button 
                             variant="destructive" 
-                            size="sm"
-                            onClick={() => confirmDelete(partner)}
+                            size="icon"
+                            onClick={() => confirmDelete(partner.id)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
 
-      {/* Edit/Add Dialog */}
-      <Dialog 
-        open={isEditing || isAdding} 
-        onOpenChange={(open) => {
-          if (!open) {
-            setIsEditing(false);
-            setIsAdding(false);
-            setSelectedPartner(null);
-            setPreviewUrl(null);
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-[600px]">
+      {/* Add/Edit Partner Dialog */}
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent className="sm:max-w-[625px]">
           <DialogHeader>
-            <DialogTitle>
-              {isAdding ? 'Neuen Partner hinzufügen' : 'Partner bearbeiten'}
-            </DialogTitle>
+            <DialogTitle>{isEditMode ? 'Partner bearbeiten' : 'Neuen Partner hinzufügen'}</DialogTitle>
             <DialogDescription>
-              Fülle alle erforderlichen Felder aus, um einen Partner zu {isAdding ? 'erstellen' : 'aktualisieren'}.
+              {isEditMode 
+                ? 'Bearbeite die Details des Partner Servers.' 
+                : 'Füge einen neuen Partner Server oder eine Kooperation hinzu.'}
             </DialogDescription>
           </DialogHeader>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-            <div className="space-y-4 md:col-span-1">
+          <div className="grid gap-6 py-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name *</Label>
                 <Input 
                   id="name" 
-                  name="name" 
                   value={formData.name} 
-                  onChange={handleChange} 
-                  placeholder="Discord Server Name"
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  placeholder="Server Name"
+                  required
                 />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="owner">Owner</Label>
-                <Input 
-                  id="owner" 
-                  name="owner" 
-                  value={formData.owner} 
-                  onChange={handleChange} 
-                  placeholder="Discord Username"
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="members">Mitglieder</Label>
-                  <Input 
-                    id="members" 
-                    name="members" 
-                    type="number" 
-                    value={formData.members} 
-                    onChange={handleChange} 
-                    placeholder="0"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Typ</Label>
-                  <Select 
-                    value={formData.type}
-                    onValueChange={handleSelectChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Typ auswählen" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="small">Kleiner Server</SelectItem>
-                      <SelectItem value="large">Großer Server</SelectItem>
-                      <SelectItem value="cooperation">Kooperation</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="website">Discord Invite Link *</Label>
+                <Label htmlFor="website">Website *</Label>
                 <Input 
                   id="website" 
-                  name="website" 
                   value={formData.website} 
-                  onChange={handleChange} 
-                  placeholder="https://discord.gg/..."
+                  onChange={(e) => setFormData({...formData, website: e.target.value})}
+                  placeholder="https://example.com"
+                  required
                 />
               </div>
             </div>
             
-            <div className="space-y-4 md:col-span-1">
+            <div className="space-y-2">
+              <Label htmlFor="description">Beschreibung</Label>
+              <Textarea 
+                id="description" 
+                value={formData.description} 
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                placeholder="Kurze Beschreibung des Servers..."
+                rows={3}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Server Logo</Label>
-                <div 
-                  {...getRootProps()} 
-                  className="border-2 border-dashed rounded-md p-4 text-center cursor-pointer hover:bg-gray-50 transition"
-                >
-                  <input {...getInputProps()} />
-                  
-                  {previewUrl ? (
-                    <div className="flex flex-col items-center">
-                      <img 
-                        src={previewUrl} 
-                        alt="Logo preview" 
-                        className="w-24 h-24 object-contain mb-2"
-                      />
-                      <p className="text-sm text-gray-500">Klicke, um zu ändern</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center">
-                      <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                      <p className="mt-1">Logo hochladen</p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        Drag & Drop oder klicken
-                      </p>
-                    </div>
-                  )}
-                  
-                  {uploading && (
-                    <div className="mt-2">
-                      <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-blue-500 mx-auto"></div>
-                    </div>
-                  )}
-                </div>
+                <Label htmlFor="owner">Server Owner</Label>
+                <Input 
+                  id="owner" 
+                  value={formData.owner} 
+                  onChange={(e) => setFormData({...formData, owner: e.target.value})}
+                  placeholder="Name des Server Owners"
+                />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="description">Beschreibung</Label>
-                <Textarea 
-                  id="description" 
-                  name="description" 
-                  value={formData.description} 
-                  onChange={handleChange} 
-                  placeholder="Kurze Beschreibung des Servers..."
-                  rows={4}
+                <Label htmlFor="members">Mitgliederzahl</Label>
+                <Input 
+                  id="members" 
+                  type="number" 
+                  min="0"
+                  value={formData.members} 
+                  onChange={(e) => setFormData({...formData, members: parseInt(e.target.value) || 0})}
+                  placeholder="Anzahl der Mitglieder"
                 />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="type">Server Art</Label>
+                <Select 
+                  value={formData.type} 
+                  onValueChange={(value) => setFormData({...formData, type: value})}
+                >
+                  <SelectTrigger id="type">
+                    <SelectValue placeholder="Server Art wählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="small">Kleiner Server</SelectItem>
+                    <SelectItem value="large">Großer Server</SelectItem>
+                    <SelectItem value="cooperation">Kooperation</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="logo">Server Logo</Label>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                    {logoPreview ? (
+                      <img 
+                        src={logoPreview} 
+                        alt="Logo Vorschau" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <ImageIcon className="h-6 w-6 text-gray-400" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <Label 
+                      htmlFor="logo-upload" 
+                      className="cursor-pointer bg-secondary text-secondary-foreground hover:bg-secondary/90 px-4 py-2 rounded-md text-sm font-medium flex items-center justify-center gap-2"
+                    >
+                      <Upload className="h-4 w-4" />
+                      Logo hochladen
+                    </Label>
+                    <Input 
+                      id="logo-upload" 
+                      type="file" 
+                      className="hidden" 
+                      accept="image/*"
+                      onChange={handleFileChange}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
           
           <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setIsEditing(false);
-                setIsAdding(false);
-                setSelectedPartner(null);
-                setPreviewUrl(null);
-              }}
-            >
-              Abbrechen
-            </Button>
-            <Button onClick={handleSave}>
-              {isAdding ? 'Hinzufügen' : 'Speichern'}
+            <Button variant="outline" onClick={() => setFormOpen(false)}>Abbrechen</Button>
+            <Button onClick={handleSubmit} disabled={uploadLoading}>
+              {uploadLoading ? (
+                <>
+                  <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
+                  Bitte warten...
+                </>
+              ) : isEditMode ? 'Aktualisieren' : 'Hinzufügen'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Partner löschen</DialogTitle>
-            <DialogDescription>
-              Möchtest du den Partner "{selectedPartner?.name}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsDeleteDialogOpen(false)}
-            >
-              Abbrechen
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleDelete}
-            >
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Partner löschen</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bist du sicher, dass du diesen Partner löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
               Löschen
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Card>
   );
 };
 

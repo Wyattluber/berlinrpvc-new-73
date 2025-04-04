@@ -9,7 +9,7 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-// Since the Database type doesn't include the news and application_seasons tables yet (they're auto-generated),
+// Since the Database type doesn't include all tables yet (they're auto-generated),
 // we need to create a workaround to make TypeScript happy
 type CustomDatabase = Database & {
   public: {
@@ -55,6 +55,44 @@ type CustomDatabase = Database & {
           name?: string;
           is_active?: boolean;
           created_at?: string;
+        };
+      };
+      partner_servers: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          website: string;
+          owner: string | null;
+          members: number;
+          type: string;
+          logo_url: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          website: string;
+          owner?: string | null;
+          members?: number;
+          type?: string;
+          logo_url?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          website?: string;
+          owner?: string | null;
+          members?: number;
+          type?: string;
+          logo_url?: string;
+          created_at?: string;
+          updated_at?: string;
         };
       };
     } & Database['public']['Tables'];

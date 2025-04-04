@@ -858,25 +858,3 @@ const AdminPanel = () => {
                             <item.icon />
                             <span>{item.title}</span>
                             <ChevronRight className="ml-auto h-4 w-4" />
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      ))}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </SidebarGroup>
-              </SidebarContent>
-            </Sidebar>
-            
-            <SidebarInset className="bg-gray-50 overflow-y-auto">
-              <div className="p-6">
-                {renderContent()}
-              </div>
-            </SidebarInset>
-          </div>
-        </SidebarProvider>
-      </CollapsibleContent>
-    </Collapsible>
-  );
-};
-
-export default AdminPanel;
