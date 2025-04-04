@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useApplication } from '@/contexts/ApplicationContext';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
@@ -74,6 +75,13 @@ const Step3Situation: React.FC<Step3Props> = ({ onBack }) => {
         throw new Error("Du musst angemeldet sein, um eine Bewerbung einzureichen.");
       }
       
+      // Format the server invite link
+      const serverInvite = data.other_server_invites 
+        ? data.other_server_invites.startsWith('http://discord.gg/') || data.other_server_invites.startsWith('https://discord.gg/')
+          ? data.other_server_invites
+          : `http://discord.gg/${data.other_server_invites}`
+        : '';
+      
       // Submit the application to Supabase
       const { error } = await supabase
         .from('applications')
@@ -92,7 +100,7 @@ const Step3Situation: React.FC<Step3Props> = ({ onBack }) => {
           situation_handling: data.situation_handling,
           bodycam_understanding: data.bodycam_understanding,
           friend_rule_violation: data.friend_rule_violation,
-          other_servers: `${data.other_server_names || ''} - ${data.other_server_invites || ''}`,
+          other_servers: `${data.other_server_names || ''} - ${serverInvite}`,
           admin_experience: data.admin_experience || null,
           notes: data.notes || null,
         });
@@ -243,13 +251,20 @@ const Step3Situation: React.FC<Step3Props> = ({ onBack }) => {
                   <FormItem>
                     <FormLabel>Server-Einladungslink</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="Discord-Einladungslink" 
-                        {...field} 
-                      />
+                      <div className="flex items-center">
+                        <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-gray-100 text-gray-500 text-sm">
+                          http://discord.gg/
+                        </span>
+                        <Input 
+                          placeholder="invite-code" 
+                          className="rounded-l-none"
+                          value={field.value?.replace('http://discord.gg/', '')}
+                          onChange={(e) => field.onChange(e.target.value)}
+                        />
+                      </div>
                     </FormControl>
                     <FormDescription>
-                      Optional: Einladungslink zum Discord-Server
+                      Optional: Gib nur den Einladungscode ein
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
