@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
@@ -43,9 +44,33 @@ const Navbar = () => {
 
   const handleLogout = async () => {
     try {
+      // Überprüfe, ob eine aktive Session existiert
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session) {
+        // Falls keine Session existiert, direkt zur Homepage navigieren und UI aktualisieren
+        toast({
+          title: "Bereits abgemeldet",
+          description: "Du bist bereits abgemeldet."
+        });
+        
+        navigate('/');
+        return;
+      }
+      
       const { error } = await supabase.auth.signOut();
       
       if (error) {
+        if (error.name === "AuthSessionMissingError") {
+          // Falls Fehler auf fehlende Session hinweist, trotzdem zur Homepage navigieren
+          toast({
+            title: "Abgemeldet",
+            description: "Du wurdest erfolgreich abgemeldet."
+          });
+          
+          navigate('/');
+          return;
+        }
         throw error;
       }
       
@@ -59,11 +84,15 @@ const Navbar = () => {
       navigate('/');
     } catch (error: any) {
       console.error("Logout error:", error);
+      
+      // Selbst bei Fehler zur Homepage navigieren
       toast({
-        title: "Abmeldefehler",
-        description: error.message || "Es gab einen Fehler bei der Abmeldung.",
-        variant: "destructive"
+        title: "Abmeldeversuch",
+        description: "Deine Sitzung wurde zurückgesetzt.",
+        variant: "default"
       });
+      
+      navigate('/');
     }
   };
 

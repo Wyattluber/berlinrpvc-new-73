@@ -231,8 +231,32 @@ const Profile = () => {
 
   const handleLogout = async () => {
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session) {
+        toast({
+          title: "Bereits abgemeldet",
+          description: "Du bist bereits abgemeldet."
+        });
+        
+        navigate('/');
+        return;
+      }
+      
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      
+      if (error) {
+        if (error.name === "AuthSessionMissingError") {
+          toast({
+            title: "Abgemeldet",
+            description: "Du wurdest erfolgreich abgemeldet."
+          });
+          
+          navigate('/');
+          return;
+        }
+        throw error;
+      }
       
       toast({
         title: "Abgemeldet",
@@ -242,11 +266,14 @@ const Profile = () => {
       navigate('/');
     } catch (error) {
       console.error('Error signing out:', error);
+      
       toast({
-        title: "Fehler",
-        description: "Es gab ein Problem bei der Abmeldung.",
-        variant: "destructive"
+        title: "Abmeldeversuch",
+        description: "Deine Sitzung wurde zurückgesetzt.",
+        variant: "default"
       });
+      
+      navigate('/');
     }
   };
 

@@ -46,7 +46,10 @@ const Login = () => {
       setIsLoading(true);
       setLoginError(null);
       
-      const { error } = await supabase.auth.signInWithPassword({
+      // Zuerst sicherstellen, dass keine alte Session existiert
+      await supabase.auth.signOut();
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email,
         password: password
       });

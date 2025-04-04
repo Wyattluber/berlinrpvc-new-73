@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -64,23 +65,31 @@ const App = () => {
   useEffect(() => {
     let isMounted = true;
     
-    // Check current auth status
+    // Verbesserte Auth-Initialisierung
     const initializeAuth = async () => {
       try {
-        // First, set up auth state change listener
+        // Zuerst den aktuellen Session-Status prüfen
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          throw sessionError;
+        }
+        
+        if (isMounted) {
+          console.log("Initial session check:", sessionData.session ? "Logged in" : "Not logged in");
+          setSession(sessionData.session);
+        }
+        
+        // Auth-Zustandsänderungen überwachen
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
           console.log("Auth state changed:", _event);
           if (!isMounted) return;
+          
           setSession(session);
           setLoading(false);
         });
 
-        // Then check current session
-        const { data: { session } } = await supabase.auth.getSession();
-        
         if (isMounted) {
-          console.log("Initial session check:", session ? "Logged in" : "Not logged in");
-          setSession(session);
           setLoading(false);
         }
 
@@ -103,6 +112,21 @@ const App = () => {
     };
   }, []);
 
+  // Hilfsfunktion zum Zurücksetzen der Authentifizierung bei Problemen
+  const resetAuth = async () => {
+    try {
+      await supabase.auth.signOut();
+      setSession(null);
+      setLoadingError(null);
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Error resetting auth:", error);
+      // Fallback: Bei gravierenden Fehlern versuchen, den localStorage zu löschen
+      localStorage.clear();
+      window.location.href = "/";
+    }
+  };
+
   if (loading) {
     // Show a loading spinner for better UX
     return (
@@ -121,13 +145,23 @@ const App = () => {
           <Sonner />
           {loadingError && (
             <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 fixed top-0 left-0 right-0 z-50">
-              <p>{loadingError}</p>
-              <button 
-                className="underline ml-2"
-                onClick={() => setLoadingError(null)}
-              >
-                Dismiss
-              </button>
+              <div className="flex items-center justify-between">
+                <p>{loadingError}</p>
+                <div className="flex space-x-2">
+                  <button 
+                    className="underline ml-2"
+                    onClick={() => setLoadingError(null)}
+                  >
+                    Ausblenden
+                  </button>
+                  <button 
+                    className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600"
+                    onClick={resetAuth}
+                  >
+                    Zurücksetzen
+                  </button>
+                </div>
+              </div>
             </div>
           )}
           <ErrorFallback>
