@@ -27,7 +27,7 @@ const queryClient = new QueryClient();
 
 // Error boundary component
 class ErrorFallback extends React.Component<{ children: React.ReactNode }> {
-  state = { hasError: false, error: null };
+  state = { hasError: false, error: null as any };
   
   static getDerivedStateFromError(error: any) {
     return { hasError: true, error };
@@ -69,85 +69,98 @@ const App = () => {
   const [loadingError, setLoadingError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+    
     // Safety timeout to prevent infinite loading
     const safetyTimeout = setTimeout(() => {
-      if (loading) {
+      if (isMounted && loading) {
         console.log("Loading timeout triggered - forcing app to render");
         setLoading(false);
         setLoadingError("Loading timed out. Some features may not be available.");
       }
-    }, 5000);
+    }, 3000); // Reduced from 5000ms to 3000ms for faster fallback
 
     // Check current auth status
-    try {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        console.log("Initial session check:", session ? "Logged in" : "Not logged in");
-        setSession(session);
+    const initializeAuth = async () => {
+      try {
+        // First, set up auth state change listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+          console.log("Auth state changed:", _event);
+          if (!isMounted) return;
+          
+          setSession(session);
+          
+          if (session) {
+            try {
+              // Check user roles when session changes
+              const [adminStatus, moderatorStatus, role] = await Promise.all([
+                checkIsAdmin(),
+                checkIsModerator(),
+                getUserRole()
+              ]);
+              
+              if (isMounted) {
+                setIsAdmin(adminStatus);
+                setIsModerator(moderatorStatus);
+                setUserRole(role);
+              }
+            } catch (error) {
+              console.error("Error during auth state change:", error);
+              if (isMounted) {
+                setLoadingError("Error updating user permissions");
+              }
+            }
+          } else if (isMounted) {
+            setIsAdmin(false);
+            setIsModerator(false);
+            setUserRole(null);
+          }
+        });
+
+        // Then check current session
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (session) {
-          // Check user roles
-          Promise.all([
-            checkIsAdmin(),
-            checkIsModerator(),
-            getUserRole()
-          ]).then(([adminStatus, moderatorStatus, role]) => {
-            console.log("User roles loaded:", { adminStatus, moderatorStatus, role });
-            setIsAdmin(adminStatus);
-            setIsModerator(moderatorStatus);
-            setUserRole(role);
-            setLoading(false);
-          }).catch(error => {
-            console.error("Error checking user roles:", error);
-            setLoading(false);
-            setLoadingError("Could not verify user permissions.");
-          });
-        } else {
-          // Not logged in - no need to check roles
+        if (isMounted) {
+          console.log("Initial session check:", session ? "Logged in" : "Not logged in");
+          setSession(session);
+          
+          if (session) {
+            // Perform role checks in parallel
+            const [adminStatus, moderatorStatus, role] = await Promise.all([
+              checkIsAdmin(),
+              checkIsModerator(),
+              getUserRole()
+            ]);
+            
+            if (isMounted) {
+              setIsAdmin(adminStatus);
+              setIsModerator(moderatorStatus);
+              setUserRole(role);
+            }
+          }
+          
+          // Complete loading regardless of session state
           setLoading(false);
         }
-      }).catch(error => {
-        console.error("Error checking session:", error);
-        setLoading(false);
-        setLoadingError("Could not verify login status.");
-      });
 
-      // Listen for auth changes
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-        console.log("Auth state changed:", _event);
-        setSession(session);
-        
-        if (session) {
-          try {
-            // Check user roles when session changes
-            const adminStatus = await checkIsAdmin();
-            setIsAdmin(adminStatus);
-            
-            const moderatorStatus = await checkIsModerator();
-            setIsModerator(moderatorStatus);
-            
-            const role = await getUserRole();
-            setUserRole(role);
-          } catch (error) {
-            console.error("Error during auth state change:", error);
-            setLoadingError("Error updating user permissions");
-          }
-        } else {
-          setIsAdmin(false);
-          setIsModerator(false);
-          setUserRole(null);
+        return () => {
+          subscription.unsubscribe();
+        };
+      } catch (error) {
+        console.error("Critical app initialization error:", error);
+        if (isMounted) {
+          setLoading(false);
+          setLoadingError("App initialization failed");
         }
-      });
+      }
+    };
 
-      return () => {
-        clearTimeout(safetyTimeout);
-        subscription.unsubscribe();
-      };
-    } catch (error) {
-      console.error("Critical app initialization error:", error);
-      setLoading(false);
-      setLoadingError("App initialization failed");
+    initializeAuth();
+
+    return () => {
+      isMounted = false;
       clearTimeout(safetyTimeout);
-    }
+    };
   }, []);
 
   if (loading) {
