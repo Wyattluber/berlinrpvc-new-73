@@ -15,6 +15,7 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import SubServers from "./pages/SubServers";
+import AdminPanel from "./pages/AdminPanel";
 
 // Create contexts for user roles
 export const AdminContext = createContext<boolean>(false);
@@ -102,6 +103,10 @@ const App = () => {
                   <Route 
                     path="/profile" 
                     element={session ? <Profile /> : <Navigate to="/login" />} 
+                  />
+                  <Route 
+                    path="/admin" 
+                    element={session && isAdmin ? <AdminPanel /> : <Navigate to="/profile" />} 
                   />
                   <Route path="/subservers" element={<SubServers />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

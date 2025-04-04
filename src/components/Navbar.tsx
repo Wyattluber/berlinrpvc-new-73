@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Menu, X, User, LogOut, ShieldCheck, Shield } from 'lucide-react';
+import { Menu, X, User, LogOut, ShieldCheck, Shield, Settings } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { AdminContext, ModeratorContext, UserRoleContext } from '@/App';
@@ -107,6 +107,14 @@ const Navbar = () => {
                   <span>Profil</span>
                   {getUserRoleBadge()}
                 </Link>
+                
+                {isAdmin && (
+                  <Link to="/admin" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300 flex items-center gap-1">
+                    <Settings size={18} />
+                    <span>Admin</span>
+                  </Link>
+                )}
+                
                 <Button variant="ghost" className="hover:text-blue-200 text-white" onClick={handleLogout}>
                   <div className="flex items-center gap-2">
                     <LogOut size={18} />
@@ -167,6 +175,17 @@ const Navbar = () => {
                   <span>Profil</span>
                   {getUserRoleBadge()}
                 </Link>
+                
+                {isAdmin && (
+                  <Link to="/admin"
+                    className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-2"
+                    onClick={toggleMenu}
+                  >
+                    <Settings size={18} />
+                    <span>Admin</span>
+                  </Link>
+                )}
+                
                 <button
                   className="block w-full text-left hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-2"
                   onClick={() => {

@@ -16,19 +16,19 @@ export async function checkIsAdmin() {
     const userId = session.user.id;
     
     // Query the admin_users table to check if the current user is an admin
-    const { data: adminUser, error } = await supabase
+    const { data, error } = await supabase
       .from('admin_users')
-      .select('*')
+      .select('id')
       .eq('user_id', userId)
       .eq('role', 'admin')
-      .single();
+      .maybeSingle();
     
     if (error) {
       console.error('Error checking admin status:', error);
       return false;
     }
     
-    return !!adminUser; // Returns true if the user was found in the admin_users table as an admin
+    return !!data; // Returns true if the user was found in the admin_users table as an admin
   } catch (error) {
     console.error('Error checking admin status:', error);
     return false;
@@ -49,19 +49,19 @@ export async function checkIsModerator() {
     
     // Query the admin_users table to check if the current user is a moderator or admin
     // Admins implicitly have moderator privileges
-    const { data: roleUser, error } = await supabase
+    const { data, error } = await supabase
       .from('admin_users')
-      .select('*')
+      .select('id')
       .eq('user_id', userId)
       .in('role', ['moderator', 'admin'])
-      .single();
+      .maybeSingle();
     
     if (error) {
       console.error('Error checking moderator status:', error);
       return false;
     }
     
-    return !!roleUser;
+    return !!data;
   } catch (error) {
     console.error('Error checking moderator status:', error);
     return false;
@@ -79,17 +79,17 @@ export async function getUserRole(): Promise<UserRole | null> {
     
     const userId = session.user.id;
     
-    const { data: roleUser, error } = await supabase
+    const { data, error } = await supabase
       .from('admin_users')
       .select('role')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
     
-    if (error || !roleUser) {
+    if (error || !data) {
       return null;
     }
     
-    return roleUser.role as UserRole;
+    return data.role as UserRole;
   } catch (error) {
     console.error('Error getting user role:', error);
     return null;
