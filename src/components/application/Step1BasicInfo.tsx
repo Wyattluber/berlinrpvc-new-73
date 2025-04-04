@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useApplication } from '@/contexts/ApplicationContext';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -213,7 +212,7 @@ const Step1BasicInfo: React.FC<Step1Props> = ({
             </div>
 
             {ageWarning && (
-              <Alert variant="warning" className="bg-yellow-50 border-yellow-300 text-yellow-800">
+              <Alert className="bg-yellow-50 border-yellow-300 text-yellow-800">
                 <AlertTriangle className="h-4 w-4 text-yellow-600" />
                 <AlertTitle>Bitte überprüfe dein Alter</AlertTitle>
                 <AlertDescription>

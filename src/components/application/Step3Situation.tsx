@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useApplication } from '@/contexts/ApplicationContext';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
@@ -78,27 +77,25 @@ const Step3Situation: React.FC<Step3Props> = ({ onBack }) => {
       // Submit the application to Supabase
       const { error } = await supabase
         .from('applications')
-        .insert([
-          {
-            user_id: user.id,
-            roblox_username: applicationData.robloxUsername,
-            roblox_id: applicationData.robloxId,
-            discord_id: applicationData.discordId,
-            age: applicationData.age,
-            activity_level: applicationData.activityLevel,
-            frp_understanding: applicationData.frpUnderstanding,
-            vdm_understanding: applicationData.vdmUnderstanding,
-            taschen_rp_understanding: applicationData.taschenRpUnderstanding,
-            server_age_understanding: applicationData.serverAgeUnderstanding,
-            why_moderator: data.situation_handling, // This field needs to be added to the database
-            situation_handling: data.situation_handling,
-            bodycam_understanding: data.bodycam_understanding,
-            friend_rule_violation: data.friend_rule_violation,
-            other_servers: `${data.other_server_names || ''} - ${data.other_server_invites || ''}`,
-            admin_experience: data.admin_experience || null,
-            notes: data.notes || null,
-          }
-        ]);
+        .insert({
+          user_id: user.id,
+          roblox_username: applicationData.robloxUsername,
+          roblox_id: applicationData.robloxId,
+          discord_id: applicationData.discordId,
+          age: Number(applicationData.age),
+          activity_level: applicationData.activityLevel,
+          frp_understanding: applicationData.frpUnderstanding,
+          vdm_understanding: applicationData.vdmUnderstanding,
+          taschen_rp_understanding: applicationData.taschenRpUnderstanding,
+          server_age_understanding: applicationData.serverAgeUnderstanding,
+          why_moderator: data.situation_handling,
+          situation_handling: data.situation_handling,
+          bodycam_understanding: data.bodycam_understanding,
+          friend_rule_violation: data.friend_rule_violation,
+          other_servers: `${data.other_server_names || ''} - ${data.other_server_invites || ''}`,
+          admin_experience: data.admin_experience || null,
+          notes: data.notes || null,
+        });
 
       if (error) throw error;
       

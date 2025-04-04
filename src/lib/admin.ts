@@ -221,7 +221,12 @@ export async function getTeamSettings(): Promise<TeamSettings | null> {
       return null;
     }
     
-    return data as TeamSettings | null;
+    // Add type check before returning
+    if (data) {
+      return data as TeamSettings;
+    }
+    
+    return null;
   } catch (error) {
     console.error('Error getting team settings:', error);
     return null;
