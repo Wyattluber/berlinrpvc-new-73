@@ -15,6 +15,7 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import SubServers from "./pages/SubServers";
+import AdminPanel from "./pages/AdminPanel";
 
 // Create context for session
 export const SessionContext = createContext<any>(null);
@@ -155,6 +156,10 @@ const App = () => {
                   element={session ? <Profile /> : <Navigate to="/login" />} 
                 />
                 <Route path="/subservers" element={<SubServers />} />
+                <Route 
+                  path="/admin" 
+                  element={session ? <AdminPanel /> : <Navigate to="/login" />} 
+                />
                 {/* Catch-all route */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

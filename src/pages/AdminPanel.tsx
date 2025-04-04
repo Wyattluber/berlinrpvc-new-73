@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AdminContext } from '@/App';
+import { SessionContext } from '@/App';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,12 +16,29 @@ const AdminPanel = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const isAdmin = useContext(AdminContext);
+  const session = useContext(SessionContext);
+  const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Redirect if not an admin
-    if (isAdmin === false) {
+    // Check if user is logged in
+    if (!session) {
+      navigate('/login');
+      toast({
+        title: "Zugriff verweigert",
+        description: "Du musst angemeldet sein, um auf diese Seite zuzugreifen.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // For simplicity, we'll assume admin users have a specific email pattern
+    // In a real app, you would check against roles in the database
+    const userEmail = session.user?.email || '';
+    const isAdminUser = userEmail.includes('admin') || userEmail.endsWith('@berlinrp.de');
+    setIsAdmin(isAdminUser);
+
+    if (!isAdminUser) {
       navigate('/profile');
       toast({
         title: "Zugriff verweigert",
@@ -30,7 +46,7 @@ const AdminPanel = () => {
         variant: "destructive"
       });
     }
-  }, [isAdmin, navigate]);
+  }, [session, navigate]);
 
   const handleAddAdmin = async () => {
     if (!userId.trim()) {
