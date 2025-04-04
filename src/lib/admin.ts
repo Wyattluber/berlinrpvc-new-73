@@ -198,10 +198,11 @@ export async function removeUserRole(userId: string) {
  */
 export async function getTeamSettings() {
   try {
+    // Using any type to avoid TypeScript error until types are updated
     const { data, error } = await supabase
-      .from('team_settings')
+      .from('team_settings' as any)
       .select('*')
-      .single();
+      .maybeSingle();
       
     if (error) {
       console.error('Error getting team settings:', error);
@@ -212,6 +213,72 @@ export async function getTeamSettings() {
   } catch (error) {
     console.error('Error getting team settings:', error);
     return null;
+  }
+}
+
+/**
+ * Update team settings
+ */
+export async function updateTeamSettings(settings: {
+  meeting_day?: string;
+  meeting_time?: string;
+  meeting_frequency?: string;
+  meeting_location?: string;
+  meeting_notes?: string;
+}) {
+  try {
+    const isAdmin = await checkIsAdmin();
+    if (!isAdmin) {
+      return {
+        success: false,
+        message: 'Only admins can update team settings'
+      };
+    }
+
+    // Check if settings already exist
+    const existingSettings = await getTeamSettings();
+    let result;
+    
+    if (existingSettings) {
+      // Update existing settings
+      result = await supabase
+        .from('team_settings' as any)
+        .update({
+          meeting_day: settings.meeting_day,
+          meeting_time: settings.meeting_time,
+          meeting_frequency: settings.meeting_frequency,
+          meeting_location: settings.meeting_location,
+          meeting_notes: settings.meeting_notes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingSettings.id);
+    } else {
+      // Insert new settings
+      result = await supabase
+        .from('team_settings' as any)
+        .insert({
+          meeting_day: settings.meeting_day,
+          meeting_time: settings.meeting_time,
+          meeting_frequency: settings.meeting_frequency,
+          meeting_location: settings.meeting_location,
+          meeting_notes: settings.meeting_notes
+        });
+    }
+    
+    if (result.error) {
+      throw result.error;
+    }
+    
+    return {
+      success: true,
+      message: 'Team settings updated successfully'
+    };
+  } catch (error: any) {
+    console.error('Error updating team settings:', error);
+    return {
+      success: false,
+      message: error.message || 'An unknown error occurred'
+    };
   }
 }
 

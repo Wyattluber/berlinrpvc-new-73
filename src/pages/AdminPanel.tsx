@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SessionContext } from '@/App';
@@ -8,7 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
-import { addAdmin, addModerator, removeUserRole, checkIsAdmin } from '@/lib/admin';
+import { 
+  addAdmin, addModerator, removeUserRole, checkIsAdmin, 
+  getTeamSettings, updateTeamSettings 
+} from '@/lib/admin';
 import { updateServerStats, fetchServerStats } from '@/lib/stats';
 import { 
   AlertCircle, CheckCircle, ShieldCheck, Shield, Loader2, Users, 
@@ -28,6 +30,17 @@ import {
 } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Separator } from "@/components/ui/separator";
+
+interface TeamSettings {
+  id?: string;
+  meeting_day: string;
+  meeting_time: string;
+  meeting_frequency: string;
+  meeting_location: string;
+  meeting_notes: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 const AdminPanel = () => {
   const [userId, setUserId] = useState('');
@@ -51,12 +64,12 @@ const AdminPanel = () => {
     servers: 1
   });
   const [statsLoading, setStatsLoading] = useState(false);
-  const [teamSettings, setTeamSettings] = useState({
-    meetingDay: '',
-    meetingTime: '',
-    meetingFrequency: '',
-    meetingLocation: '',
-    meetingNotes: ''
+  const [teamSettings, setTeamSettings] = useState<TeamSettings>({
+    meeting_day: '',
+    meeting_time: '',
+    meeting_frequency: '',
+    meeting_location: '',
+    meeting_notes: ''
   });
   const [applicationQuestions, setApplicationQuestions] = useState({
     section1: [
@@ -199,23 +212,16 @@ const AdminPanel = () => {
 
   const fetchTeamSettings = async () => {
     try {
-      const { data, error } = await supabase
-        .from('team_settings')
-        .select('*')
-        .single();
+      const settings = await getTeamSettings();
       
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "No rows found"
-        console.error("Error fetching team settings:", error);
-        return;
-      }
-      
-      if (data) {
+      if (settings) {
         setTeamSettings({
-          meetingDay: data.meeting_day || '',
-          meetingTime: data.meeting_time || '',
-          meetingFrequency: data.meeting_frequency || '',
-          meetingLocation: data.meeting_location || '',
-          meetingNotes: data.meeting_notes || ''
+          id: settings.id,
+          meeting_day: settings.meeting_day || '',
+          meeting_time: settings.meeting_time || '',
+          meeting_frequency: settings.meeting_frequency || '',
+          meeting_location: settings.meeting_location || '',
+          meeting_notes: settings.meeting_notes || ''
         });
       }
     } catch (error) {
@@ -343,18 +349,21 @@ const AdminPanel = () => {
     setIsLoading(true);
     
     try {
-      // If application is approved, make the user a moderator
       if (applicationStatus === 'approved' && currentApplication.status !== 'approved') {
-        // Get user_id from application
-        const { data: userData, error: userError } = await supabase
-          .from('auth.users')
-          .select('id')
-          .eq('user_metadata->discord_id', currentApplication.discord_id)
-          .maybeSingle();
-          
-        if (!userError && userData) {
-          // Add user as moderator
-          await addModerator(userData.id);
+        const discordId = currentApplication.discord_id;
+        
+        try {
+          const { data: userData, error: userError } = await supabase
+            .from('applications')
+            .select('user_id')
+            .eq('id', currentApplication.id)
+            .single();
+            
+          if (!userError && userData && userData.user_id) {
+            await addModerator(userData.user_id);
+          }
+        } catch (error) {
+          console.error("Could not automatically add user as moderator:", error);
         }
       }
       
@@ -418,48 +427,22 @@ const AdminPanel = () => {
     setIsLoading(true);
     
     try {
-      // First check if settings already exist
-      const { data: existingSettings, error: checkError } = await supabase
-        .from('team_settings')
-        .select('id')
-        .limit(1);
-        
-      if (checkError) throw checkError;
-      
-      let result;
-      
-      if (existingSettings && existingSettings.length > 0) {
-        // Update existing settings
-        result = await supabase
-          .from('team_settings')
-          .update({
-            meeting_day: teamSettings.meetingDay,
-            meeting_time: teamSettings.meetingTime,
-            meeting_frequency: teamSettings.meetingFrequency,
-            meeting_location: teamSettings.meetingLocation,
-            meeting_notes: teamSettings.meetingNotes,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingSettings[0].id);
-      } else {
-        // Insert new settings
-        result = await supabase
-          .from('team_settings')
-          .insert({
-            meeting_day: teamSettings.meetingDay,
-            meeting_time: teamSettings.meetingTime,
-            meeting_frequency: teamSettings.meetingFrequency,
-            meeting_location: teamSettings.meetingLocation,
-            meeting_notes: teamSettings.meetingNotes
-          });
-      }
-      
-      if (result.error) throw result.error;
-      
-      toast({
-        title: "Team-Einstellungen gespeichert",
-        description: "Die Team-Einstellungen wurden erfolgreich gespeichert."
+      const result = await updateTeamSettings({
+        meeting_day: teamSettings.meeting_day,
+        meeting_time: teamSettings.meeting_time,
+        meeting_frequency: teamSettings.meeting_frequency,
+        meeting_location: teamSettings.meeting_location,
+        meeting_notes: teamSettings.meeting_notes
       });
+      
+      if (result.success) {
+        toast({
+          title: "Team-Einstellungen gespeichert",
+          description: "Die Team-Einstellungen wurden erfolgreich gespeichert."
+        });
+      } else {
+        throw new Error(result.message);
+      }
     } catch (error: any) {
       console.error("Error saving team settings:", error);
       toast({
@@ -514,7 +497,7 @@ const AdminPanel = () => {
   }
 
   if (!isAdmin) {
-    return null; // User will be redirected in useEffect
+    return null;
   }
 
   return (
@@ -749,8 +732,8 @@ const AdminPanel = () => {
                         <div className="space-y-2">
                           <label className="text-sm font-medium">Meeting Tag</label>
                           <Select 
-                            value={teamSettings.meetingDay}
-                            onValueChange={(value) => setTeamSettings({...teamSettings, meetingDay: value})}
+                            value={teamSettings.meeting_day}
+                            onValueChange={(value) => setTeamSettings({...teamSettings, meeting_day: value})}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Tag auswählen" />
@@ -771,8 +754,8 @@ const AdminPanel = () => {
                           <label className="text-sm font-medium">Meeting Zeit</label>
                           <Input 
                             type="time" 
-                            value={teamSettings.meetingTime}
-                            onChange={(e) => setTeamSettings({...teamSettings, meetingTime: e.target.value})}
+                            value={teamSettings.meeting_time}
+                            onChange={(e) => setTeamSettings({...teamSettings, meeting_time: e.target.value})}
                           />
                         </div>
                       </div>
@@ -781,8 +764,8 @@ const AdminPanel = () => {
                         <div className="space-y-2">
                           <label className="text-sm font-medium">Häufigkeit</label>
                           <Select 
-                            value={teamSettings.meetingFrequency}
-                            onValueChange={(value) => setTeamSettings({...teamSettings, meetingFrequency: value})}
+                            value={teamSettings.meeting_frequency}
+                            onValueChange={(value) => setTeamSettings({...teamSettings, meeting_frequency: value})}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Häufigkeit auswählen" />
@@ -799,8 +782,8 @@ const AdminPanel = () => {
                           <label className="text-sm font-medium">Ort / Plattform</label>
                           <Input 
                             placeholder="z.B. Discord / Voice Channel" 
-                            value={teamSettings.meetingLocation}
-                            onChange={(e) => setTeamSettings({...teamSettings, meetingLocation: e.target.value})}
+                            value={teamSettings.meeting_location}
+                            onChange={(e) => setTeamSettings({...teamSettings, meeting_location: e.target.value})}
                           />
                         </div>
                       </div>
@@ -810,8 +793,8 @@ const AdminPanel = () => {
                         <Textarea 
                           placeholder="Zusätzliche Informationen für Team-Mitglieder"
                           rows={4}
-                          value={teamSettings.meetingNotes}
-                          onChange={(e) => setTeamSettings({...teamSettings, meetingNotes: e.target.value})}
+                          value={teamSettings.meeting_notes}
+                          onChange={(e) => setTeamSettings({...teamSettings, meeting_notes: e.target.value})}
                         />
                       </div>
                       
@@ -904,330 +887,4 @@ const AdminPanel = () => {
                                 <div key={index} className="space-y-2 p-3 rounded-md border border-gray-200">
                                   <div className="flex justify-between items-center">
                                     <label className="text-sm font-medium">{question.label}</label>
-                                    <Badge className={question.required ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}>
-                                      {question.required ? "Erforderlich" : "Optional"}
-                                    </Badge>
-                                  </div>
-                                  <Textarea 
-                                    value={question.label}
-                                    onChange={(e) => {
-                                      const newQuestions = {...applicationQuestions};
-                                      newQuestions.section3[index].label = e.target.value;
-                                      setApplicationQuestions(newQuestions);
-                                    }}
-                                  />
-                                  <div className="flex justify-end">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        const newQuestions = {...applicationQuestions};
-                                        newQuestions.section3[index].required = !newQuestions.section3[index].required;
-                                        setApplicationQuestions(newQuestions);
-                                      }}
-                                    >
-                                      {question.required ? "Als optional markieren" : "Als erforderlich markieren"}
-                                    </Button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      </Accordion>
-                      
-                      <Button 
-                        className="mt-6 w-full"
-                        variant="outline"
-                        disabled
-                      >
-                        Fragen speichern
-                      </Button>
-                      
-                      <p className="text-xs text-center text-gray-500 mt-2">
-                        Hinweis: Diese Funktion wird in einem zukünftigen Update verfügbar sein
-                      </p>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="statistics" className="space-y-4 mt-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <BarChart className="text-blue-500" size={20} />
-                        Server Statistiken bearbeiten
-                      </CardTitle>
-                      <CardDescription>
-                        Hier kannst du die angezeigten Statistiken auf der Startseite ändern
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">Discord Mitglieder</label>
-                          <Input 
-                            type="number" 
-                            value={stats.discordMembers} 
-                            onChange={(e) => setStats({...stats, discordMembers: parseInt(e.target.value) || 0})}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">Partner Server</label>
-                          <Input 
-                            type="number" 
-                            value={stats.partnerServers} 
-                            onChange={(e) => setStats({...stats, partnerServers: parseInt(e.target.value) || 0})}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">Server</label>
-                          <Input 
-                            type="number" 
-                            value={stats.servers} 
-                            onChange={(e) => setStats({...stats, servers: parseInt(e.target.value) || 0})}
-                          />
-                        </div>
-                      </div>
-                      
-                      <Button
-                        onClick={handleSaveStats}
-                        disabled={statsLoading}
-                        className="w-full"
-                      >
-                        {statsLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                        Statistiken speichern
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-      
-      {/* Application Status Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Bewerbung bearbeiten</DialogTitle>
-            <DialogDescription>
-              Hier kannst du den Status der Bewerbung ändern und Anmerkungen hinzufügen.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {currentApplication && (
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Status
-                </label>
-                <Select value={applicationStatus} onValueChange={setApplicationStatus}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Status wählen" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Ausstehend</SelectItem>
-                    <SelectItem value="approved">Genehmigt</SelectItem>
-                    <SelectItem value="rejected">Abgelehnt</SelectItem>
-                    <SelectItem value="waitlist">Warteliste</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Anmerkungen (für den Bewerber sichtbar)
-                </label>
-                <Textarea
-                  value={applicationNotes}
-                  onChange={(e) => setApplicationNotes(e.target.value)}
-                  placeholder="Füge hier Anmerkungen oder Feedback hinzu..."
-                  rows={4}
-                />
-              </div>
-            </div>
-          )}
-          
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDialogOpen(false)}
-            >
-              Abbrechen
-            </Button>
-            <Button
-              onClick={handleSaveApplicationStatus}
-              disabled={isLoading}
-            >
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Speichern
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Application View Dialog */}
-      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Bewerbungsdetails</DialogTitle>
-            <div className="flex items-center gap-2 mt-1">
-              {currentApplication && getStatusBadge(currentApplication.status)}
-              <span className="text-sm text-gray-500">
-                {currentApplication && formatDate(currentApplication.created_at)}
-              </span>
-            </div>
-          </DialogHeader>
-          
-          {currentApplication && (
-            <div className="py-4 space-y-6">
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Persönliche Informationen</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-500">Roblox Benutzername</p>
-                    <p>{currentApplication.roblox_username}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-500">Roblox ID</p>
-                    <p>{currentApplication.roblox_id}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-500">Discord ID</p>
-                    <p>{currentApplication.discord_id}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-500">Alter</p>
-                    <p>{currentApplication.age} Jahre</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-500">Aktivitätslevel</p>
-                    <p>{currentApplication.activity_level}/10</p>
-                  </div>
-                </div>
-              </div>
-              
-              <Separator />
-              
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Regelverständnis</h3>
-                
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-500">Was ist für dich FRP (Fail-Roleplay)?</p>
-                    <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
-                      <p className="whitespace-pre-wrap">{currentApplication.frp_understanding}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-500">Was ist für dich VDM (Vehicle-Deathmatch)?</p>
-                    <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
-                      <p className="whitespace-pre-wrap">{currentApplication.vdm_understanding}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-500">Was ist Taschen-RP und warum ist es verboten?</p>
-                    <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
-                      <p className="whitespace-pre-wrap">{currentApplication.taschen_rp_understanding}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-500">Wie alt muss man sein, um auf dem Server spielen zu dürfen?</p>
-                    <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
-                      <p className="whitespace-pre-wrap">{currentApplication.server_age_understanding}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <Separator />
-              
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Situationshandhabung & Erfahrung</h3>
-                
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-500">Wie würdest du mit einem Spieler umgehen, der sich weigert, auf Teammitglieder zu hören?</p>
-                    <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
-                      <p className="whitespace-pre-wrap">{currentApplication.situation_handling}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-500">Was ist eine Bodycam und wann kommt sie zum Einsatz?</p>
-                    <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
-                      <p className="whitespace-pre-wrap">{currentApplication.bodycam_understanding}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-500">Wie würdest du vorgehen, wenn ein Freund von dir gegen die Regeln verstößt?</p>
-                    <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
-                      <p className="whitespace-pre-wrap">{currentApplication.friend_rule_violation}</p>
-                    </div>
-                  </div>
-                  
-                  {currentApplication.other_servers && (
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-gray-500">Auf welchen anderen Servern spielst du noch?</p>
-                      <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
-                        <p className="whitespace-pre-wrap">{currentApplication.other_servers}</p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {currentApplication.admin_experience && (
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-gray-500">Hast du bereits Erfahrung als Administrator/Teammitglied?</p>
-                      <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
-                        <p className="whitespace-pre-wrap">{currentApplication.admin_experience}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {currentApplication.notes && (
-                <>
-                  <Separator />
-                  <div className="space-y-2">
-                    <h3 className="font-semibold text-lg">Admin-Anmerkungen</h3>
-                    <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
-                      <p className="whitespace-pre-wrap text-blue-800">{currentApplication.notes}</p>
-                    </div>
-                  </div>
-                </>
-              )}
-              
-              <div className="flex space-x-2 justify-end">
-                <Button
-                  variant="outline"
-                  onClick={() => setViewDialogOpen(false)}
-                >
-                  Schließen
-                </Button>
-                <Button
-                  onClick={() => {
-                    setViewDialogOpen(false);
-                    handleEditApplication(currentApplication);
-                  }}
-                >
-                  Status bearbeiten
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-      
-      <Footer />
-    </div>
-  );
-};
-
-export default AdminPanel;
+                                    <Badge className={question.required ? "bg-blue-100 text-blue
