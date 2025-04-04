@@ -39,6 +39,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import ApplicationsList from '@/components/ApplicationsList';
 import PartnerServersManagement from '@/components/PartnerServersManagement';
 import SubServersManagement from '@/components/SubServersManagement';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
+} from '@/components/ui/table';
 
 type Application = {
   id: string;
@@ -71,11 +74,9 @@ const DashboardOverview = ({ userCount, adminUsers }: { userCount: number, admin
   useEffect(() => {
     const getStats = async () => {
       try {
-        // Load applications to get real stats
         const applicationsData = await fetchApplications();
         setApplications(applicationsData);
         
-        // Calculate real stats
         const pendingCount = applicationsData.filter(app => app.status === 'pending').length;
         const approvedCount = applicationsData.filter(app => app.status === 'approved').length;
         const rejectedCount = applicationsData.filter(app => app.status === 'rejected').length;
@@ -588,8 +589,6 @@ const SecuritySettings = () => {
     const fetchAuthLogs = async () => {
       setLoadingLogs(true);
       try {
-        // In a real implementation, this would fetch auth logs from your database
-        // For now, we'll just display a placeholder
         setAuthLogs([]);
       } catch (error) {
         console.error('Error fetching auth logs:', error);
@@ -864,4 +863,49 @@ const AdminPanel = () => {
       case 'news':
         return <NewsManagement />;
       case 'partners':
-        return <
+        return <PartnerServersManagement />;
+      case 'sub_servers':
+        return <SubServersManagement />;
+      case 'team-settings':
+        return <TeamSettings />;
+      case 'security':
+        return <SecuritySettings />;
+      case 'account':
+        return <AccountDetails />;
+      default:
+        return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
+    }
+  };
+  
+  return (
+    <div className="min-h-screen w-full">
+      <div className="flex items-center justify-between">
+        <SidebarProvider>
+          <Sidebar open={sidebarOpen} onOpenChange={setSidebarOpen}>
+            <SidebarContent>
+              <SidebarHeader>
+                <SidebarMenu>
+                  {menuItems.map(item => (
+                    <SidebarMenuItem key={item.id}>
+                      <SidebarMenuButton>
+                        <SidebarMenuLabel>{item.title}</SidebarMenuLabel>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarHeader>
+            </SidebarContent>
+          </Sidebar>
+        </SidebarProvider>
+        
+        <div className="flex-1">
+          <div className="p-4">
+            {renderContent()}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdminPanel;
