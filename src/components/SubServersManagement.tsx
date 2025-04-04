@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LoaderIcon, PlusCircle, Edit, Trash2, ExternalLink, Upload, ImageIcon } from 'lucide-react';
+import { LoaderIcon, PlusCircle, Edit, Trash2, ExternalLink } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -32,7 +32,6 @@ interface SubServerFormData {
   icon: string;
   color: string;
   status: string;
-  icon_file: File | null;
 }
 
 const SubServersManagement = () => {
@@ -48,11 +47,9 @@ const SubServersManagement = () => {
     icon: '🚌',
     color: 'from-blue-500 to-blue-700',
     status: 'coming_soon',
-    icon_file: null
   });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [serverToDelete, setServerToDelete] = useState<string | null>(null);
-  const [uploadLoading, setUploadLoading] = useState(false);
 
   useEffect(() => {
     fetchSubServers();
@@ -91,7 +88,6 @@ const SubServersManagement = () => {
       icon: '🚌',
       color: 'from-blue-500 to-blue-700',
       status: 'coming_soon',
-      icon_file: null
     });
     setIsEditMode(false);
     setCurrentServerId(null);
@@ -110,48 +106,10 @@ const SubServersManagement = () => {
       icon: server.icon,
       color: server.color,
       status: server.status,
-      icon_file: null
     });
     setIsEditMode(true);
     setCurrentServerId(server.id);
     setFormOpen(true);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFormData({
-        ...formData,
-        icon_file: file
-      });
-    }
-  };
-
-  const uploadIcon = async (file: File, serverId: string): Promise<string> => {
-    setUploadLoading(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const filePath = `sub_server_icons/${serverId}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('subservers')
-        .upload(filePath, file, {
-          upsert: true,
-          contentType: file.type
-        });
-      
-      if (uploadError) {
-        throw new Error(`Fehler beim Hochladen des Icons: ${uploadError.message}`);
-      }
-      
-      const { data } = supabase.storage.from('subservers').getPublicUrl(filePath);
-      return data.publicUrl;
-    } catch (error: any) {
-      console.error('Error uploading icon:', error);
-      throw error;
-    } finally {
-      setUploadLoading(false);
-    }
   };
 
   const handleSubmit = async () => {
@@ -485,13 +443,8 @@ const SubServersManagement = () => {
           
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)}>Abbrechen</Button>
-            <Button onClick={handleSubmit} disabled={uploadLoading}>
-              {uploadLoading ? (
-                <>
-                  <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
-                  Bitte warten...
-                </>
-              ) : isEditMode ? 'Aktualisieren' : 'Hinzufügen'}
+            <Button onClick={handleSubmit}>
+              {isEditMode ? 'Aktualisieren' : 'Hinzufügen'}
             </Button>
           </DialogFooter>
         </DialogContent>

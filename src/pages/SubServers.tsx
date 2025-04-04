@@ -15,6 +15,8 @@ interface SubServer {
   color: string;
   status: string;
   link: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 const SubServers = () => {
