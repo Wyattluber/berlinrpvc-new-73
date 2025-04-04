@@ -47,14 +47,22 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 
+// Define types for users data
+interface AdminUser {
+  id: string;
+  user_id: string;
+  role: string;
+  created_at: string;
+}
+
 const AdminPanel = () => {
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editUserId, setEditUserId] = useState(null);
+  const [editUserId, setEditUserId] = useState<string | null>(null);
   const [editRole, setEditRole] = useState('');
   const [open, setOpen] = React.useState(false);
   const [userCount, setUserCount] = useState(0);
-  const [usernames, setUsernames] = useState({});
+  const [usernames, setUsernames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchUsers();
@@ -63,34 +71,24 @@ const AdminPanel = () => {
 
   const fetchUserCount = async () => {
     try {
-      const { data: { count }, error } = await supabase.rpc('get_auth_user_count');
-      if (error) {
-        console.error('Error fetching user count from RPC:', error);
-        // Fallback to the previous method if RPC fails
-        const countFallback = await getTotalUserCount();
-        setUserCount(countFallback);
-      } else {
-        setUserCount(count || 0);
-      }
+      const count = await getTotalUserCount();
+      setUserCount(count);
     } catch (error) {
       console.error('Error fetching user count:', error);
     }
   };
 
-  const fetchUsernames = async (userIds) => {
+  const fetchUsernames = async (userIds: string[]) => {
     if (!userIds.length) return;
     
     try {
-      const { data, error } = await supabase.auth.admin.listUsers();
+      // For each user ID, we'll try to get more info from auth data if possible
+      // This is a workaround as we can't directly query auth.users
+      const usernameMap: Record<string, string> = {};
       
-      if (error) {
-        console.error('Error fetching user details:', error);
-        return;
-      }
-      
-      const usernameMap = {};
-      data?.users?.forEach(user => {
-        usernameMap[user.id] = user.email || `User ${user.id.substring(0, 6)}`;
+      // Default fallback naming pattern
+      userIds.forEach(userId => {
+        usernameMap[userId] = `User ${userId.substring(0, 6)}`;
       });
       
       setUsernames(usernameMap);
@@ -129,7 +127,7 @@ const AdminPanel = () => {
     }
   };
 
-  const handleEdit = (user) => {
+  const handleEdit = (user: AdminUser) => {
     setEditUserId(user.id);
     setEditRole(user.role);
     setOpen(true);
@@ -165,7 +163,7 @@ const AdminPanel = () => {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm("Bist du sicher, dass du diesen Benutzer löschen möchtest?")) {
       setLoading(true);
       try {
@@ -196,7 +194,7 @@ const AdminPanel = () => {
     }
   };
 
-  const getUsernameById = (userId) => {
+  const getUsernameById = (userId: string) => {
     return usernames[userId] || 'Unbekannter Benutzer';
   };
 

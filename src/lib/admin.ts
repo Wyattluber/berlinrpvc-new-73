@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 type UserRole = 'admin' | 'moderator';
@@ -337,14 +338,20 @@ export async function hasSubmittedApplication(userId: string) {
 export async function getTotalUserCount(): Promise<number> {
   try {
     // First try to get the count from the RPC function
-    const { data: { count }, error: rpcError } = await supabase.rpc('get_auth_user_count');
-    
-    if (!rpcError && count !== undefined) {
-      return count;
+    // Check if the RPC function exists by doing a safe call
+    try {
+      const { data, error } = await supabase.rpc('get_auth_user_count');
+      
+      if (!error && data !== null && typeof data === 'number') {
+        return data;
+      }
+    } catch (rpcError) {
+      console.warn('RPC get_auth_user_count not available:', rpcError);
+      // Continue to fallback method
     }
     
     // Fallback: Use the admin_users table as a proxy
-    console.warn('Falling back to admin_users count, RPC failed:', rpcError);
+    console.warn('Falling back to admin_users count');
     const { count: fallbackCount, error: fallbackError } = await supabase
       .from('admin_users')
       .select('*', { count: 'exact', head: true });
