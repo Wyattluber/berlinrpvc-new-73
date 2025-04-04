@@ -35,10 +35,12 @@ export async function createAdminAccount(email: string, password: string) {
     // Then add the user to the admin_users table with explicit typing
     const { error } = await supabase
       .from('admin_users')
-      .insert([{  // Changed to array format to fix type error
-        user_id: authData.user.id,
-        email: email
-      }]);
+      .insert([  // Using array format for insert
+        { 
+          user_id: authData.user.id,
+          email: email
+        }
+      ]);
     
     if (error) throw error;
     
@@ -72,10 +74,12 @@ export async function makeUserAdmin(userId: string, email: string) {
   try {
     const { error } = await supabase
       .from('admin_users')
-      .insert([{  // Changed to array format to fix type error
-        user_id: userId,
-        email: email
-      }]);
+      .insert([  // Using array format for insert
+        { 
+          user_id: userId,
+          email: email
+        }
+      ]);
     
     if (error) throw error;
     
@@ -117,10 +121,12 @@ export async function forceUpdateAdminStatus(email: string) {
     // If not an admin, add admin privileges
     const { error } = await supabase
       .from('admin_users')
-      .insert([{  // Changed to array format to fix type error
-        user_id: existingUser.id,
-        email: email
-      }]);
+      .insert([  // Using array format for insert
+        { 
+          user_id: existingUser.id,
+          email: email
+        }
+      ]);
     
     if (error) throw error;
     
