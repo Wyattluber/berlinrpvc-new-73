@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { checkIsAdmin, getTotalUserCount, TeamSettings } from './admin';
 
@@ -267,7 +266,7 @@ export async function deleteNewsItem(id: string) {
     console.error('Error deleting news item:', error);
     return { 
       success: false, 
-      message: error.message || 'Failed to delete news item' 
+      message: error.message || 'Ein Fehler ist aufgetreten' 
     };
   }
 }

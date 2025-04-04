@@ -30,6 +30,27 @@ export type Database = {
         }
         Relationships: []
       }
+      application_seasons: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
       applications: {
         Row: {
           activity_level: number
@@ -45,6 +66,7 @@ export type Database = {
           other_servers: string | null
           roblox_id: string
           roblox_username: string
+          season_id: string | null
           server_age_understanding: string
           situation_handling: string
           status: string
@@ -67,6 +89,7 @@ export type Database = {
           other_servers?: string | null
           roblox_id: string
           roblox_username: string
+          season_id?: string | null
           server_age_understanding: string
           situation_handling: string
           status?: string
@@ -89,6 +112,7 @@ export type Database = {
           other_servers?: string | null
           roblox_id?: string
           roblox_username?: string
+          season_id?: string | null
           server_age_understanding?: string
           situation_handling?: string
           status?: string
@@ -97,7 +121,15 @@ export type Database = {
           user_id?: string
           vdm_understanding?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "applications_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "application_seasons"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       auth_logs: {
         Row: {
