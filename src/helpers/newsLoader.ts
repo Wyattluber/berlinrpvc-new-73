@@ -1,5 +1,6 @@
 
 import { fetchNews } from '@/lib/adminService';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Helper to load news into the profile page
@@ -10,8 +11,21 @@ export async function loadNewsIntoProfile() {
     const newsContainer = document.getElementById('profile-news-feed');
     if (!newsContainer) return;
     
-    // Fetch news items
-    const newsItems = await fetchNews();
+    // Show loading state
+    newsContainer.innerHTML = `
+      <div class="text-center py-4">
+        <div class="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent mx-auto mb-2"></div>
+        <p class="text-sm text-gray-500">Lade Neuigkeiten...</p>
+      </div>
+    `;
+    
+    // Fetch news items directly from Supabase for better reliability
+    const { data: newsItems, error } = await supabase
+      .from('news')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
     
     // Clear loading indicator
     newsContainer.innerHTML = '';
@@ -29,7 +43,7 @@ export async function loadNewsIntoProfile() {
     // Create HTML for each news item
     newsItems.slice(0, 3).forEach(item => {
       const newsElement = document.createElement('div');
-      newsElement.className = 'p-3 bg-gray-50 rounded-md';
+      newsElement.className = 'p-3 bg-gray-50 rounded-md mb-2';
       
       const createdDate = new Date(item.created_at);
       const formattedDate = createdDate.toLocaleDateString('de-DE');
@@ -63,6 +77,8 @@ export async function loadNewsIntoProfile() {
       
       newsContainer.appendChild(showMoreElement);
     }
+    
+    console.log('News loaded successfully:', newsItems.length, 'items');
   } catch (error) {
     console.error('Error loading news into profile:', error);
     
@@ -72,8 +88,14 @@ export async function loadNewsIntoProfile() {
       newsContainer.innerHTML = `
         <div class="text-center py-4">
           <p class="text-sm text-red-500">Fehler beim Laden der Neuigkeiten.</p>
+          <button id="retry-news-load" class="text-sm text-blue-600 mt-2">Erneut versuchen</button>
         </div>
       `;
+      
+      // Add retry button functionality
+      document.getElementById('retry-news-load')?.addEventListener('click', () => {
+        loadNewsIntoProfile();
+      });
     }
   }
 }
