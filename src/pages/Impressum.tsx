@@ -17,22 +17,22 @@ const Impressum = () => {
             <h2>Angaben gemäß § 5 TMG</h2>
             <p>
               BerlinRP-VC<br />
-              [Straße und Hausnummer]<br />
-              [Postleitzahl und Ort]<br />
+              Wyatt-Jason Lück<br />
+              Liebensteiner Straße 35<br />
+              12687 Berlin<br />
               Deutschland
             </p>
 
             <h2>Kontakt</h2>
             <p>
-              Telefon: [Telefonnummer]<br />
-              E-Mail: <a href="mailto:kontakt@berlinrp.de">kontakt@berlinrp.de</a>
+              E-Mail: <a href="mailto:kontakt@berlinrpvc.de">kontakt@berlinrpvc.de</a>
             </p>
 
             <h2>Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV</h2>
             <p>
-              [Name des Verantwortlichen]<br />
-              [Straße und Hausnummer]<br />
-              [Postleitzahl und Ort]<br />
+              Wyatt-Jason Lück<br />
+              Liebensteiner Straße 35<br />
+              12687 Berlin<br />
               Deutschland
             </p>
 

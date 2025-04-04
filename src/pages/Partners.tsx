@@ -113,13 +113,19 @@ const Partners = () => {
                         </div>
                       </div>
                       
-                      <p className="text-indigo-100 mb-4">{partner.description || ''}</p>
+                      <p className="text-indigo-100 mb-4 whitespace-pre-line">{partner.description || ''}</p>
                       
-                      {partner.owner && (
-                        <p className="text-sm text-indigo-200 mb-6">
-                          <span className="font-medium">Owner:</span> {partner.owner}
+                      <div className="flex justify-between items-center mb-6">
+                        {partner.owner && (
+                          <p className="text-sm text-indigo-200">
+                            <span className="font-medium">Owner:</span> {partner.owner}
+                          </p>
+                        )}
+                        
+                        <p className="text-sm text-indigo-200">
+                          <span className="font-medium">Mitglieder:</span> {partner.members}
                         </p>
-                      )}
+                      </div>
                       
                       <div className="mt-auto pt-4 border-t border-indigo-500/20">
                         <a 
@@ -165,7 +171,7 @@ const Partners = () => {
               um unsere Community zu erweitern und das Spielerlebnis zu verbessern.
             </p>
             <a 
-              href="mailto:info@berlinrpvc.de" 
+              href="mailto:kontakt@berlinrpvc.de" 
               className="inline-block px-6 py-3 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 hover:shadow-lg hover:scale-105 transform"
             >
               Kontaktiere uns

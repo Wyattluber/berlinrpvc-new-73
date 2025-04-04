@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { checkIsAdmin } from '@/lib/admin';
@@ -39,6 +38,7 @@ import UserRoleManager from '@/components/UserRoleManager';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import ApplicationsList from '@/components/ApplicationsList';
 import PartnerServersManagement from '@/components/PartnerServersManagement';
+import SubServersManagement from '@/components/SubServersManagement';
 
 type Application = {
   id: string;
@@ -799,6 +799,7 @@ const AdminPanel = () => {
     { title: "Bewerbungen", id: "applications", icon: FileText },
     { title: "Neuigkeiten", id: "news", icon: BellRing },
     { title: "Partner", id: "partners", icon: Share },
+    { title: "Unterserver", id: "sub_servers", icon: Server },
     { title: "Teameinstellungen", id: "team-settings", icon: Settings },
     { title: "Sicherheit", id: "security", icon: ShieldCheck },
     { title: "Kontoverwaltung", id: "account", icon: UserCog }
@@ -816,6 +817,8 @@ const AdminPanel = () => {
         return <NewsManagement />;
       case 'partners':
         return <PartnerServersManagement />;
+      case 'sub_servers':
+        return <SubServersManagement />;
       case 'team-settings':
         return <TeamSettings />;
       case 'security':

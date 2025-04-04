@@ -1,55 +1,74 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Button } from '@/components/ui/button';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, LoaderIcon } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
 
-const subServers = [
-  {
-    id: 'police',
-    name: 'Polizei Berlin RP',
-    description: 'Offizieller Polizei-Server für den BerlinRP-VC',
-    icon: '👮‍♂️',
-    color: 'from-blue-500 to-blue-700',
-    status: 'active',
-    link: '#',
-    comingSoon: true
-  },
-  {
-    id: 'fire',
-    name: 'Feuerwehr/Sanitäter Berlin',
-    description: 'Feuerwehr und Rettungsdienst für BerlinRP-VC',
-    icon: '🚒',
-    color: 'from-red-500 to-red-700',
-    status: 'active',
-    link: '#',
-    comingSoon: true
-  },
-  {
-    id: 'hvb',
-    name: 'Busfahrer (HVB)',
-    description: 'Offizieller HVB-Server für BerlinRP-VC',
-    icon: '🚌',
-    color: 'from-yellow-500 to-amber-700',
-    status: 'active',
-    link: '#',
-    comingSoon: true
-  },
-  {
-    id: 'adac',
-    name: 'ADAC',
-    description: 'Offizieller ADAC-Server für BerlinRP-VC',
-    icon: '🔧',
-    color: 'from-yellow-400 to-yellow-600',
-    status: 'active',
-    link: '#',
-    comingSoon: true
-  }
-];
+interface SubServer {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string;
+  color: string;
+  status: string;
+  link: string | null;
+}
 
 const SubServers = () => {
+  const [subServers, setSubServers] = useState<SubServer[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSubServers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('sub_servers')
+          .select('*')
+          .order('name', { ascending: true });
+
+        if (error) {
+          throw error;
+        }
+
+        setSubServers(data || []);
+      } catch (error) {
+        console.error('Error fetching sub servers:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSubServers();
+  }, []);
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'Aktiv';
+      case 'inactive':
+        return 'Inaktiv';
+      case 'coming_soon':
+        return 'Coming Soon';
+      default:
+        return status;
+    }
+  };
+
+  const getStatusClass = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800';
+      case 'inactive':
+        return 'bg-red-100 text-red-800';
+      case 'coming_soon':
+      default:
+        return 'bg-amber-100 text-amber-800';
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -66,48 +85,68 @@ const SubServers = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            {subServers.map(server => (
-              <Card key={server.id} className="overflow-hidden border-0 shadow-lg group hover:shadow-xl transition-all duration-300">
-                <div className={`h-2 bg-gradient-to-r ${server.color}`}></div>
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="text-xl flex items-center gap-2">
-                      <span className="text-2xl">{server.icon}</span>
-                      <span>{server.name}</span>
-                    </CardTitle>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${server.comingSoon ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
-                      {server.comingSoon ? 'Coming Soon' : 'Aktiv'}
-                    </span>
-                  </div>
-                  <CardDescription>{server.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="pb-4">
-                  <p className="text-gray-600 text-sm">
-                    {server.comingSoon ? 
-                      'Dieser Server befindet sich derzeit in Entwicklung und wird in Kürze verfügbar sein.' : 
-                      'Verbinde dich jetzt mit diesem Server und beginne dein Roleplay-Abenteuer!'}
-                  </p>
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    disabled={server.comingSoon}
-                    variant={server.comingSoon ? "outline" : "default"} 
-                    className={server.comingSoon ? "w-full text-gray-500" : `w-full bg-gradient-to-r ${server.color} group-hover:shadow-md transition-all duration-300`}
-                  >
-                    <span className="flex items-center gap-2">
-                      {server.comingSoon ? 'Demnächst verfügbar' : (
-                        <>
-                          <span>Server beitreten</span>
-                          <ExternalLink size={16} className="transition-transform group-hover:translate-x-1" />
-                        </>
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <LoaderIcon className="h-10 w-10 animate-spin text-indigo-400" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+              {subServers.map(server => (
+                <Card key={server.id} className="overflow-hidden border-0 shadow-lg group hover:shadow-xl transition-all duration-300">
+                  <div className={`h-2 bg-gradient-to-r ${server.color}`}></div>
+                  <CardHeader className="pb-3">
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-xl flex items-center gap-2">
+                        <span className="text-2xl">{server.icon}</span>
+                        <span>{server.name}</span>
+                      </CardTitle>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(server.status)}`}>
+                        {getStatusLabel(server.status)}
+                      </span>
+                    </div>
+                    <CardDescription>{server.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="pb-4">
+                    <p className="text-gray-600 text-sm">
+                      {server.status === 'coming_soon' ? 
+                        'Dieser Server befindet sich derzeit in Entwicklung und wird in Kürze verfügbar sein.' : 
+                        server.status === 'inactive' ? 
+                        'Dieser Server ist derzeit nicht verfügbar.' :
+                        'Verbinde dich jetzt mit diesem Server und beginne dein Roleplay-Abenteuer!'}
+                    </p>
+                  </CardContent>
+                  <CardFooter>
+                    <Button 
+                      disabled={server.status !== 'active' || !server.link}
+                      variant={server.status === 'active' && server.link ? "default" : "outline"} 
+                      className={server.status === 'active' && server.link ? 
+                        `w-full bg-gradient-to-r ${server.color} group-hover:shadow-md transition-all duration-300` : 
+                        "w-full text-gray-500"}
+                      asChild={server.status === 'active' && server.link ? true : false}
+                    >
+                      {server.status === 'active' && server.link ? (
+                        <a href={server.link} target="_blank" rel="noopener noreferrer">
+                          <span className="flex items-center gap-2">
+                            <span>Server beitreten</span>
+                            <ExternalLink size={16} className="transition-transform group-hover:translate-x-1" />
+                          </span>
+                        </a>
+                      ) : (
+                        <span>
+                          {server.status === 'coming_soon' ? 'Demnächst verfügbar' : 'Derzeit nicht verfügbar'}
+                        </span>
                       )}
-                    </span>
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+              {subServers.length === 0 && (
+                <div className="col-span-2 text-center py-8">
+                  <p className="text-gray-500">Keine Unterserver gefunden.</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
       
