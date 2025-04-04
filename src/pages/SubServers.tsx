@@ -108,25 +108,6 @@ const SubServers = () => {
               </Card>
             ))}
           </div>
-          
-          <div className="mt-16 text-center">
-            <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
-              Interessiert an einem eigenen Unterserver?
-            </h2>
-            <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-              Wenn du Interesse hast, einen eigenen Unterserver für BerlinRP-VC zu erstellen, 
-              kontaktiere uns für weitere Informationen.
-            </p>
-            <Button 
-              size="lg"
-              className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 transition-all duration-300"
-            >
-              <a href="mailto:info@berlinrpvc.de" className="flex items-center gap-2">
-                <span>Kontaktiere uns</span>
-                <ExternalLink size={18} />
-              </a>
-            </Button>
-          </div>
         </div>
       </main>
       

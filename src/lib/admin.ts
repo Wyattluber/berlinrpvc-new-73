@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 type UserRole = 'admin' | 'moderator';
@@ -51,7 +50,7 @@ export async function checkIsModerator() {
     // Admins implicitly have moderator privileges
     const { data, error } = await supabase
       .from('admin_users')
-      .select('id')
+      .select('id, role')
       .eq('user_id', userId)
       .in('role', ['moderator', 'admin'])
       .maybeSingle();

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -13,7 +14,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { SessionContext } from '@/App';
-import { checkIsAdmin } from '@/lib/admin';
+import { checkIsAdmin, checkIsModerator, getTeamSettings, getUserRole } from '@/lib/admin';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface UserProfile {
   id: string;
@@ -45,6 +47,9 @@ const Profile = () => {
   const [isLoadingApplications, setIsLoadingApplications] = useState(false);
   const session = useContext(SessionContext);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isModerator, setIsModerator] = useState(false);
+  const [teamSettings, setTeamSettings] = useState<any>(null);
+  const [isLoadingTeamSettings, setIsLoadingTeamSettings] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -60,6 +65,12 @@ const Profile = () => {
     hasLetter: false,
     hasNumber: false
   });
+
+  // New state for ID verification dialog
+  const [showVerifyDialog, setShowVerifyDialog] = useState(false);
+  const [verifiedDiscordId, setVerifiedDiscordId] = useState('');
+  const [verifiedRobloxId, setVerifiedRobloxId] = useState('');
+  const [hasModifiedIds, setHasModifiedIds] = useState(false);
 
   useEffect(() => {
     setPasswordValidation({
@@ -108,30 +119,55 @@ const Profile = () => {
 
       setUser(userProfile);
       setDiscordId(userProfile.discordId || '');
+      setVerifiedDiscordId(userProfile.discordId || '');
       setRobloxId(userProfile.robloxId || '');
+      setVerifiedRobloxId(userProfile.robloxId || '');
       setUsername(userProfile.name || '');
       
       fetchApplications(user.id);
+      fetchTeamSettings();
     };
 
     checkUser();
   }, [navigate, session]);
 
   useEffect(() => {
-    const checkAdminStatus = async () => {
+    const checkUserRole = async () => {
       if (session?.user) {
         try {
           const adminStatus = await checkIsAdmin();
+          const modStatus = await checkIsModerator();
+          const role = await getUserRole();
+          
           setIsAdmin(adminStatus);
+          setIsModerator(modStatus);
+          
+          // Update user role if available
+          if (user && role) {
+            setUser(prev => prev ? {...prev, role} : null);
+          }
         } catch (error) {
-          console.error("Error checking admin status:", error);
+          console.error("Error checking user status:", error);
           setIsAdmin(false);
+          setIsModerator(false);
         }
       }
     };
     
-    checkAdminStatus();
-  }, [session]);
+    checkUserRole();
+  }, [session, user]);
+
+  // Monitor for ID changes
+  useEffect(() => {
+    if (
+      (verifiedDiscordId && discordId !== verifiedDiscordId) || 
+      (verifiedRobloxId && robloxId !== verifiedRobloxId)
+    ) {
+      setHasModifiedIds(true);
+    } else {
+      setHasModifiedIds(false);
+    }
+  }, [discordId, robloxId, verifiedDiscordId, verifiedRobloxId]);
 
   const fetchApplications = async (userId: string) => {
     setIsLoadingApplications(true);
@@ -151,47 +187,83 @@ const Profile = () => {
     }
   };
 
+  const fetchTeamSettings = async () => {
+    setIsLoadingTeamSettings(true);
+    try {
+      const settings = await getTeamSettings();
+      if (settings) {
+        setTeamSettings(settings);
+      }
+    } catch (error) {
+      console.error('Error fetching team settings:', error);
+    } finally {
+      setIsLoadingTeamSettings(false);
+    }
+  };
+
   const handleSaveProfile = () => {
+    if (hasModifiedIds) {
+      setShowVerifyDialog(true);
+      return;
+    }
+    
+    saveProfileData();
+  };
+
+  const saveProfileData = async () => {
     setIsLoading(true);
     
-    const updateProfile = async () => {
-      try {
-        const { error } = await supabase.auth.updateUser({
-          data: { 
-            discord_id: discordId,
-            roblox_id: robloxId,
-            name: username,
-          }
-        });
-
-        if (error) throw error;
-
-        if (user) {
-          setUser({
-            ...user,
-            discordId,
-            robloxId,
-            name: username
-          });
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { 
+          discord_id: discordId,
+          roblox_id: robloxId,
+          name: username,
         }
-        
-        toast({
-          title: "Profil gespeichert",
-          description: "Dein Profil wurde erfolgreich aktualisiert.",
-        });
-      } catch (error) {
-        console.error('Error updating profile:', error);
-        toast({
-          title: "Fehler",
-          description: "Es gab ein Problem beim Speichern deines Profils.",
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      });
 
-    updateProfile();
+      if (error) throw error;
+
+      if (user) {
+        setUser({
+          ...user,
+          discordId,
+          robloxId,
+          name: username
+        });
+      }
+      
+      // Update verified IDs
+      setVerifiedDiscordId(discordId);
+      setVerifiedRobloxId(robloxId);
+      setHasModifiedIds(false);
+      
+      toast({
+        title: "Profil gespeichert",
+        description: "Dein Profil wurde erfolgreich aktualisiert.",
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Fehler",
+        description: "Es gab ein Problem beim Speichern deines Profils.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const confirmIdChange = () => {
+    setShowVerifyDialog(false);
+    saveProfileData();
+  };
+
+  const cancelIdChange = () => {
+    setShowVerifyDialog(false);
+    // Reset to verified values
+    setDiscordId(verifiedDiscordId);
+    setRobloxId(verifiedRobloxId);
   };
 
   const handleChangePassword = async () => {
@@ -291,6 +363,8 @@ const Profile = () => {
   const getUserRoleName = () => {
     if (isAdmin) {
       return 'Administrator';
+    } else if (isModerator) {
+      return 'Moderator';
     }
     return 'Benutzer';
   };
@@ -373,7 +447,7 @@ const Profile = () => {
                     )}
                     <div>
                       <CardTitle className="text-lg">{user.name}</CardTitle>
-                      <CardDescription className="text-xs truncate">{user.email}</CardDescription>
+                      <CardDescription className="text-xs truncate max-w-[180px]">{user.email}</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
@@ -437,70 +511,95 @@ const Profile = () => {
                   <CardContent>
                     <div className="grid gap-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Card>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-lg">Bewerbungsstatus</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            {isLoadingApplications ? (
-                              <div className="flex justify-center py-4">
-                                <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
-                              </div>
-                            ) : applications.length > 0 ? (
-                              <div className="space-y-4">
-                                {applications.map((app) => (
-                                  <div key={app.id} className="bg-blue-50 p-3 rounded-md border border-blue-100 text-blue-700">
-                                    <div className="flex justify-between items-center mb-2">
-                                      <span className="text-sm font-medium">Bewerbung vom {formatDate(app.created_at)}</span>
-                                      {getStatusBadge(app.status)}
-                                    </div>
-                                    <p className="text-sm">
-                                      {app.status === 'pending' ? 
-                                        'Deine Bewerbung wird derzeit geprüft.' :
-                                        app.status === 'approved' ?
-                                        'Deine Bewerbung wurde angenommen! Wir werden dich kontaktieren.' :
-                                        app.status === 'waitlist' ?
-                                        'Deine Bewerbung wurde in die Warteliste aufgenommen.' :
-                                        'Deine Bewerbung wurde leider abgelehnt.'}
-                                    </p>
-                                    {app.notes && (
-                                      <div className="mt-2 pt-2 border-t border-blue-200">
-                                        <p className="text-sm font-medium">Anmerkungen:</p>
-                                        <p className="text-sm">{app.notes}</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            ) : discordId ? (
-                              <div className="text-sm bg-blue-50 p-3 rounded-md border border-blue-100 text-blue-700">
-                                Du kannst jetzt eine Bewerbung einreichen.
-                                <div className="mt-2">
-                                  <Button 
-                                    size="sm"
-                                    onClick={() => navigate('/apply/form')}
-                                  >
-                                    Bewerbung erstellen
-                                  </Button>
+                        {!isAdmin && !isModerator && (
+                          <Card>
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-lg">Bewerbungsstatus</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              {isLoadingApplications ? (
+                                <div className="flex justify-center py-4">
+                                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
                                 </div>
-                              </div>
-                            ) : (
-                              <div className="text-sm bg-amber-50 p-3 rounded-md border border-amber-100 text-amber-700">
-                                Bitte vervollständige dein Profil, um dich zu bewerben.
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
+                              ) : applications.length > 0 ? (
+                                <div className="space-y-4">
+                                  {applications.map((app) => (
+                                    <div key={app.id} className="bg-blue-50 p-3 rounded-md border border-blue-100 text-blue-700">
+                                      <div className="flex justify-between items-center mb-2">
+                                        <span className="text-sm font-medium">Bewerbung vom {formatDate(app.created_at)}</span>
+                                        {getStatusBadge(app.status)}
+                                      </div>
+                                      <p className="text-sm">
+                                        {app.status === 'pending' ? 
+                                          'Deine Bewerbung wird derzeit geprüft.' :
+                                          app.status === 'approved' ?
+                                          'Deine Bewerbung wurde angenommen! Wir werden dich kontaktieren.' :
+                                          app.status === 'waitlist' ?
+                                          'Deine Bewerbung wurde in die Warteliste aufgenommen.' :
+                                          'Deine Bewerbung wurde leider abgelehnt.'}
+                                      </p>
+                                      {app.notes && (
+                                        <div className="mt-2 pt-2 border-t border-blue-200">
+                                          <p className="text-sm font-medium">Anmerkungen:</p>
+                                          <p className="text-sm">{app.notes}</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : discordId ? (
+                                <div className="text-sm bg-blue-50 p-3 rounded-md border border-blue-100 text-blue-700">
+                                  Du kannst jetzt eine Bewerbung einreichen.
+                                  <div className="mt-2">
+                                    <Button 
+                                      size="sm"
+                                      onClick={() => navigate('/apply/form')}
+                                    >
+                                      Bewerbung erstellen
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-sm bg-amber-50 p-3 rounded-md border border-amber-100 text-amber-700">
+                                  Bitte vervollständige dein Profil, um dich zu bewerben.
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        )}
+                        
                         <Card>
                           <CardHeader className="pb-2">
                             <CardTitle className="text-lg">Team-Meetings</CardTitle>
                           </CardHeader>
                           <CardContent>
-                            <div className="text-sm text-gray-500">
-                              <Calendar size={32} className="mb-3 text-blue-600" />
-                              <p>Keine anstehenden Meetings</p>
-                              <span className="text-xs">Meetings werden hier angezeigt, sobald du im Team bist.</span>
-                            </div>
+                            {isLoadingTeamSettings ? (
+                              <div className="flex justify-center py-4">
+                                <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+                              </div>
+                            ) : (isAdmin || isModerator) && teamSettings ? (
+                              <div className="text-sm space-y-3">
+                                <div className="bg-blue-50 p-3 rounded-md border border-blue-100">
+                                  <Calendar size={24} className="mb-2 text-blue-600" />
+                                  <p className="font-medium">Nächstes Meeting:</p>
+                                  <div className="space-y-1 mt-1">
+                                    <p><span className="font-medium">Tag:</span> {teamSettings.meeting_day}</p>
+                                    <p><span className="font-medium">Uhrzeit:</span> {teamSettings.meeting_time} Uhr</p>
+                                    <p><span className="font-medium">Frequenz:</span> {teamSettings.meeting_frequency}</p>
+                                    <p><span className="font-medium">Ort:</span> {teamSettings.meeting_location}</p>
+                                    {teamSettings.meeting_notes && (
+                                      <p><span className="font-medium">Hinweis:</span> {teamSettings.meeting_notes}</p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-sm text-gray-500">
+                                <Calendar size={32} className="mb-3 text-blue-600" />
+                                <p>Keine anstehenden Meetings</p>
+                                <span className="text-xs">Meetings werden hier angezeigt, sobald du im Team bist.</span>
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       </div>
@@ -562,7 +661,7 @@ const Profile = () => {
                     
                     <div className="space-y-2">
                       <Label htmlFor="email">E-Mail</Label>
-                      <Input id="email" type="email" value={user.email} disabled />
+                      <Input id="email" type="email" value={user.email} disabled className="truncate" />
                     </div>
                     
                     <div className="space-y-2">
@@ -575,10 +674,19 @@ const Profile = () => {
                         placeholder="z.B.: 123456789012345678" 
                         value={discordId}
                         onChange={(e) => setDiscordId(e.target.value)}
+                        className={verifiedDiscordId ? "bg-gray-50" : ""}
+                        disabled={!!verifiedDiscordId}
                       />
-                      <p className="text-xs text-gray-500">
-                        Bitte gib deine vollständige Discord ID ein, damit wir dich kontaktieren können.
-                      </p>
+                      {verifiedDiscordId && (
+                        <p className="text-xs text-gray-500">
+                          Deine Discord ID wurde verifiziert und kann nicht mehr geändert werden.
+                        </p>
+                      )}
+                      {!verifiedDiscordId && (
+                        <p className="text-xs text-gray-500">
+                          Bitte gib deine vollständige Discord ID ein, damit wir dich kontaktieren können.
+                        </p>
+                      )}
                     </div>
                     
                     <div className="space-y-2">
@@ -591,10 +699,19 @@ const Profile = () => {
                         placeholder="z.B.: 123456789" 
                         value={robloxId}
                         onChange={(e) => setRobloxId(e.target.value)}
+                        className={verifiedRobloxId ? "bg-gray-50" : ""}
+                        disabled={!!verifiedRobloxId}
                       />
-                      <p className="text-xs text-gray-500">
-                        Bitte gib deine Roblox ID ein.
-                      </p>
+                      {verifiedRobloxId && (
+                        <p className="text-xs text-gray-500">
+                          Deine Roblox ID wurde verifiziert und kann nicht mehr geändert werden.
+                        </p>
+                      )}
+                      {!verifiedRobloxId && (
+                        <p className="text-xs text-gray-500">
+                          Bitte gib deine Roblox ID ein.
+                        </p>
+                      )}
                     </div>
                     
                     <div className="space-y-2">
@@ -749,6 +866,46 @@ const Profile = () => {
           </div>
         </div>
       </main>
+      
+      <Dialog open={showVerifyDialog} onOpenChange={setShowVerifyDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eingegebene IDs bestätigen</DialogTitle>
+            <DialogDescription>
+              Sobald Du Deine Discord oder Roblox ID speicherst, kann sie nicht mehr geändert werden. Stelle sicher, dass sie korrekt sind.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
+            {discordId !== verifiedDiscordId && discordId && (
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Discord ID:</p>
+                <p className="text-sm bg-blue-50 p-2 rounded border border-blue-100">{discordId}</p>
+              </div>
+            )}
+            
+            {robloxId !== verifiedRobloxId && robloxId && (
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Roblox ID:</p>
+                <p className="text-sm bg-blue-50 p-2 rounded border border-blue-100">{robloxId}</p>
+              </div>
+            )}
+            
+            <Alert variant="warning" className="bg-amber-50 border-amber-200">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertTitle className="text-amber-800">Achtung</AlertTitle>
+              <AlertDescription className="text-amber-700">
+                Nach dem Speichern können diese IDs nicht mehr geändert werden. Bitte überprüfe sie sorgfältig.
+              </AlertDescription>
+            </Alert>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={cancelIdChange}>Abbrechen</Button>
+            <Button onClick={confirmIdChange}>Bestätigen und speichern</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       <Footer />
     </div>

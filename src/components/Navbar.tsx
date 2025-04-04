@@ -6,12 +6,13 @@ import { Menu, X, User, LogOut, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { SessionContext } from '@/App';
-import { checkIsAdmin } from '@/lib/admin';
+import { checkIsAdmin, checkIsModerator } from '@/lib/admin';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isModerator, setIsModerator] = useState(false);
   const session = useContext(SessionContext);
   const location = useLocation();
   const navigate = useNavigate();
@@ -24,14 +25,19 @@ const Navbar = () => {
       if (loggedIn) {
         try {
           const adminStatus = await checkIsAdmin();
+          const modStatus = await checkIsModerator();
           console.log("Admin status check result:", adminStatus);
+          console.log("Moderator status check result:", modStatus);
           setIsAdmin(adminStatus);
+          setIsModerator(modStatus);
         } catch (error) {
-          console.error("Error checking admin status:", error);
+          console.error("Error checking user status:", error);
           setIsAdmin(false);
+          setIsModerator(false);
         }
       } else {
         setIsAdmin(false);
+        setIsModerator(false);
       }
     };
     
@@ -81,6 +87,7 @@ const Navbar = () => {
       
       setIsLoggedIn(false);
       setIsAdmin(false);
+      setIsModerator(false);
       navigate('/');
     } catch (error: any) {
       console.error("Logout error:", error);
@@ -95,6 +102,8 @@ const Navbar = () => {
       navigate('/');
     }
   };
+
+  const shouldShowApplyButton = !isAdmin && !isModerator;
 
   return (
     <nav className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-md">
@@ -146,9 +155,11 @@ const Navbar = () => {
               </Button>
             )}
             
-            <Button variant="default" className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-md border-0 transition-all duration-300 hover:scale-105 hover:shadow-md">
-              <Link to="/apply/form">Jetzt Bewerben</Link>
-            </Button>
+            {shouldShowApplyButton && (
+              <Button variant="default" className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-md border-0 transition-all duration-300 hover:scale-105 hover:shadow-md">
+                <Link to="/apply/form">Jetzt Bewerben</Link>
+              </Button>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -220,13 +231,16 @@ const Navbar = () => {
                 <span>Login</span>
               </Link>
             )}
-            <Button 
-              variant="default" 
-              className="w-full mt-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-md border-0"
-              onClick={toggleMenu}
-            >
-              <Link to="/apply/form" className="w-full">Jetzt Bewerben</Link>
-            </Button>
+            
+            {shouldShowApplyButton && (
+              <Button 
+                variant="default" 
+                className="w-full mt-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-md border-0"
+                onClick={toggleMenu}
+              >
+                <Link to="/apply/form" className="w-full">Jetzt Bewerben</Link>
+              </Button>
+            )}
           </div>
         )}
       </div>
