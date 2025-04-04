@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   LoaderIcon, Users, FileText, Settings, LayoutDashboard, 
   UserCog, ShieldCheck, BellRing, ChevronRight, Trash2, PencilLine,
-  Activity, BarChart3, UserPlus, Server, Share
+  Activity, BarChart3, UserPlus, Server, Share, Info, X, Check
 } from 'lucide-react';
 import { 
   SidebarProvider, 
@@ -33,6 +33,7 @@ import {
   Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell 
 } from 'recharts';
 import NewsManagement from '@/components/NewsManagement';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type Application = {
   id: string;
@@ -216,6 +217,8 @@ const UsersManagement = ({ adminUsers, handleUpdateRole, handleDeleteUser }: {
 }) => {
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>('');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
   const startEditing = (userId: string, currentRole: string) => {
     setEditingUser(userId);
@@ -227,50 +230,89 @@ const UsersManagement = ({ adminUsers, handleUpdateRole, handleDeleteUser }: {
     setEditingUser(null);
   };
 
+  const cancelEditing = () => {
+    setEditingUser(null);
+  };
+
+  const confirmDelete = (userId: string) => {
+    setUserToDelete(userId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const executeDelete = async () => {
+    if (userToDelete) {
+      await handleDeleteUser(userToDelete);
+      setIsDeleteDialogOpen(false);
+      setUserToDelete(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Benutzerverwaltung</h2>
+      
       <Card>
         <CardHeader>
-          <CardTitle>Administratoren</CardTitle>
+          <CardTitle>Administratoren & Moderatoren</CardTitle>
           <CardDescription>
             Verwalte Benutzer mit administrativen Berechtigungen
           </CardDescription>
         </CardHeader>
         <CardContent>
           {adminUsers.length === 0 ? (
-            <p>Keine Admin-Benutzer gefunden.</p>
+            <div className="p-4 text-center border rounded-md bg-muted/50">
+              <Info className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground">Keine Admin-Benutzer gefunden.</p>
+              <p className="text-xs mt-1 text-muted-foreground">Admin-Benutzer müssen direkt in der Datenbank hinzugefügt werden.</p>
+            </div>
           ) : (
             <div className="space-y-2">
+              <div className="grid grid-cols-3 gap-4 mb-2 px-3 py-2 bg-muted/30 rounded font-medium text-sm">
+                <div>E-Mail</div>
+                <div>Rolle</div>
+                <div className="text-right">Aktionen</div>
+              </div>
+              
               {adminUsers.map((user) => (
-                <div key={user.id} className="flex items-center justify-between p-3 border rounded hover:bg-gray-50">
+                <div key={user.id} className="grid grid-cols-3 gap-4 items-center p-3 border rounded hover:bg-gray-50">
+                  <div className="text-sm font-medium truncate">{user.email || "Kein E-Mail"}</div>
+                  
                   <div>
-                    <p className="font-medium">{user.email || "Kein E-Mail"}</p>
                     {editingUser === user.id ? (
                       <Select value={selectedRole} onValueChange={setSelectedRole}>
-                        <SelectTrigger className="w-[180px] h-8 mt-1">
+                        <SelectTrigger className="w-[180px] h-8">
                           <SelectValue placeholder="Rolle auswählen" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="admin">Administrator</SelectItem>
                           <SelectItem value="moderator">Moderator</SelectItem>
                         </SelectContent>
                       </Select>
                     ) : (
-                      <p className="text-sm text-muted-foreground">{user.role}</p>
+                      <span className={`text-sm px-2 py-1 rounded-full ${
+                        user.role === 'admin' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                      }`}>
+                        {user.role === 'admin' ? 'Administrator' : 'Moderator'}
+                      </span>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  
+                  <div className="flex gap-2 justify-end">
                     {editingUser === user.id ? (
-                      <Button variant="outline" size="sm" onClick={() => saveChanges(user.id)}>
-                        Speichern
-                      </Button>
+                      <>
+                        <Button variant="outline" size="sm" onClick={() => saveChanges(user.id)}>
+                          <Check className="h-4 w-4 mr-1" /> Speichern
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={cancelEditing}>
+                          <X className="h-4 w-4 mr-1" /> Abbrechen
+                        </Button>
+                      </>
                     ) : (
                       <>
                         <Button variant="outline" size="sm" onClick={() => startEditing(user.id, user.role)}>
                           <PencilLine className="h-4 w-4 mr-1" /> Bearbeiten
                         </Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDeleteUser(user.id)}>
+                        <Button variant="destructive" size="sm" onClick={() => confirmDelete(user.id)}>
                           <Trash2 className="h-4 w-4 mr-1" /> Löschen
                         </Button>
                       </>
@@ -281,7 +323,30 @@ const UsersManagement = ({ adminUsers, handleUpdateRole, handleDeleteUser }: {
             </div>
           )}
         </CardContent>
+        
+        <CardFooter>
+          <p className="text-xs text-muted-foreground">
+            Hinweis: Neue Admin-Benutzer können nur durch bestehende Administratoren hinzugefügt werden.
+          </p>
+        </CardFooter>
       </Card>
+      
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Benutzer löschen</DialogTitle>
+            <DialogDescription>
+              Möchtest du wirklich diesen Admin-Benutzer löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex space-x-2">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Abbrechen</Button>
+            <Button variant="destructive" onClick={executeDelete}>
+              Ja, löschen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
@@ -644,10 +709,6 @@ const AdminPanel = () => {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!window.confirm("Möchtest du diesen Benutzer wirklich löschen?")) {
-      return;
-    }
-    
     try {
       const result = await deleteAdminUser(userId);
       
