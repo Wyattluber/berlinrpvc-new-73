@@ -8,7 +8,10 @@ export async function loadNewsIntoProfile() {
   try {
     // Get the news container element
     const newsContainer = document.getElementById('profile-news-feed');
-    if (!newsContainer) return;
+    if (!newsContainer) {
+      console.error('News container element not found');
+      return;
+    }
     
     // Show loading state
     newsContainer.innerHTML = `
@@ -18,7 +21,7 @@ export async function loadNewsIntoProfile() {
       </div>
     `;
     
-    // Fetch news items from Supabase with simplified query
+    // Fetch news items from Supabase
     const { data: newsItems, error } = await supabase
       .from('news')
       .select('*')
@@ -102,12 +105,14 @@ export async function loadNewsIntoProfile() {
   }
 }
 
-// Auto-load news when script is imported in profile page
-document.addEventListener('DOMContentLoaded', () => {
-  if (window.location.pathname === '/profile') {
-    // Give a slight delay to ensure the container is rendered
-    setTimeout(() => {
-      loadNewsIntoProfile();
-    }, 300);
-  }
-});
+// Auto-load news when script is imported on profile page
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.location.pathname === '/profile') {
+      // Give a slight delay to ensure the container is rendered
+      setTimeout(() => {
+        loadNewsIntoProfile();
+      }, 300);
+    }
+  });
+}

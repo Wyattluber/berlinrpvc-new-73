@@ -1,48 +1,22 @@
-import React, { useState, useEffect, useContext, lazy } from 'react';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { SessionContext } from '../App';
-import { LoaderIcon, CheckCircle, Calendar, Clock, Users, MessageSquare, Bell, HelpCircle, AlertTriangle, Plus, Lock } from 'lucide-react';
+import { LoaderIcon, CheckCircle, Calendar, Bell, HelpCircle, AlertTriangle, Plus, Lock } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { getUserApplicationsHistory, checkIsAdmin } from '@/lib/admin';
 import ProfileImageUpload from '@/components/ProfileImageUpload';
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import MeetingCountdown from '@/components/MeetingCountdown';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import AdminPanel from './AdminPanel';
-import { getTeamSettings } from '@/lib/adminService';
-import { checkProfileIdsLocked, updateUserProfile } from '@/lib/auth';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 type Application = {
   id: string;
@@ -83,6 +57,7 @@ const Profile = () => {
   const [roleUserEmail, setRoleUserEmail] = useState('');
   const [roleUserSelection, setRoleUserSelection] = useState('');
   const [roleType, setRoleType] = useState<'admin' | 'moderator'>('moderator');
+  const [greeting, setGreeting] = useState('');
   const navigate = useNavigate();
   const session = useContext(SessionContext);
   const activeTab = searchParams.get('tab') || 'dashboard';
@@ -183,6 +158,31 @@ const Profile = () => {
     
     fetchProfile();
   }, [session, refetchApplications]);
+
+  useEffect(() => {
+    const getTimeBasedGreeting = () => {
+      const hour = new Date().getHours();
+      let greetingText = '';
+      
+      if (hour >= 5 && hour < 12) {
+        greetingText = 'Guten Morgen';
+      } else if (hour >= 12 && hour < 18) {
+        greetingText = 'Guten Tag';
+      } else if (hour >= 18 && hour < 22) {
+        greetingText = 'Guten Abend';
+      } else {
+        greetingText = 'Gute Nacht';
+      }
+      
+      setGreeting(greetingText);
+    };
+    
+    getTimeBasedGreeting();
+    
+    const intervalId = setInterval(getTimeBasedGreeting, 3600000);
+    
+    return () => clearInterval(intervalId);
+  }, []);
 
   const handleTabChange = (value: string) => {
     setSearchParams({ tab: value });
@@ -455,7 +455,9 @@ const Profile = () => {
                   )}
                 </Avatar>
               </div>
-              <CardTitle className="text-2xl font-bold">{username || 'Benutzer'}</CardTitle>
+              <CardTitle className="text-2xl font-bold">
+                {greeting}, {username || 'Benutzer'}!
+              </CardTitle>
               <CardDescription>
                 {user?.email || 'Keine E-Mail-Adresse'}
               </CardDescription>
