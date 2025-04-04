@@ -32,10 +32,10 @@ export async function fetchServerStats(): Promise<ServerStats> {
     }
     
     return {
-      discordMembers: data.discord_members,
-      partnerServers: data.partner_servers,
+      discordMembers: data.discordMembers,
+      partnerServers: data.partnerServers,
       servers: data.servers,
-      lastUpdated: data.last_updated
+      lastUpdated: data.lastUpdated
     };
   } catch (error) {
     console.error('Error fetching server stats:', error);
@@ -54,10 +54,10 @@ export async function fetchServerStats(): Promise<ServerStats> {
 export async function updateServerStats(stats: ServerStats): Promise<{ success: boolean; message: string }> {
   try {
     const updatedStats = {
-      discord_members: stats.discordMembers,
-      partner_servers: stats.partnerServers,
+      discordMembers: stats.discordMembers,
+      partnerServers: stats.partnerServers,
       servers: stats.servers,
-      last_updated: new Date().toISOString()
+      lastUpdated: new Date().toISOString()
     };
     
     const { error } = await supabase
