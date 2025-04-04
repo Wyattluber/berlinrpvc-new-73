@@ -123,6 +123,39 @@ export type Database = {
         }
         Relationships: []
       }
+      team_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          meeting_day: string | null
+          meeting_frequency: string | null
+          meeting_location: string | null
+          meeting_notes: string | null
+          meeting_time: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          meeting_day?: string | null
+          meeting_frequency?: string | null
+          meeting_location?: string | null
+          meeting_notes?: string | null
+          meeting_time?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          meeting_day?: string | null
+          meeting_frequency?: string | null
+          meeting_location?: string | null
+          meeting_notes?: string | null
+          meeting_time?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
