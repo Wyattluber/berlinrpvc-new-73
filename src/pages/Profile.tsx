@@ -299,7 +299,7 @@ const Profile = () => {
                   <TabsTrigger value="applications">Bewerbungen</TabsTrigger>
                   <TabsTrigger value="security">Sicherheit</TabsTrigger>
                   {(isAdmin || session?.user?.email === 'admin@berlinrpvc.de') && (
-                    <TabsTrigger value="admin">Admin Panel</TabsTrigger>
+                    <TabsTrigger value="admin">Admin Dashboard</TabsTrigger>
                   )}
                 </TabsList>
                 

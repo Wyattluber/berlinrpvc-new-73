@@ -33,7 +33,7 @@ const StatCard = ({ title, value, icon: Icon, className = "", lastUpdated, color
 
 const ServerStats = () => {
   const [stats, setStats] = useState<ServerStatsType>({
-    discordMembers: 179,
+    discordMembers: 181,
     partnerServers: 2,
     servers: 1,
     lastUpdated: new Date().toISOString()
@@ -54,40 +54,32 @@ const ServerStats = () => {
   }, []);
 
   return (
-    <section className="py-10 bg-gradient-to-b from-gray-50 to-white">
-      <div className="container mx-auto px-4">
-        <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
-          Server Statistiken
-        </h2>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <StatCard 
-            title="Discord Mitglieder" 
-            value={stats.discordMembers} 
-            icon={Users} 
-            lastUpdated={stats.lastUpdated ? new Date(stats.lastUpdated).toLocaleString('de-DE') : 'Unbekannt'}
-            className="border-t-4 border-t-blue-500 hover:translate-y-[-5px]"
-            color="bg-gradient-to-r from-blue-500 to-blue-600"
-          />
-          <StatCard 
-            title="Partner Server" 
-            value={stats.partnerServers} 
-            icon={Share}
-            lastUpdated={stats.lastUpdated ? new Date(stats.lastUpdated).toLocaleString('de-DE') : 'Unbekannt'}
-            className="border-t-4 border-t-indigo-500 hover:translate-y-[-5px]"
-            color="bg-gradient-to-r from-indigo-500 to-indigo-600"
-          />
-          <StatCard 
-            title="Server" 
-            value={stats.servers} 
-            icon={Server}
-            lastUpdated={stats.lastUpdated ? new Date(stats.lastUpdated).toLocaleString('de-DE') : 'Unbekannt'}
-            className="border-t-4 border-t-purple-500 hover:translate-y-[-5px]"
-            color="bg-gradient-to-r from-purple-500 to-purple-600"
-          />
-        </div>
-      </div>
-    </section>
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+      <StatCard 
+        title="Discord Mitglieder" 
+        value={stats.discordMembers} 
+        icon={Users} 
+        lastUpdated={stats.lastUpdated ? new Date(stats.lastUpdated).toLocaleString('de-DE') : 'Unbekannt'}
+        className="border-t-4 border-t-blue-500 hover:translate-y-[-5px]"
+        color="bg-gradient-to-r from-blue-500 to-blue-600"
+      />
+      <StatCard 
+        title="Partner Server" 
+        value={stats.partnerServers} 
+        icon={Share}
+        lastUpdated={stats.lastUpdated ? new Date(stats.lastUpdated).toLocaleString('de-DE') : 'Unbekannt'}
+        className="border-t-4 border-t-indigo-500 hover:translate-y-[-5px]"
+        color="bg-gradient-to-r from-indigo-500 to-indigo-600"
+      />
+      <StatCard 
+        title="Server" 
+        value={stats.servers} 
+        icon={Server}
+        lastUpdated={stats.lastUpdated ? new Date(stats.lastUpdated).toLocaleString('de-DE') : 'Unbekannt'}
+        className="border-t-4 border-t-purple-500 hover:translate-y-[-5px]"
+        color="bg-gradient-to-r from-purple-500 to-purple-600"
+      />
+    </div>
   );
 };
 

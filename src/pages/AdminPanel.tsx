@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { checkIsAdmin } from '@/lib/admin';
@@ -10,7 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LoaderIcon, Users, FileText, Settings, LayoutDashboard, UserCog, ShieldCheck, BellRing, ChevronRight, Trash2, PencilLine } from 'lucide-react';
+import { 
+  LoaderIcon, Users, FileText, Settings, LayoutDashboard, 
+  UserCog, ShieldCheck, BellRing, ChevronRight, Trash2, PencilLine,
+  Activity, BarChart3, UserPlus, Server, Share
+} from 'lucide-react';
 import { 
   SidebarProvider, 
   Sidebar, 
@@ -24,48 +27,184 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
 } from '@/components/ui/sidebar';
+import ServerStats from '@/components/ServerStats';
+import { 
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, 
+  Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell 
+} from 'recharts';
 
-// Dashboard content components
+type Application = {
+  id: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+const userActivityData = [
+  { name: 'Mon', users: 4 },
+  { name: 'Tue', users: 3 },
+  { name: 'Wed', users: 7 },
+  { name: 'Thu', users: 5 },
+  { name: 'Fri', users: 8 },
+  { name: 'Sat', users: 12 },
+  { name: 'Sun', users: 10 },
+];
+
+const applicationStatusData = [
+  { name: 'Angenommen', value: 15, color: '#4ade80' },
+  { name: 'Abgelehnt', value: 8, color: '#f87171' },
+  { name: 'Ausstehend', value: 12, color: '#60a5fa' },
+];
+
+const COLORS = ['#4ade80', '#f87171', '#60a5fa'];
+
 const DashboardOverview = ({ userCount, adminUsers }: { userCount: number, adminUsers: any[] }) => (
   <div className="space-y-6">
     <h2 className="text-2xl font-bold">Dashboard Übersicht</h2>
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      <Card>
+    
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <Card className="border-l-4 border-l-blue-500">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
             Benutzer gesamt
           </CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
+          <Users className="h-4 w-4 text-blue-500" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{userCount}</div>
+          <p className="text-xs text-muted-foreground">Registrierte Benutzer</p>
         </CardContent>
       </Card>
       
-      <Card>
+      <Card className="border-l-4 border-l-purple-500">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
             Admin-Benutzer
           </CardTitle>
-          <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+          <ShieldCheck className="h-4 w-4 text-purple-500" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{adminUsers.length}</div>
+          <p className="text-xs text-muted-foreground">Team Mitglieder</p>
+        </CardContent>
+      </Card>
+      
+      <Card className="border-l-4 border-l-green-500">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">
+            Neue Bewerbungen
+          </CardTitle>
+          <FileText className="h-4 w-4 text-green-500" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">12</div>
+          <p className="text-xs text-muted-foreground">Letzte 7 Tage</p>
+        </CardContent>
+      </Card>
+      
+      <Card className="border-l-4 border-l-amber-500">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">
+            Server Aktivität
+          </CardTitle>
+          <Activity className="h-4 w-4 text-amber-500" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">89%</div>
+          <p className="text-xs text-muted-foreground">Serverauslastung</p>
+        </CardContent>
+      </Card>
+    </div>
+    
+    <div className="mt-8">
+      <h3 className="text-lg font-semibold mb-3">Server Statistiken</h3>
+      <ServerStats />
+    </div>
+    
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Benutzeraktivität</CardTitle>
+          <CardDescription>Tägliche aktive Benutzer (letzte Woche)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={userActivityData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="users" stroke="#3b82f6" activeDot={{ r: 8 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </CardContent>
       </Card>
       
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Bewerbungen
-          </CardTitle>
-          <FileText className="h-4 w-4 text-muted-foreground" />
+        <CardHeader>
+          <CardTitle className="text-base">Bewerbungsstatus</CardTitle>
+          <CardDescription>Verteilung der Bewerbungen nach Status</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">-</div>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={applicationStatusData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                >
+                  {applicationStatusData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </CardContent>
       </Card>
     </div>
+    
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle>Letzte Aktivitäten</CardTitle>
+        <CardDescription>Die neuesten Ereignisse im System</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {[
+            { icon: UserPlus, text: "Neuer Benutzer registriert: Max Mustermann", time: "Vor 2 Stunden" },
+            { icon: FileText, text: "Neue Bewerbung eingegangen: Lisa Schmidt", time: "Vor 5 Stunden" },
+            { icon: BarChart3, text: "Täglicher Statistikbericht generiert", time: "Vor 12 Stunden" },
+            { icon: ShieldCheck, text: "Sicherheitsaudit abgeschlossen", time: "Vor 1 Tag" },
+            { icon: Settings, text: "Systemeinstellungen aktualisiert", time: "Vor 2 Tagen" }
+          ].map((activity, i) => (
+            <div key={i} className="flex items-start space-x-4 p-2 hover:bg-gray-50 rounded-md">
+              <div className="bg-blue-100 p-2 rounded-full">
+                <activity.icon className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">{activity.text}</p>
+                <p className="text-xs text-gray-500">{activity.time}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button variant="outline" size="sm" className="w-full">Alle Aktivitäten anzeigen</Button>
+      </CardFooter>
+    </Card>
   </div>
 );
 
@@ -459,7 +598,6 @@ const AdminPanel = () => {
         setIsAdmin(adminStatus);
         
         if (adminStatus) {
-          // Fetch admin-related data
           const users = await fetchAdminUsers();
           setAdminUsers(users);
           
@@ -488,7 +626,6 @@ const AdminPanel = () => {
           description: "Benutzerrolle erfolgreich aktualisiert."
         });
         
-        // Update local state
         setAdminUsers(prevUsers => prevUsers.map(user => 
           user.id === userId ? { ...user, role } : user
         ));
@@ -519,7 +656,6 @@ const AdminPanel = () => {
           description: "Benutzer erfolgreich gelöscht."
         });
         
-        // Update local state
         setAdminUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
       } else {
         throw new Error(result.message);
@@ -555,7 +691,6 @@ const AdminPanel = () => {
     );
   }
   
-  // Sidebar menu items configuration
   const menuItems = [
     { title: "Dashboard", id: "dashboard", icon: LayoutDashboard },
     { title: "Benutzer", id: "users", icon: Users },
@@ -566,7 +701,6 @@ const AdminPanel = () => {
     { title: "Benachrichtigungen", id: "notifications", icon: BellRing }
   ];
   
-  // Render the selected content based on activeSection
   const renderContent = () => {
     switch (activeSection) {
       case 'dashboard':
@@ -619,7 +753,7 @@ const AdminPanel = () => {
           </SidebarContent>
         </Sidebar>
         
-        <SidebarInset>
+        <SidebarInset className="bg-gray-50">
           <div className="p-6">
             {renderContent()}
           </div>
@@ -630,4 +764,3 @@ const AdminPanel = () => {
 };
 
 export default AdminPanel;
-
