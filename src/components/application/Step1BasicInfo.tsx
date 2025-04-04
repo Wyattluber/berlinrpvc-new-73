@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useApplication } from '@/contexts/ApplicationContext';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -12,7 +13,7 @@ import { AlertTriangle } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 
-// Define the form schema with Zod
+// Define the form schema with Zod - updated minimum age to 14
 const step1Schema = z.object({
   roblox_username: z.string().min(1, { message: "Bitte gib deinen Roblox Benutzernamen ein." }),
   roblox_id: z.string().min(1, { message: "Bitte gib deine Roblox ID ein." }),
@@ -60,7 +61,7 @@ const Step1BasicInfo: React.FC<Step1Props> = ({
   const age = form.watch('age');
   
   useEffect(() => {
-    if (typeof age === 'number' && age < 13) {
+    if (typeof age === 'number' && age < 14) {
       setAgeWarning(true);
     } else {
       setAgeWarning(false);
@@ -216,7 +217,7 @@ const Step1BasicInfo: React.FC<Step1Props> = ({
                 <AlertTriangle className="h-4 w-4 text-yellow-600" />
                 <AlertTitle>Bitte überprüfe dein Alter</AlertTitle>
                 <AlertDescription>
-                  Das Mindestalter für unseren Server beträgt 12 Jahre. Bitte überprüfe, ob du dein Alter korrekt angegeben hast.
+                  Das Mindestalter für Moderatoren beträgt 14 Jahre. Bitte überprüfe, ob du dein Alter korrekt angegeben hast.
                 </AlertDescription>
               </Alert>
             )}

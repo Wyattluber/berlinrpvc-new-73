@@ -11,7 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { Shield, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-// Updated job description with emoji formatting
+// Updated job description with emoji formatting and corrected age requirement
 const jobDescription = {
   title: "Moderator",
   description: "Als Moderator hilfst du, den Server für alle Mitglieder angenehm zu gestalten. Du löst Konflikte, bearbeitest Tickets und unterstützt bei Veranstaltungen.",
@@ -21,7 +21,7 @@ const jobDescription = {
     "Unterstützung bei Server-Events",
     "Mitarbeit im Support-Bereich"
   ],
-  requirement: "Mindestens 16 Jahre alt, aktiv auf Discord und im Spiel",
+  requirement: "Mindestens 14 Jahre alt, aktiv auf Discord und im Spiel",
   details: [
     {
       title: "📌 Teamkleidung",
@@ -273,7 +273,7 @@ const Apply = () => {
               <ul className="space-y-3 mb-8">
                 <li className="flex items-start">
                   <span className="text-indigo-600 font-bold mr-2">•</span>
-                  <span>Mindestalter: 16 Jahre</span>
+                  <span>Mindestalter: 14 Jahre</span>
                 </li>
                 <li className="flex items-start">
                   <span className="text-indigo-600 font-bold mr-2">•</span>
@@ -293,7 +293,7 @@ const Apply = () => {
                 </li>
                 <li className="flex items-start">
                   <span className="text-indigo-600 font-bold mr-2">•</span>
-                  <span>Funktionierendes Mikrofon und TS3/Discord</span>
+                  <span>Funktionierendes Mikrofon und Discord</span>
                 </li>
               </ul>
               
