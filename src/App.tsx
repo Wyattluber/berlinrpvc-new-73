@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -15,6 +16,7 @@ import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import SubServers from "./pages/SubServers";
 import AdminPanel from "./pages/AdminPanel";
+import { ApplicationProvider } from "@/contexts/ApplicationContext";
 
 // Create context for session
 export const SessionContext = createContext<any>(null);
@@ -177,7 +179,11 @@ const App = () => {
                 <Route path="/" element={<Index />} />
                 <Route path="/apply" element={<Apply />} />
                 <Route path="/partners" element={<Partners />} />
-                <Route path="/apply/form" element={<ApplicationForm />} />
+                <Route path="/apply/form" element={
+                  <ApplicationProvider>
+                    <ApplicationForm />
+                  </ApplicationProvider>
+                } />
                 <Route 
                   path="/login" 
                   element={session ? <Navigate to="/profile" /> : <Login />} 
