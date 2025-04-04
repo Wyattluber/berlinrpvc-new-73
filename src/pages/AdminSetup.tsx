@@ -15,12 +15,12 @@ const AdminSetup = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Admin credentials 
+  // Fixed admin credentials 
   const adminEmail = "info@berlinrpvc.de";
   const specificUserId = "3ea1fee3-d6fa-4004-8a79-a41551f0b846";
 
   useEffect(() => {
-    // Check if the admin account already exists
+    // Check if admin account already exists
     const checkExistingAccount = async () => {
       try {
         // Check if user with this ID exists in admin_users table
