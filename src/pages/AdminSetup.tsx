@@ -26,7 +26,7 @@ const AdminSetup = () => {
         // Check if user with this ID exists in admin_users table
         const { data, error } = await supabase
           .from('admin_users')
-          .select('*')
+          .select()
           .eq('user_id', specificUserId)
           .maybeSingle();
         
@@ -59,6 +59,10 @@ const AdminSetup = () => {
       
       const result = await setSpecificUserAsAdmin(specificUserId, adminEmail);
       console.log("Admin account setup result:", result);
+      
+      if (!result.success) {
+        throw new Error(result.message || "Failed to set up admin account");
+      }
       
       setIsSuccess(true);
       toast({
