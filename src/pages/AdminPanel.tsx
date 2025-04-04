@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { checkIsAdmin } from '@/lib/admin';
@@ -334,7 +335,7 @@ const UsersManagement = ({ adminUsers, handleUpdateRole, handleDeleteUser }: {
               <p className="text-sm text-muted-foreground">Keine Admin-Benutzer gefunden.</p>
               <p className="text-xs mt-1 text-muted-foreground">Admin-Benutzer müssen direkt in der Datenbank hinzugefügt werden.</p>
             </div>
-          ) : (\
+          ) : (
             <div className="space-y-2 min-w-[700px]">
               <div className="grid grid-cols-4 gap-4 mb-2 px-3 py-2 bg-muted/30 rounded font-medium text-sm">
                 <div>Benutzer</div>
@@ -568,7 +569,7 @@ const TeamSettings = () => {
             {saving ? (
               <>
                 <LoaderIcon className="h-4 w-4 mr-2 animate-spin" />
-                Speichern...\
+                Speichern...
               </>
             ) : 'Einstellungen speichern'}
           </Button>
@@ -580,7 +581,7 @@ const TeamSettings = () => {
 
 const SecuritySettings = () => {
   const [authLogs, setAuthLogs] = useState<any[]>([]);
-  const [loadingLogs, setLoadingLogs] = useState(false);\
+  const [loadingLogs, setLoadingLogs] = useState(false);
 
   useEffect(() => {
     const fetchAuthLogs = async () => {
@@ -860,4 +861,60 @@ const AdminPanel = () => {
       case 'dashboard':
         return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
       case 'users':
-        return <UsersManagement adminUsers={adminUsers} handleUpdateRole={handleUpdateRole} handleDeleteUser={handleDelete
+        return <UsersManagement adminUsers={adminUsers} handleUpdateRole={handleUpdateRole} handleDeleteUser={handleDeleteUser} />;
+      case 'applications':
+        return <ApplicationsManagement />;
+      case 'news':
+        return <NewsManagement />;
+      case 'partners':
+        return <PartnerServersManagement />;
+      case 'sub_servers':
+        return <SubServersManagement />;
+      case 'team-settings':
+        return <TeamSettings />;
+      case 'security':
+        return <SecuritySettings />;
+      case 'account':
+        return <AccountDetails />;
+      default:
+        return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
+    }
+  };
+  
+  return (
+    <div className="min-h-screen w-full">
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full">
+          <Sidebar open={sidebarOpen} onOpenChange={setSidebarOpen}>
+            <SidebarHeader>
+              <div className="p-2">
+                <h2 className="text-lg font-bold">Admin Panel</h2>
+              </div>
+            </SidebarHeader>
+            <SidebarContent>
+              <SidebarMenu>
+                {menuItems.map(item => (
+                  <SidebarMenuItem key={item.id}>
+                    <SidebarMenuButton 
+                      className={activeSection === item.id ? "bg-accent" : ""}
+                      onClick={() => handleMenuClick(item.id)}
+                    >
+                      <item.icon className="h-5 w-5 mr-2" />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarContent>
+          </Sidebar>
+          
+          <div className="flex-1 p-6 overflow-auto">
+            {renderContent()}
+          </div>
+        </div>
+      </SidebarProvider>
+    </div>
+  );
+};
+
+export default AdminPanel;
