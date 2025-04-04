@@ -44,8 +44,10 @@ const AdminPanel = () => {
           return;
         }
 
+        console.log("Checking admin status for user:", session.user.id);
         // Check if user is an admin with the security definer function
         const adminStatus = await checkIsAdmin();
+        console.log("Admin status check result:", adminStatus);
         
         if (isMounted) {
           setIsAdmin(adminStatus);
@@ -83,14 +85,17 @@ const AdminPanel = () => {
 
   const fetchAdminUsers = async () => {
     try {
+      console.log("Fetching admin users");
       const { data, error } = await supabase
         .from('admin_users')
         .select('*');
       
       if (error) {
+        console.error("Error fetching admin users:", error);
         throw error;
       }
       
+      console.log("Admin users fetched:", data);
       setAdminUsers(data || []);
     } catch (error: any) {
       console.error("Error fetching admin users:", error);

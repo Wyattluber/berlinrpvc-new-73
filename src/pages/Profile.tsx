@@ -7,12 +7,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Settings, User, Calendar, BarChart, AlertCircle, CheckCircle, Clock, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { Settings, User, Calendar, BarChart, AlertCircle, CheckCircle, Clock, KeyRound, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { SessionContext } from '@/App';
+import { checkIsAdmin } from '@/lib/admin';
 
 interface UserProfile {
   id: string;
@@ -39,6 +40,7 @@ const Profile = () => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [isLoadingApplications, setIsLoadingApplications] = useState(false);
   const session = useContext(SessionContext);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -107,6 +109,22 @@ const Profile = () => {
 
     checkUser();
   }, [navigate, session]);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (session?.user) {
+        try {
+          const adminStatus = await checkIsAdmin();
+          setIsAdmin(adminStatus);
+        } catch (error) {
+          console.error("Error checking admin status:", error);
+          setIsAdmin(false);
+        }
+      }
+    };
+    
+    checkAdminStatus();
+  }, [session]);
 
   const fetchApplications = async (userId: string) => {
     setIsLoadingApplications(true);
@@ -340,6 +358,18 @@ const Profile = () => {
                       <KeyRound size={16} className="mr-2" />
                       Sicherheit
                     </Button>
+                    
+                    {isAdmin && (
+                      <Button 
+                        variant="secondary" 
+                        className="w-full justify-start mt-2 border border-blue-200 bg-blue-50 text-blue-700"
+                        onClick={() => navigate('/admin')}
+                      >
+                        <ShieldCheck size={16} className="mr-2" />
+                        Admin Panel
+                      </Button>
+                    )}
+                    
                     <Button 
                       variant="outline" 
                       className="w-full justify-start text-red-500 hover:text-red-600 mt-4"

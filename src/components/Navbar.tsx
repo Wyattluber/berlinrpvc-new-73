@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
@@ -17,15 +16,14 @@ const Navbar = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check auth status when component mounts or location changes
     const authCheck = async () => {
       const loggedIn = !!session;
       setIsLoggedIn(loggedIn);
       
       if (loggedIn) {
-        // Check if user is admin
         try {
           const adminStatus = await checkIsAdmin();
+          console.log("Admin status check result:", adminStatus);
           setIsAdmin(adminStatus);
         } catch (error) {
           console.error("Error checking admin status:", error);
