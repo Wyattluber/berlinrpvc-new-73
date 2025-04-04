@@ -32,13 +32,13 @@ export async function createAdminAccount(email: string, password: string) {
     
     if (!authData.user) throw new Error('User creation failed');
     
-    // Then add the user to the admin_users table
+    // Then add the user to the admin_users table - fixing type instantiation error
     const { error } = await supabase
       .from('admin_users')
-      .insert({ 
-        user_id: authData.user.id, 
-        email 
-      });
+      .insert({
+        user_id: authData.user.id,
+        email: email
+      } as any); // Using type assertion to avoid deep type instantiation
     
     if (error) throw error;
     
@@ -72,10 +72,10 @@ export async function makeUserAdmin(userId: string, email: string) {
   try {
     const { error } = await supabase
       .from('admin_users')
-      .insert({ 
-        user_id: userId, 
-        email 
-      });
+      .insert({
+        user_id: userId,
+        email: email
+      } as any); // Using type assertion to avoid deep type instantiation
     
     if (error) throw error;
     
