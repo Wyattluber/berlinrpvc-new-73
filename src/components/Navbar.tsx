@@ -1,248 +1,293 @@
 
-import React, { useState, useEffect, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Button } from './ui/button';
-import { Menu, X, User, LogOut, ShieldCheck } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User, Cog, ShieldCheck } from 'lucide-react';
+import { SessionContext } from '@/App';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { SessionContext } from '@/App';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { checkIsAdmin, checkIsModerator } from '@/lib/admin';
+import { useMobileMenu } from '@/hooks/use-mobile';
 
 const Navbar = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const session = useContext(SessionContext);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isModerator, setIsModerator] = useState(false);
-  const session = useContext(SessionContext);
+  const { mobileMenuOpen, setMobileMenuOpen } = useMobileMenu();
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const authCheck = async () => {
-      const loggedIn = !!session;
-      setIsLoggedIn(loggedIn);
-      
-      if (loggedIn) {
-        try {
-          const adminStatus = await checkIsAdmin();
-          const modStatus = await checkIsModerator();
-          console.log("Admin status check result:", adminStatus);
-          console.log("Moderator status check result:", modStatus);
-          setIsAdmin(adminStatus);
-          setIsModerator(modStatus);
-        } catch (error) {
-          console.error("Error checking user status:", error);
-          setIsAdmin(false);
-          setIsModerator(false);
-        }
-      } else {
-        setIsAdmin(false);
-        setIsModerator(false);
-      }
-    };
-    
-    authCheck();
-  }, [session, location]);
+    if (session?.user) {
+      checkIsAdmin().then(result => setIsAdmin(result));
+      checkIsModerator().then(result => setIsModerator(result));
+    }
+  }, [session]);
 
-  const toggleMenu = () => {
-    setIsOpen(!isOpen);
-  };
-
-  const handleLogout = async () => {
+  const handleSignOut = async () => {
     try {
-      // Überprüfe, ob eine aktive Session existiert
-      const { data: sessionData } = await supabase.auth.getSession();
-      
-      if (!sessionData.session) {
-        // Falls keine Session existiert, direkt zur Homepage navigieren und UI aktualisieren
-        toast({
-          title: "Bereits abgemeldet",
-          description: "Du bist bereits abgemeldet."
-        });
-        
-        navigate('/');
-        return;
-      }
-      
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        if (error.name === "AuthSessionMissingError") {
-          // Falls Fehler auf fehlende Session hinweist, trotzdem zur Homepage navigieren
-          toast({
-            title: "Abgemeldet",
-            description: "Du wurdest erfolgreich abgemeldet."
-          });
-          
-          navigate('/');
-          return;
-        }
-        throw error;
-      }
-      
+      await supabase.auth.signOut();
+      navigate('/');
       toast({
-        title: "Erfolgreich abgemeldet",
+        title: "Abgemeldet",
         description: "Du wurdest erfolgreich abgemeldet."
       });
-      
-      setIsLoggedIn(false);
-      setIsAdmin(false);
-      setIsModerator(false);
-      navigate('/');
-    } catch (error: any) {
-      console.error("Logout error:", error);
-      
-      // Selbst bei Fehler zur Homepage navigieren
+    } catch (error) {
+      console.error('Error signing out:', error);
       toast({
-        title: "Abmeldeversuch",
-        description: "Deine Sitzung wurde zurückgesetzt.",
-        variant: "default"
+        title: "Fehler",
+        description: "Fehler beim Abmelden. Bitte versuche es erneut.",
+        variant: "destructive"
       });
-      
-      navigate('/');
     }
   };
 
-  const shouldShowApplyButton = !isAdmin && !isModerator;
-
   return (
-    <nav className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white shadow-md">
-      <div className="container mx-auto px-4 py-3">
-        <div className="flex justify-between items-center">
-          <Link to="/" className="flex items-center">
-            <span className="font-bold text-xl bg-gradient-to-r from-blue-200 to-indigo-200 bg-clip-text text-transparent">BerlinRP-VC</span>
-          </Link>
-
-          {/* Desktop Menu */}
-          <div className="hidden md:flex space-x-4 items-center">
-            <Link to="/" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300">
-              Home
+    <nav className="bg-gradient-to-r from-gray-900 to-gray-800 text-white shadow-md">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
+          <div className="flex items-center">
+            <Link to="/" className="flex-shrink-0 flex items-center">
+              <span className="text-xl font-bold">Bayern RP</span>
             </Link>
-            <Link to="/partners" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300">
+          </div>
+          
+          <div className="hidden md:flex items-center space-x-4">
+            <Link 
+              to="/" 
+              className={`px-3 py-2 rounded-md text-sm font-medium ${
+                location.pathname === '/' 
+                ? 'bg-gray-700 text-white' 
+                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              }`}
+            >
+              Startseite
+            </Link>
+            
+            <Link 
+              to="/subservers" 
+              className={`px-3 py-2 rounded-md text-sm font-medium ${
+                location.pathname === '/subservers' 
+                ? 'bg-gray-700 text-white' 
+                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              }`}
+            >
+              Subserver
+            </Link>
+            
+            <Link 
+              to="/partners" 
+              className={`px-3 py-2 rounded-md text-sm font-medium ${
+                location.pathname === '/partners' 
+                ? 'bg-gray-700 text-white' 
+                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              }`}
+            >
               Partner
             </Link>
-            <Link to="/subservers" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300">
-              Unterserver
+            
+            <Link 
+              to="/apply" 
+              className={`px-3 py-2 rounded-md text-sm font-medium ${
+                location.pathname.startsWith('/apply') 
+                ? 'bg-gray-700 text-white' 
+                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              }`}
+            >
+              Bewerben
             </Link>
             
-            {isLoggedIn ? (
-              <>
-                <Link to="/profile" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300 flex items-center gap-1">
-                  <User size={18} />
-                  <span>Profil</span>
-                </Link>
-                
-                {isAdmin && (
-                  <Link to="/admin" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300 flex items-center gap-1">
-                    <ShieldCheck size={18} />
-                    <span>Admin</span>
-                  </Link>
-                )}
-                
-                <Button variant="ghost" className="hover:text-blue-200 text-white" onClick={handleLogout}>
-                  <div className="flex items-center gap-2">
-                    <LogOut size={18} />
-                    <span>Logout</span>
-                  </div>
-                </Button>
-              </>
-            ) : (
-              <Button variant="ghost" className="hover:text-blue-200 text-white">
-                <Link to="/login" className="flex items-center gap-2">
-                  <User size={18} />
-                  <span>Login</span>
-                </Link>
-              </Button>
+            {(isAdmin || isModerator) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white flex items-center">
+                    <ShieldCheck className="h-4 w-4 mr-1" />
+                    Admin
+                    <ChevronDown className="ml-1 h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel>Admin-Bereich</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/admin')}>
+                    <Cog className="mr-2 h-4 w-4" />
+                    <span>Admin-Panel</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/admin/dashboard')}>
+                    <ShieldCheck className="mr-2 h-4 w-4" />
+                    <span>Bewerbungen</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             
-            {shouldShowApplyButton && (
-              <Button variant="default" className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-md border-0 transition-all duration-300 hover:scale-105 hover:shadow-md">
-                <Link to="/apply/form">Jetzt Bewerben</Link>
+            {session ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white flex items-center">
+                    <User className="h-4 w-4 mr-1" />
+                    Profil
+                    <ChevronDown className="ml-1 h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel>Benutzerkonto</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/profile')}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Mein Profil</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Abmelden</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button onClick={() => navigate('/login')} variant="secondary" size="sm">
+                Anmelden
               </Button>
             )}
           </div>
-
-          {/* Mobile Menu Button */}
-          <div className="md:hidden">
-            <button onClick={toggleMenu} className="text-white focus:outline-none">
-              {isOpen ? <X size={24} /> : <Menu size={24} />}
+          
+          <div className="md:hidden flex items-center">
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+              aria-expanded="false"
+            >
+              <span className="sr-only">Menü öffnen</span>
+              {mobileMenuOpen ? (
+                <X className="block h-6 w-6" aria-hidden="true" />
+              ) : (
+                <Menu className="block h-6 w-6" aria-hidden="true" />
+              )}
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Mobile Menu */}
-        {isOpen && (
-          <div className="md:hidden mt-2 py-2">
-            <Link to="/" 
-              className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300"
-              onClick={toggleMenu}
-            >
-              Home
-            </Link>
-            <Link to="/partners" 
-              className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300"
-              onClick={toggleMenu}
-            >
-              Partner
-            </Link>
-            <Link to="/subservers" 
-              className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300"
-              onClick={toggleMenu}
-            >
-              Unterserver
-            </Link>
-            {isLoggedIn ? (
-              <>
-                <Link to="/profile"
-                  className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-2"
-                  onClick={toggleMenu}
-                >
-                  <User size={18} />
-                  <span>Profil</span>
-                </Link>
-                
-                {isAdmin && (
-                  <Link to="/admin"
-                    className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-2"
-                    onClick={toggleMenu}
-                  >
-                    <ShieldCheck size={18} />
-                    <span>Admin</span>
-                  </Link>
-                )}
-                
-                <button
-                  className="block w-full text-left hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-2"
-                  onClick={() => {
-                    handleLogout();
-                    toggleMenu();
-                  }}
-                >
-                  <LogOut size={18} />
-                  <span>Logout</span>
-                </button>
-              </>
-            ) : (
-              <Link to="/login"
-                className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-2"
-                onClick={toggleMenu}
+      {/* Mobile menu, show/hide based on menu state */}
+      <div className={`${mobileMenuOpen ? 'block' : 'hidden'} md:hidden`}>
+        <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+          <Link
+            to="/"
+            className={`block px-3 py-2 rounded-md text-base font-medium ${
+              location.pathname === '/' 
+              ? 'bg-gray-900 text-white' 
+              : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+            }`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Startseite
+          </Link>
+          
+          <Link
+            to="/subservers"
+            className={`block px-3 py-2 rounded-md text-base font-medium ${
+              location.pathname === '/subservers' 
+              ? 'bg-gray-900 text-white' 
+              : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+            }`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Subserver
+          </Link>
+          
+          <Link
+            to="/partners"
+            className={`block px-3 py-2 rounded-md text-base font-medium ${
+              location.pathname === '/partners' 
+              ? 'bg-gray-900 text-white' 
+              : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+            }`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Partner
+          </Link>
+          
+          <Link
+            to="/apply"
+            className={`block px-3 py-2 rounded-md text-base font-medium ${
+              location.pathname.startsWith('/apply') 
+              ? 'bg-gray-900 text-white' 
+              : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+            }`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Bewerben
+          </Link>
+          
+          {(isAdmin || isModerator) && (
+            <>
+              <Link
+                to="/admin"
+                className={`block px-3 py-2 rounded-md text-base font-medium ${
+                  location.pathname === '/admin' 
+                  ? 'bg-gray-900 text-white' 
+                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
               >
-                <User size={18} />
-                <span>Login</span>
+                Admin-Panel
               </Link>
-            )}
-            
-            {shouldShowApplyButton && (
-              <Button 
-                variant="default" 
-                className="w-full mt-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-md border-0"
-                onClick={toggleMenu}
+              
+              <Link
+                to="/admin/dashboard"
+                className={`block px-3 py-2 rounded-md text-base font-medium ${
+                  location.pathname === '/admin/dashboard' 
+                  ? 'bg-gray-900 text-white' 
+                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
               >
-                <Link to="/apply/form" className="w-full">Jetzt Bewerben</Link>
-              </Button>
-            )}
-          </div>
-        )}
+                Admin-Dashboard
+              </Link>
+            </>
+          )}
+          
+          {session ? (
+            <>
+              <Link
+                to="/profile"
+                className={`block px-3 py-2 rounded-md text-base font-medium ${
+                  location.pathname === '/profile' 
+                  ? 'bg-gray-900 text-white' 
+                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                }`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Mein Profil
+              </Link>
+              
+              <button
+                onClick={() => {
+                  handleSignOut();
+                  setMobileMenuOpen(false);
+                }}
+                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
+              >
+                Abmelden
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/login"
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Anmelden
+            </Link>
+          )}
+        </div>
       </div>
     </nav>
   );

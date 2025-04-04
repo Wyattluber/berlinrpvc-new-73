@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SessionContext } from '@/App';
@@ -49,9 +50,9 @@ const AdminPanel = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [activeTab, setActiveTab] = useState("applications");
-  const [applications, setApplications] = useState<any[]>([]);
-  const [loadingApplications, setLoadingApplications] = useState(false);
+  const [activeTab, setActiveTab] = useState("user-management");
+  const [registeredUsers, setRegisteredUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
   const [currentApplication, setCurrentApplication] = useState<any>(null);
   const [applicationStatus, setApplicationStatus] = useState('');
   const [applicationNotes, setApplicationNotes] = useState('');
@@ -70,6 +71,7 @@ const AdminPanel = () => {
     meeting_location: '',
     meeting_notes: ''
   });
+  const [userCount, setUserCount] = useState(0);
   const [applicationQuestions, setApplicationQuestions] = useState({
     section1: [
       { id: 'roblox_username', label: 'Roblox Benutzername', required: true },
@@ -129,7 +131,7 @@ const AdminPanel = () => {
             });
           } else {
             fetchAdminUsers();
-            fetchApplications();
+            fetchRegisteredUsers();
             fetchTeamSettings();
           }
         }
@@ -186,26 +188,39 @@ const AdminPanel = () => {
     }
   };
 
-  const fetchApplications = async () => {
-    setLoadingApplications(true);
+  const fetchRegisteredUsers = async () => {
+    setLoadingUsers(true);
     try {
-      const { data, error } = await supabase
-        .from('applications')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // First, get the total count of users
+      const { count, error: countError } = await supabase
+        .from('auth.users')
+        .select('*', { count: 'exact', head: true });
+
+      if (countError) {
+        console.error("Error counting users:", countError);
+        throw countError;
+      }
+
+      // We can't directly access auth.users, so we'll use a workaround
+      // by fetching user IDs from admin_users and applications tables
+      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
       
-      if (error) throw error;
+      if (authError) {
+        console.error("Error fetching auth users:", authError);
+        throw authError;
+      }
       
-      setApplications(data || []);
+      setUserCount(authUsers?.users?.length || 0);
+      setRegisteredUsers(authUsers?.users || []);
     } catch (error) {
-      console.error("Error fetching applications:", error);
+      console.error("Error fetching registered users:", error);
       toast({
         title: "Fehler",
-        description: "Bewerbungen konnten nicht geladen werden.",
+        description: "Benutzer konnten nicht geladen werden.",
         variant: "destructive"
       });
     } finally {
-      setLoadingApplications(false);
+      setLoadingUsers(false);
     }
   };
 
@@ -382,7 +397,6 @@ const AdminPanel = () => {
         description: `Die Bewerbung wurde erfolgreich auf "${applicationStatus}" gesetzt.`
       });
       
-      fetchApplications();
       setDialogOpen(false);
     } catch (error) {
       console.error("Error updating application:", error);
@@ -517,86 +531,11 @@ const AdminPanel = () => {
             </CardHeader>
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="applications">Bewerbungen</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="user-management">Benutzerverwaltung</TabsTrigger>
                   <TabsTrigger value="team-settings">Team-Einstellungen</TabsTrigger>
                   <TabsTrigger value="statistics">Statistiken</TabsTrigger>
                 </TabsList>
-                
-                <TabsContent value="applications" className="space-y-4 mt-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <Users className="text-blue-500" size={20} />
-                        Bewerbungen verwalten
-                      </CardTitle>
-                      <CardDescription>
-                        Hier kannst du alle eingegangenen Bewerbungen verwalten und deren Status ändern
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {loadingApplications ? (
-                        <div className="flex justify-center py-8">
-                          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-                        </div>
-                      ) : applications.length > 0 ? (
-                        <div className="overflow-x-auto">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Discord ID</TableHead>
-                                <TableHead>Roblox Benutzername</TableHead>
-                                <TableHead>Alter</TableHead>
-                                <TableHead>Datum</TableHead>
-                                <TableHead>Aktionen</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {applications.map((app) => (
-                                <TableRow key={app.id}>
-                                  <TableCell>{getStatusBadge(app.status)}</TableCell>
-                                  <TableCell>{app.discord_id}</TableCell>
-                                  <TableCell>{app.roblox_username}</TableCell>
-                                  <TableCell>{app.age}</TableCell>
-                                  <TableCell>{formatDate(app.created_at)}</TableCell>
-                                  <TableCell>
-                                    <div className="flex gap-2">
-                                      <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        onClick={() => handleViewApplication(app)}
-                                        className="flex items-center gap-1"
-                                      >
-                                        <Eye size={14} />
-                                        Ansehen
-                                      </Button>
-                                      <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        onClick={() => handleEditApplication(app)}
-                                        className="flex items-center gap-1"
-                                      >
-                                        <Edit size={14} />
-                                        Status
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      ) : (
-                        <div className="text-center py-8 text-gray-500">
-                          <Users className="h-12 w-12 mx-auto text-gray-300 mb-2" />
-                          <p>Keine Bewerbungen gefunden</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
                 
                 <TabsContent value="user-management" className="space-y-4 mt-4">
                   {successMessage && (
@@ -713,6 +652,54 @@ const AdminPanel = () => {
                       )}
                     </CardContent>
                   </Card>
+                  
+                  <Card className="mt-6">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Users className="text-blue-500" size={20} />
+                        Registrierte Benutzer ({userCount})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {loadingUsers ? (
+                        <div className="flex justify-center py-8">
+                          <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                        </div>
+                      ) : registeredUsers.length > 0 ? (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Benutzer-ID</TableHead>
+                              <TableHead>E-Mail</TableHead>
+                              <TableHead>Registriert am</TableHead>
+                              <TableHead>Bestätigt</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {registeredUsers.map((user) => (
+                              <TableRow key={user.id}>
+                                <TableCell className="font-mono text-xs">{user.id}</TableCell>
+                                <TableCell>{user.email}</TableCell>
+                                <TableCell>{formatDate(user.created_at)}</TableCell>
+                                <TableCell>
+                                  {user.email_confirmed_at ? (
+                                    <Badge className="bg-green-100 text-green-800">Ja</Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-yellow-600">Nein</Badge>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          <Users className="h-12 w-12 mx-auto text-gray-300 mb-2" />
+                          <p>Keine Benutzer gefunden</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
                 </TabsContent>
                 
                 <TabsContent value="team-settings" className="space-y-4 mt-4">
@@ -807,105 +794,6 @@ const AdminPanel = () => {
                       </Button>
                     </CardContent>
                   </Card>
-                  
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <FileText className="text-blue-500" size={20} />
-                        Bewerbungsfragen verwalten
-                      </CardTitle>
-                      <CardDescription>
-                        Hier kannst du die Fragen für die Teammitglied-Bewerbung anpassen
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <Accordion type="single" collapsible className="w-full">
-                        <AccordionItem value="section1">
-                          <AccordionTrigger className="text-base font-medium">
-                            Abschnitt 1: Persönliche Informationen
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <div className="space-y-4 py-2">
-                              {applicationQuestions.section1.map((question, index) => (
-                                <div key={index} className="space-y-2 p-3 rounded-md border border-gray-200">
-                                  <div className="flex justify-between items-center">
-                                    <label className="text-sm font-medium">{question.label}</label>
-                                    <Badge className={question.required ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}>
-                                      {question.required ? "Erforderlich" : "Optional"}
-                                    </Badge>
-                                  </div>
-                                  <Input 
-                                    value={question.label}
-                                    onChange={(e) => {
-                                      const newQuestions = {...applicationQuestions};
-                                      newQuestions.section1[index].label = e.target.value;
-                                      setApplicationQuestions(newQuestions);
-                                    }}
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                        
-                        <AccordionItem value="section2">
-                          <AccordionTrigger className="text-base font-medium">
-                            Abschnitt 2: Regelverständnis
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <div className="space-y-4 py-2">
-                              {applicationQuestions.section2.map((question, index) => (
-                                <div key={index} className="space-y-2 p-3 rounded-md border border-gray-200">
-                                  <div className="flex justify-between items-center">
-                                    <label className="text-sm font-medium">{question.label}</label>
-                                    <Badge className={question.required ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}>
-                                      {question.required ? "Erforderlich" : "Optional"}
-                                    </Badge>
-                                  </div>
-                                  <Textarea 
-                                    value={question.label}
-                                    onChange={(e) => {
-                                      const newQuestions = {...applicationQuestions};
-                                      newQuestions.section2[index].label = e.target.value;
-                                      setApplicationQuestions(newQuestions);
-                                    }}
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                        
-                        <AccordionItem value="section3">
-                          <AccordionTrigger className="text-base font-medium">
-                            Abschnitt 3: Situationshandhabung & Erfahrung
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <div className="space-y-4 py-2">
-                              {applicationQuestions.section3.map((question, index) => (
-                                <div key={index} className="space-y-2 p-3 rounded-md border border-gray-200">
-                                  <div className="flex justify-between items-center">
-                                    <label className="text-sm font-medium">{question.label}</label>
-                                    <Badge className={question.required ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}>
-                                      {question.required ? "Erforderlich" : "Optional"}
-                                    </Badge>
-                                  </div>
-                                  <Textarea 
-                                    value={question.label}
-                                    onChange={(e) => {
-                                      const newQuestions = {...applicationQuestions};
-                                      newQuestions.section3[index].label = e.target.value;
-                                      setApplicationQuestions(newQuestions);
-                                    }}
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      </Accordion>
-                    </CardContent>
-                  </Card>
                 </TabsContent>
                 
                 <TabsContent value="statistics" className="space-y-4 mt-4">
@@ -966,6 +854,194 @@ const AdminPanel = () => {
         </div>
       </main>
       <Footer />
+      
+      {/* View Application Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Bewerbung von {currentApplication?.roblox_username}</DialogTitle>
+            <DialogDescription>
+              Eingereicht am {currentApplication ? formatDate(currentApplication.created_at) : ''}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {currentApplication && (
+            <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Persönliche Informationen</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Roblox Benutzername</h4>
+                    <p className="text-base">{currentApplication.roblox_username}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Roblox ID</h4>
+                    <p className="text-base">{currentApplication.roblox_id}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Discord ID</h4>
+                    <p className="text-base">{currentApplication.discord_id}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Alter</h4>
+                    <p className="text-base">{currentApplication.age} Jahre</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Aktivitätslevel (1-10)</h4>
+                    <p className="text-base">{currentApplication.activity_level}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <Separator />
+              
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Regelverständnis</h3>
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Was ist für dich FRP (Fail-Roleplay)?</h4>
+                    <p className="text-base bg-gray-50 p-3 rounded">{currentApplication.frp_understanding}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Was ist für dich VDM (Vehicle-Deathmatch)?</h4>
+                    <p className="text-base bg-gray-50 p-3 rounded">{currentApplication.vdm_understanding}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Was ist Taschen-RP und warum ist es verboten?</h4>
+                    <p className="text-base bg-gray-50 p-3 rounded">{currentApplication.taschen_rp_understanding}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Wie alt muss man sein, um auf dem Server spielen zu dürfen?</h4>
+                    <p className="text-base bg-gray-50 p-3 rounded">{currentApplication.server_age_understanding}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <Separator />
+              
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Situationshandhabung & Erfahrung</h3>
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Wie würdest du mit einem Spieler umgehen, der sich weigert, auf Teammitglieder zu hören?</h4>
+                    <p className="text-base bg-gray-50 p-3 rounded">{currentApplication.situation_handling}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Was ist eine Bodycam und wann kommt sie zum Einsatz?</h4>
+                    <p className="text-base bg-gray-50 p-3 rounded">{currentApplication.bodycam_understanding}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Wie würdest du vorgehen, wenn ein Freund von dir gegen die Regeln verstößt?</h4>
+                    <p className="text-base bg-gray-50 p-3 rounded">{currentApplication.friend_rule_violation}</p>
+                  </div>
+                  
+                  {currentApplication.other_servers && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500">Auf welchen anderen Servern spielst du noch?</h4>
+                      <p className="text-base bg-gray-50 p-3 rounded">{currentApplication.other_servers}</p>
+                    </div>
+                  )}
+                  
+                  {currentApplication.admin_experience && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500">Hast du bereits Erfahrung als Administrator/Teammitglied?</h4>
+                      <p className="text-base bg-gray-50 p-3 rounded">{currentApplication.admin_experience}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <Separator />
+              
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">Status</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-500">Aktueller Status:</span>
+                  {getStatusBadge(currentApplication.status)}
+                </div>
+                
+                {currentApplication.notes && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Notizen</h4>
+                    <p className="text-base bg-gray-50 p-3 rounded">{currentApplication.notes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter className="flex space-x-2 sm:justify-end">
+            <Button 
+              onClick={() => setViewDialogOpen(false)}
+              variant="outline"
+            >
+              Schließen
+            </Button>
+            <Button 
+              onClick={() => {
+                setViewDialogOpen(false);
+                if (currentApplication) {
+                  handleEditApplication(currentApplication);
+                }
+              }}
+            >
+              Status bearbeiten
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Application Status Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bewerbungsstatus ändern</DialogTitle>
+            <DialogDescription>
+              Ändere den Status der Bewerbung von {currentApplication?.roblox_username}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
+              <Select 
+                value={applicationStatus}
+                onValueChange={setApplicationStatus}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Status auswählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending">Ausstehend</SelectItem>
+                  <SelectItem value="approved">Genehmigt</SelectItem>
+                  <SelectItem value="rejected">Abgelehnt</SelectItem>
+                  <SelectItem value="waitlist">Warteliste</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Notizen</label>
+              <Textarea 
+                placeholder="Interne Notizen zur Bewerbung"
+                value={applicationNotes}
+                onChange={(e) => setApplicationNotes(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              onClick={handleSaveApplicationStatus}
+              disabled={isLoading}
+            >
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Speichern
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

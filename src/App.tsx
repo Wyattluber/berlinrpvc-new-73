@@ -16,6 +16,7 @@ import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import SubServers from "./pages/SubServers";
 import AdminPanel from "./pages/AdminPanel";
+import AdminDashboard from "./pages/AdminDashboard";
 import { ApplicationProvider } from "@/contexts/ApplicationContext";
 
 // Create context for session
@@ -196,6 +197,10 @@ const App = () => {
                 <Route 
                   path="/admin" 
                   element={session ? <AdminPanel /> : <Navigate to="/login" />} 
+                />
+                <Route 
+                  path="/admin/dashboard" 
+                  element={session ? <AdminDashboard /> : <Navigate to="/login" />} 
                 />
                 {/* Catch-all route */}
                 <Route path="*" element={<NotFound />} />
