@@ -210,9 +210,9 @@ export interface TeamSettings {
  */
 export async function getTeamSettings(): Promise<TeamSettings | null> {
   try {
-    // Using a type assertion to work around the type issues
+    // Using a different approach to handle the type issues
     const { data, error } = await supabase
-      .from('team_settings' as any)
+      .from('team_settings')
       .select('*')
       .maybeSingle();
       
@@ -221,12 +221,22 @@ export async function getTeamSettings(): Promise<TeamSettings | null> {
       return null;
     }
     
-    // Add type check before returning
-    if (data) {
-      return data as TeamSettings;
-    }
+    // If no data is returned, return null
+    if (!data) return null;
     
-    return null;
+    // Create a proper TeamSettings object from the returned data
+    const teamSettings: TeamSettings = {
+      id: data.id,
+      meeting_day: data.meeting_day || '',
+      meeting_time: data.meeting_time || '',
+      meeting_frequency: data.meeting_frequency || '',
+      meeting_location: data.meeting_location || '',
+      meeting_notes: data.meeting_notes || '',
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
+    
+    return teamSettings;
   } catch (error) {
     console.error('Error getting team settings:', error);
     return null;
