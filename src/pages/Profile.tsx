@@ -599,7 +599,7 @@ const Profile = () => {
                     
                     <div className="space-y-2">
                       <Label htmlFor="role">Rolle</Label>
-                      <Input id="role" value={getRoleName(user.role)} disabled />
+                      <Input id="role" value={getUserRoleName()} disabled />
                     </div>
                     
                     <Button

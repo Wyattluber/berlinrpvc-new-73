@@ -13,9 +13,12 @@ export type ServerStats = {
  */
 export async function fetchServerStats(): Promise<ServerStats> {
   try {
+    // We need to use "from" method with the table name as string
+    // rather than relying on TypeScript type inference
     const { data, error } = await supabase
       .from('server_stats')
       .select('*')
+      .eq('id', 1)
       .single();
     
     if (error) {
@@ -28,7 +31,7 @@ export async function fetchServerStats(): Promise<ServerStats> {
       };
     }
     
-    return data;
+    return data as ServerStats;
   } catch (error) {
     console.error('Error fetching server stats:', error);
     return {
@@ -43,19 +46,17 @@ export async function fetchServerStats(): Promise<ServerStats> {
 /**
  * Update the server statistics in the database
  */
-export async function updateServerStats(stats: ServerStats): Promise<{ success: boolean, message: string }> {
+export async function updateServerStats(stats: ServerStats): Promise<{ success: boolean; message: string }> {
   try {
     const updatedStats = {
       ...stats,
       lastUpdated: new Date().toISOString()
     };
     
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('server_stats')
       .update(updatedStats)
-      .eq('id', 1)
-      .select()
-      .single();
+      .eq('id', 1);
     
     if (error) {
       console.error('Error updating server stats:', error);
@@ -67,8 +68,7 @@ export async function updateServerStats(stats: ServerStats): Promise<{ success: 
     
     return {
       success: true,
-      message: 'Server statistics updated successfully',
-      data
+      message: 'Server statistics updated successfully'
     };
   } catch (error: any) {
     console.error('Error updating server stats:', error);

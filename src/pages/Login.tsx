@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Mail, Lock, Loader2, GitHub, Google } from 'lucide-react';
+import { Mail, Lock, Loader2, Github } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from '@/integrations/supabase/client';
@@ -153,24 +153,12 @@ const Login = () => {
               </>
             ) : (
               <>
-                <GitHub className="mr-2 h-4 w-4" />
+                <Github className="mr-2 h-4 w-4" />
                 Mit GitHub anmelden
               </>
             )}
           </Button>
-          <Button variant="outline" onClick={() => handleOAuthLogin('google')} disabled={loading}>
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Bitte warten...
-              </>
-            ) : (
-              <>
-                <Google className="mr-2 h-4 w-4" />
-                Mit Google anmelden
-              </>
-            )}
-          </Button>
+          {/* Removed Google login button since the icon is not available */}
         </CardContent>
         <div className="px-6 py-4 text-sm text-muted-foreground">
           <Link to="/forgot-password" className="hover:text-blue-500">Passwort vergessen?</Link>

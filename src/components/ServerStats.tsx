@@ -41,8 +41,13 @@ const ServerStats = () => {
 
   useEffect(() => {
     const loadStats = async () => {
-      const serverStats = await fetchServerStats();
-      setStats(serverStats);
+      try {
+        const serverStats = await fetchServerStats();
+        console.log("Loaded server stats:", serverStats);
+        setStats(serverStats);
+      } catch (error) {
+        console.error("Error loading server stats:", error);
+      }
     };
 
     loadStats();

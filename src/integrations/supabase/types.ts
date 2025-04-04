@@ -99,6 +99,30 @@ export type Database = {
         }
         Relationships: []
       }
+      server_stats: {
+        Row: {
+          discordMembers: number
+          id: number
+          lastUpdated: string
+          partnerServers: number
+          servers: number
+        }
+        Insert: {
+          discordMembers?: number
+          id?: number
+          lastUpdated?: string
+          partnerServers?: number
+          servers?: number
+        }
+        Update: {
+          discordMembers?: number
+          id?: number
+          lastUpdated?: string
+          partnerServers?: number
+          servers?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

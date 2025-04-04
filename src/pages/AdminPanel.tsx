@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SessionContext } from '@/App';
@@ -9,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { addAdmin, addModerator, removeUserRole, checkIsAdmin } from '@/lib/admin';
-import { updateServerStats } from '@/lib/stats';
+import { updateServerStats, fetchServerStats } from '@/lib/stats';
 import { AlertCircle, CheckCircle, ShieldCheck, Shield, Loader2, Users, Edit, Trash, ChevronsUpDown, BarChart } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -45,7 +44,6 @@ const AdminPanel = () => {
   const session = useContext(SessionContext);
   const navigate = useNavigate();
 
-  // Load admin status and admin users list
   useEffect(() => {
     let isMounted = true;
     
@@ -53,7 +51,6 @@ const AdminPanel = () => {
       setLoadingAdminCheck(true);
       
       try {
-        // Check if user is logged in
         if (!session?.user) {
           navigate('/login');
           toast({
@@ -65,7 +62,6 @@ const AdminPanel = () => {
         }
 
         console.log("Checking admin status for user:", session.user.id);
-        // Check if user is an admin with the security definer function
         const adminStatus = await checkIsAdmin();
         console.log("Admin status check result:", adminStatus);
         
@@ -80,7 +76,6 @@ const AdminPanel = () => {
               variant: "destructive"
             });
           } else {
-            // If user is admin, fetch admin users list
             fetchAdminUsers();
             fetchApplications();
           }
@@ -103,6 +98,21 @@ const AdminPanel = () => {
       isMounted = false;
     };
   }, [session, navigate]);
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const serverStats = await fetchServerStats();
+        setStats(serverStats);
+      } catch (error) {
+        console.error("Error loading stats:", error);
+      }
+    };
+
+    if (isAdmin && !loadingAdminCheck) {
+      loadStats();
+    }
+  }, [isAdmin, loadingAdminCheck]);
 
   const fetchAdminUsers = async () => {
     try {
@@ -164,7 +174,7 @@ const AdminPanel = () => {
           title: "Erfolgreich",
           description: result.message,
         });
-        fetchAdminUsers(); // Refresh the admin users list
+        fetchAdminUsers();
       } else {
         setErrorMessage(result.message);
         toast({
@@ -198,7 +208,7 @@ const AdminPanel = () => {
           title: "Erfolgreich",
           description: result.message,
         });
-        fetchAdminUsers(); // Refresh the admin users list
+        fetchAdminUsers();
       } else {
         setErrorMessage(result.message);
         toast({
@@ -232,7 +242,7 @@ const AdminPanel = () => {
           title: "Erfolgreich",
           description: result.message,
         });
-        fetchAdminUsers(); // Refresh the admin users list
+        fetchAdminUsers();
       } else {
         setErrorMessage(result.message);
         toast({
@@ -295,17 +305,21 @@ const AdminPanel = () => {
     setStatsLoading(true);
     
     try {
-      // Here you would update the stats component data
-      // For this example, we'll just show a success message
-      toast({
-        title: "Statistiken aktualisiert",
-        description: "Die Statistiken wurden erfolgreich aktualisiert."
-      });
-    } catch (error) {
+      const result = await updateServerStats(stats);
+      
+      if (result.success) {
+        toast({
+          title: "Statistiken aktualisiert",
+          description: "Die Statistiken wurden erfolgreich aktualisiert."
+        });
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error: any) {
       console.error("Error updating stats:", error);
       toast({
         title: "Fehler",
-        description: "Die Statistiken konnten nicht aktualisiert werden.",
+        description: error.message || "Die Statistiken konnten nicht aktualisiert werden.",
         variant: "destructive"
       });
     } finally {
