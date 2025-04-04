@@ -14,8 +14,7 @@ import {
 import { updateServerStats, fetchServerStats } from '@/lib/stats';
 import { 
   AlertCircle, CheckCircle, ShieldCheck, Shield, Loader2, Users, 
-  Edit, Trash, ChevronsUpDown, BarChart, Eye, MessageSquare, Settings, 
-  Calendar, FileText 
+  Edit, Eye, Calendar, FileText 
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -887,4 +886,88 @@ const AdminPanel = () => {
                                 <div key={index} className="space-y-2 p-3 rounded-md border border-gray-200">
                                   <div className="flex justify-between items-center">
                                     <label className="text-sm font-medium">{question.label}</label>
-                                    <Badge className={question.required ? "bg-blue-100 text-blue
+                                    <Badge className={question.required ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}>
+                                      {question.required ? "Erforderlich" : "Optional"}
+                                    </Badge>
+                                  </div>
+                                  <Textarea 
+                                    value={question.label}
+                                    onChange={(e) => {
+                                      const newQuestions = {...applicationQuestions};
+                                      newQuestions.section3[index].label = e.target.value;
+                                      setApplicationQuestions(newQuestions);
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="statistics" className="space-y-4 mt-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Users className="text-blue-500" size={20} />
+                        Server-Statistiken
+                      </CardTitle>
+                      <CardDescription>
+                        Hier kannst du die öffentlich sichtbaren Statistiken anpassen
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Discord Mitglieder</label>
+                          <Input 
+                            type="number" 
+                            value={stats.discordMembers}
+                            onChange={(e) => setStats({...stats, discordMembers: parseInt(e.target.value) || 0})}
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Partner-Server</label>
+                          <Input 
+                            type="number" 
+                            value={stats.partnerServers}
+                            onChange={(e) => setStats({...stats, partnerServers: parseInt(e.target.value) || 0})}
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Server</label>
+                          <Input 
+                            type="number" 
+                            value={stats.servers}
+                            onChange={(e) => setStats({...stats, servers: parseInt(e.target.value) || 0})}
+                          />
+                        </div>
+                      </div>
+                      
+                      <Button 
+                        onClick={handleSaveStats}
+                        disabled={statsLoading}
+                        className="w-full"
+                      >
+                        {statsLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                        Statistiken speichern
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+};
+
+export default AdminPanel;

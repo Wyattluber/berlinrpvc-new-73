@@ -193,14 +193,26 @@ export async function removeUserRole(userId: string) {
   }
 }
 
+// Define the TeamSettings interface
+export interface TeamSettings {
+  id?: string;
+  meeting_day: string;
+  meeting_time: string;
+  meeting_frequency: string;
+  meeting_location: string;
+  meeting_notes: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 /**
  * Get team settings
  */
-export async function getTeamSettings() {
+export async function getTeamSettings(): Promise<TeamSettings | null> {
   try {
-    // Using any type to avoid TypeScript error until types are updated
+    // Using type assertion to avoid TypeScript error
     const { data, error } = await supabase
-      .from('team_settings' as any)
+      .from('team_settings')
       .select('*')
       .maybeSingle();
       
@@ -209,7 +221,7 @@ export async function getTeamSettings() {
       return null;
     }
     
-    return data;
+    return data as TeamSettings | null;
   } catch (error) {
     console.error('Error getting team settings:', error);
     return null;
@@ -239,10 +251,10 @@ export async function updateTeamSettings(settings: {
     const existingSettings = await getTeamSettings();
     let result;
     
-    if (existingSettings) {
+    if (existingSettings && existingSettings.id) {
       // Update existing settings
       result = await supabase
-        .from('team_settings' as any)
+        .from('team_settings')
         .update({
           meeting_day: settings.meeting_day,
           meeting_time: settings.meeting_time,
@@ -255,7 +267,7 @@ export async function updateTeamSettings(settings: {
     } else {
       // Insert new settings
       result = await supabase
-        .from('team_settings' as any)
+        .from('team_settings')
         .insert({
           meeting_day: settings.meeting_day,
           meeting_time: settings.meeting_time,
