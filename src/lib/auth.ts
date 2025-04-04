@@ -74,14 +74,28 @@ export function setupAuthEventListeners() {
  */
 export async function getRecentAuthLogs(userId: string, limit = 10) {
   try {
+    // Use a direct SQL query using rpc to avoid TypeScript issues until types are updated
     const { data, error } = await supabase
-      .from('auth_logs')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+      .rpc('get_auth_logs_for_user', { 
+        user_id_param: userId,
+        limit_param: limit
+      });
       
-    if (error) throw error;
+    if (error) {
+      // Fallback to direct query if RPC fails
+      console.warn('RPC failed, falling back to direct query:', error);
+      
+      // Cast as any to bypass TypeScript checks until types are updated
+      const { data: directData, error: directError } = await (supabase as any)
+        .from('auth_logs')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      
+      if (directError) throw directError;
+      return directData || [];
+    }
     
     return data || [];
   } catch (error) {
