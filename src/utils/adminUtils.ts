@@ -35,10 +35,10 @@ export async function createAdminAccount(email: string, password: string) {
     // Then add the user to the admin_users table with explicit typing
     const { error } = await supabase
       .from('admin_users')
-      .insert({
+      .insert([{  // Changed to array format to fix type error
         user_id: authData.user.id,
         email: email
-      } as any); // Using type assertion to avoid deep instantiation
+      }]);
     
     if (error) throw error;
     
@@ -72,10 +72,10 @@ export async function makeUserAdmin(userId: string, email: string) {
   try {
     const { error } = await supabase
       .from('admin_users')
-      .insert({
+      .insert([{  // Changed to array format to fix type error
         user_id: userId,
         email: email
-      } as any); // Using type assertion to avoid deep instantiation
+      }]);
     
     if (error) throw error;
     
@@ -94,7 +94,9 @@ export async function forceUpdateAdminStatus(email: string) {
     
     if (userError) throw userError;
     
-    const existingUser = userData?.users?.find(u => u.email === email);
+    // Add proper type checking and null coalescing
+    const users = userData?.users || [];
+    const existingUser = users.find(u => u.email === email);
     
     if (!existingUser) {
       throw new Error('User not found');
@@ -115,10 +117,10 @@ export async function forceUpdateAdminStatus(email: string) {
     // If not an admin, add admin privileges
     const { error } = await supabase
       .from('admin_users')
-      .insert({
+      .insert([{  // Changed to array format to fix type error
         user_id: existingUser.id,
         email: email
-      } as any); // Using type assertion to avoid deep instantiation
+      }]);
     
     if (error) throw error;
     
