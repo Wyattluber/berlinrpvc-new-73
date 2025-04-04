@@ -14,7 +14,7 @@ const stats = {
 
 const StatCard = ({ title, value, icon: Icon, className = "", lastUpdated, color }) => {
   return (
-    <Card className={`hover:shadow-lg transition-all duration-300 ${className} relative group`}>
+    <Card className={`hover:shadow-lg transition-all duration-300 ${className} relative group overflow-hidden`}>
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>

@@ -23,7 +23,12 @@ const Index = () => {
               <img 
                 src="/lovable-uploads/facc787d-f5d9-4ce8-9d2b-2c329ba5f0cd.png" 
                 alt="BerlinRP-VC" 
-                className="w-full h-auto object-contain mx-auto filter drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+                className="w-full h-auto max-h-64 object-contain mx-auto filter drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  target.src = 'https://via.placeholder.com/400x200?text=BerlinRP-VC';
+                }}
               />
             </div>
             <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto text-blue-100">
@@ -57,6 +62,11 @@ const Index = () => {
                     src="/lovable-uploads/dd1f41c8-840e-4e30-a847-665d1ef1d0b1.png" 
                     alt="BerlinRP-VC Community" 
                     className="rounded-lg shadow-lg w-full h-auto max-w-md mx-auto"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.onerror = null;
+                      target.src = 'https://via.placeholder.com/600x400?text=Community+Image';
+                    }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-blue-900/80 to-transparent"></div>
                 </div>
