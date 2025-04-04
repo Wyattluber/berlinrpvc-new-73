@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -19,14 +18,12 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [activeView, setActiveView] = useState<'login-register' | 'reset-password'>('login-register');
   
-  // Login state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showDetailedError, setShowDetailedError] = useState(false);
   
-  // Registration state
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
@@ -38,19 +35,16 @@ const Login = () => {
   const [registerError, setRegisterError] = useState<string | null>(null);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   
-  // Password Reset state
   const [resetEmail, setResetEmail] = useState('');
   const [resetSuccess, setResetSuccess] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
   
-  // Password validation states
   const [passwordValidation, setPasswordValidation] = useState({
     length: false,
     hasLetter: false,
     hasNumber: false
   });
   
-  // Update password validation in real-time
   useEffect(() => {
     setPasswordValidation({
       length: registerPassword.length >= 8,
@@ -60,7 +54,6 @@ const Login = () => {
   }, [registerPassword]);
   
   useEffect(() => {
-    // Check if user is already logged in
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
@@ -68,7 +61,6 @@ const Login = () => {
       }
     };
     
-    // Check for error in URL parameters (from OAuth redirects)
     const url = new URL(window.location.href);
     const error = url.searchParams.get('error');
     const errorDescription = url.searchParams.get('error_description');
@@ -78,7 +70,6 @@ const Login = () => {
       setLoginError(errorMsg);
       console.error("OAuth error:", error, errorDescription);
 
-      // Show more detailed error message for specific errors
       if (error.includes('discord') || errorDescription?.includes('discord')) {
         setShowDetailedError(true);
       }
@@ -116,7 +107,6 @@ const Login = () => {
       
       if (error) throw error;
 
-      // Check if user is admin
       const { data: adminData } = await supabase
         .from('admin_users')
         .select('*')
@@ -128,7 +118,6 @@ const Login = () => {
         description: adminData ? "Du wurdest als Administrator angemeldet." : "Willkommen zurück!",
       });
       
-      // Redirect admin users directly to admin panel
       if (adminData) {
         navigate('/admin');
       } else {
@@ -162,7 +151,6 @@ const Login = () => {
     setRegistrationSuccess(false);
     
     try {
-      // Validation
       if (registerPassword !== confirmPassword) {
         setRegisterError("Passwörter stimmen nicht überein");
         return;
@@ -176,7 +164,6 @@ const Login = () => {
       setIsLoading(true);
       setRegisterError(null);
       
-      // Create user with email and password
       const userData = {
         email: registerEmail,
         password: registerPassword,
@@ -193,10 +180,8 @@ const Login = () => {
       
       if (error) throw error;
 
-      // Show success message with checkmark
       setRegistrationSuccess(true);
       
-      // Clear form 
       setRegisterEmail('');
       setRegisterPassword('');
       setConfirmPassword('');
@@ -207,7 +192,6 @@ const Login = () => {
       toast({
         title: "Registrierung erfolgreich",
         description: "Dein Account wurde erfolgreich erstellt. Bitte bestätige deine E-Mail Adresse.",
-        variant: "success"
       });
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -247,7 +231,6 @@ const Login = () => {
       toast({
         title: "E-Mail gesendet",
         description: "Eine E-Mail zum Zurücksetzen deines Passworts wurde gesendet.",
-        variant: "default"
       });
     } catch (error: any) {
       console.error("Password reset error:", error);
@@ -320,7 +303,6 @@ const Login = () => {
                     </TabsTrigger>
                   </TabsList>
                   
-                  {/* Login Tab */}
                   <TabsContent value="login" className="space-y-4">
                     <div className="grid gap-4">
                       <Button
@@ -441,7 +423,6 @@ const Login = () => {
                     )}
                   </TabsContent>
                   
-                  {/* Register Tab */}
                   <TabsContent value="register" className="space-y-4">
                     {registerError && (
                       <Alert variant="destructive" className="mb-4">
@@ -546,7 +527,6 @@ const Login = () => {
                           </Button>
                         </div>
                         
-                        {/* Password requirements indicator */}
                         <div className="text-xs space-y-1 mt-2">
                           <p className="font-semibold text-gray-600">Passwort muss:</p>
                           <div className="flex items-center gap-1">
@@ -588,7 +568,6 @@ const Login = () => {
                           </Button>
                         </div>
                         
-                        {/* Password match indicator */}
                         {confirmPassword && (
                           <div className="flex items-center gap-1 mt-1 text-xs">
                             <div className={`w-2 h-2 rounded-full ${confirmPassword === registerPassword ? 'bg-green-500' : 'bg-red-500'}`}></div>
@@ -614,7 +593,6 @@ const Login = () => {
                 </Tabs>
               </>
             ) : (
-              // Password Reset Form
               <div className="space-y-4">
                 {resetError && (
                   <Alert variant="destructive" className="mb-4">
