@@ -1,17 +1,18 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { SessionContext } from '../App';
-import { LoaderIcon, CheckCircle } from 'lucide-react';
+import { LoaderIcon, CheckCircle, Calendar, Clock, Users, MessageSquare, Bell, HelpCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { getUserApplicationsHistory, checkIsAdmin } from '@/lib/admin';
 import ProfileImageUpload from '@/components/ProfileImageUpload';
@@ -29,6 +30,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 import AdminPanel from './AdminPanel';
+import { getTeamSettings } from '@/lib/adminService';
 
 // Define a type for the application history items
 type Application = {
@@ -52,9 +54,10 @@ const Profile = () => {
   const [emailUpdateMessage, setEmailUpdateMessage] = useState('');
   const [emailUpdateSuccess, setEmailUpdateSuccess] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [teamSettings, setTeamSettings] = useState<any>(null);
   const navigate = useNavigate();
   const session = useContext(SessionContext);
-  const activeTab = searchParams.get('tab') || 'account';
+  const activeTab = searchParams.get('tab') || 'dashboard';
 
   // Fetch user applications history
   const { 
@@ -81,6 +84,20 @@ const Profile = () => {
       }
     }
   });
+
+  // Fetch team settings
+  useEffect(() => {
+    const fetchTeamSettings = async () => {
+      try {
+        const settings = await getTeamSettings();
+        setTeamSettings(settings);
+      } catch (error) {
+        console.error("Error fetching team settings:", error);
+      }
+    };
+    
+    fetchTeamSettings();
+  }, []);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -253,6 +270,20 @@ const Profile = () => {
     }
   };
 
+  // Format meeting day in German
+  const formatMeetingDay = (day: string) => {
+    const days: Record<string, string> = {
+      'monday': 'Montag',
+      'tuesday': 'Dienstag',
+      'wednesday': 'Mittwoch',
+      'thursday': 'Donnerstag',
+      'friday': 'Freitag',
+      'saturday': 'Samstag',
+      'sunday': 'Sonntag'
+    };
+    return days[day] || day;
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col min-h-screen">
@@ -279,22 +310,34 @@ const Profile = () => {
       <Navbar />
       
       <main className="flex-grow py-10 bg-gradient-to-b from-gray-50 to-white">
-        <div className="container mx-auto px-4 max-w-4xl">
+        <div className="container mx-auto px-4 max-w-5xl">
           <Card className="shadow-lg">
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold">Dein Profil</CardTitle>
+            <CardHeader className="text-center border-b pb-4">
+              <div className="flex justify-center mb-4">
+                <Avatar className="h-20 w-20">
+                  {userAvatar ? (
+                    <AvatarImage src={userAvatar} />
+                  ) : (
+                    <AvatarFallback className="bg-blue-100 text-blue-600 text-xl">
+                      {username ? username.charAt(0).toUpperCase() : 'U'}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+              </div>
+              <CardTitle className="text-2xl font-bold">{username || 'Benutzer'}</CardTitle>
               <CardDescription>
-                Verwalte dein Konto und deine Einstellungen
+                {user?.email || 'Keine E-Mail-Adresse'}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               <Tabs 
                 defaultValue={activeTab} 
                 value={activeTab}
                 onValueChange={handleTabChange}
-                className="space-y-4"
+                className="w-full"
               >
-                <TabsList className="w-full">
+                <TabsList className="w-full rounded-none border-b">
+                  <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
                   <TabsTrigger value="account">Konto</TabsTrigger>
                   <TabsTrigger value="applications">Bewerbungen</TabsTrigger>
                   <TabsTrigger value="security">Sicherheit</TabsTrigger>
@@ -303,7 +346,151 @@ const Profile = () => {
                   )}
                 </TabsList>
                 
-                <TabsContent value="account" className="space-y-4">
+                <TabsContent value="dashboard" className="p-6 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-center">
+                          <CardTitle className="text-lg font-medium text-blue-800">Teammeetings</CardTitle>
+                          <Calendar className="h-5 w-5 text-blue-500" />
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        {teamSettings ? (
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium flex items-center">
+                              <Calendar className="h-4 w-4 mr-2 text-blue-500" />
+                              <span>{formatMeetingDay(teamSettings.meeting_day) || 'Samstag'}</span>
+                            </p>
+                            <p className="text-sm font-medium flex items-center">
+                              <Clock className="h-4 w-4 mr-2 text-blue-500" />
+                              <span>{teamSettings.meeting_time || '19:00'} Uhr</span>
+                            </p>
+                            <p className="text-sm font-medium flex items-center">
+                              <Users className="h-4 w-4 mr-2 text-blue-500" />
+                              <span>{teamSettings.meeting_frequency || 'Wöchentlich'}</span>
+                            </p>
+                            <p className="text-sm font-medium flex items-center">
+                              <MessageSquare className="h-4 w-4 mr-2 text-blue-500" />
+                              <span>{teamSettings.meeting_location || 'Discord'}</span>
+                            </p>
+                            {teamSettings.meeting_notes && (
+                              <p className="text-sm text-gray-600 mt-2">
+                                {teamSettings.meeting_notes}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-600">
+                            Teammeetings werden geladen...
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-center">
+                          <CardTitle className="text-lg font-medium text-purple-800">Deine Bewerbungen</CardTitle>
+                          <Bell className="h-5 w-5 text-purple-500" />
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        {isApplicationsLoading ? (
+                          <div className="text-sm text-gray-600">Lade Bewerbungen...</div>
+                        ) : applications.length > 0 ? (
+                          <div className="space-y-2">
+                            {applications.slice(0, 3).map((app) => (
+                              <div key={app.id} className="text-sm p-2 bg-white rounded-md border border-purple-200 shadow-sm">
+                                <p className="font-medium">Status: {app.status}</p>
+                                <p className="text-xs text-gray-500">
+                                  {new Date(app.created_at).toLocaleDateString('de-DE')}
+                                </p>
+                              </div>
+                            ))}
+                            {applications.length > 3 && (
+                              <Button 
+                                variant="link" 
+                                className="text-purple-600 p-0 h-auto text-sm"
+                                onClick={() => handleTabChange('applications')}
+                              >
+                                Alle {applications.length} Bewerbungen anzeigen
+                              </Button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-600">
+                            Du hast noch keine Bewerbungen eingereicht.
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-center">
+                          <CardTitle className="text-lg font-medium text-green-800">Account Status</CardTitle>
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm">E-Mail verifiziert</span>
+                            <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                              ✓ Verifiziert
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm">Profilvollständigkeit</span>
+                            <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
+                              80%
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm">Mitglied seit</span>
+                            <span className="text-sm">
+                              {user?.created_at ? new Date(user.created_at).toLocaleDateString('de-DE') : 'Unbekannt'}
+                            </span>
+                          </div>
+                          {isAdmin && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm">Rolle</span>
+                              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                                Administrator
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Neuigkeiten & Ankündigungen</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {[
+                          { title: "Neues Feature: Discord Integration", date: "Vor 2 Tagen", content: "Ab sofort kannst du deinen Discord-Account mit deinem Profil verknüpfen." },
+                          { title: "Serverupdate", date: "Vor 5 Tagen", content: "Wir haben unseren Server aktualisiert. Falls du Probleme bemerkst, melde dich bitte bei einem Admin." },
+                          { title: "Neue Teammitglieder", date: "Vor 1 Woche", content: "Wir begrüßen 3 neue Teammitglieder in unserem Server-Team!" }
+                        ].map((news, i) => (
+                          <div key={i} className="p-3 bg-gray-50 rounded-md">
+                            <div className="flex justify-between items-center mb-1">
+                              <h3 className="font-medium">{news.title}</h3>
+                              <span className="text-xs text-gray-500">{news.date}</span>
+                            </div>
+                            <p className="text-sm text-gray-600">{news.content}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="account" className="p-6 space-y-4">
                   <div className="flex flex-col items-center gap-4">
                     <ProfileImageUpload
                       userId={session?.user?.id || ''}
@@ -354,7 +541,7 @@ const Profile = () => {
                   </div>
                 </TabsContent>
                 
-                <TabsContent value="applications" className="space-y-4">
+                <TabsContent value="applications" className="p-6 space-y-4">
                   <CardTitle>Deine Bewerbungen</CardTitle>
                   <CardDescription>Hier findest du eine Übersicht deiner bisherigen Bewerbungen.</CardDescription>
                   {isApplicationsLoading ? (
@@ -388,7 +575,7 @@ const Profile = () => {
                   )}
                 </TabsContent>
                 
-                <TabsContent value="security" className="space-y-4">
+                <TabsContent value="security" className="p-6 space-y-4">
                   <CardTitle>Sicherheitseinstellungen</CardTitle>
                   <CardDescription>Ändere dein Passwort oder deine E-Mail-Adresse.</CardDescription>
                   <div className="grid gap-4">

@@ -118,7 +118,7 @@ const DashboardOverview = ({ userCount, adminUsers }: { userCount: number, admin
     
     <div className="mt-8">
       <h3 className="text-lg font-semibold mb-3">Server Statistiken</h3>
-      <ServerStats />
+      <ServerStats isAdmin={true} />
     </div>
     
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
