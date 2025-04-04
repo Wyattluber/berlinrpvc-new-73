@@ -32,10 +32,10 @@ export async function fetchServerStats(): Promise<ServerStats> {
     }
     
     return {
-      discordMembers: data.discordMembers,
-      partnerServers: data.partnerServers,
-      servers: data.servers,
-      lastUpdated: data.lastUpdated
+      discordMembers: data.discordMembers || 179,
+      partnerServers: data.partnerServers || 2,
+      servers: data.servers || 1,
+      lastUpdated: data.lastUpdated || new Date().toISOString()
     };
   } catch (error) {
     console.error('Error fetching server stats:', error);

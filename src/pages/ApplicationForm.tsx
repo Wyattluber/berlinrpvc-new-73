@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -63,7 +62,7 @@ const ApplicationForm = () => {
         .eq('user_id', session.user.id)
         .maybeSingle();
 
-      if (applications) {
+      if (applications && applications.id) {
         setHasSubmittedApplication(true);
         toast({
           title: "Bewerbung bereits eingereicht",
@@ -79,7 +78,7 @@ const ApplicationForm = () => {
         .eq('user_id', session.user.id)
         .maybeSingle();
 
-      if (adminData) {
+      if (adminData && adminData.role) {
         setUserRole(adminData.role);
         toast({
           title: "Admin/Moderator-Zugriff",

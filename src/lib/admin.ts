@@ -114,7 +114,7 @@ export async function addUserWithRole(userId: string, role: UserRole = 'moderato
     
     const { data, error } = await supabase
       .from('admin_users')
-      .insert({ user_id: userId, role })
+      .insert([{ user_id: userId, role }])
       .select()
       .single();
     
@@ -269,7 +269,7 @@ export async function updateTeamSettings(settings: {
     if (existingSettings && existingSettings.id) {
       // Update existing settings
       result = await supabase
-        .from('team_settings' as any)
+        .from('team_settings')
         .update({
           meeting_day: settings.meeting_day,
           meeting_time: settings.meeting_time,
@@ -282,14 +282,14 @@ export async function updateTeamSettings(settings: {
     } else {
       // Insert new settings
       result = await supabase
-        .from('team_settings' as any)
-        .insert({
+        .from('team_settings')
+        .insert([{
           meeting_day: settings.meeting_day,
           meeting_time: settings.meeting_time,
           meeting_frequency: settings.meeting_frequency,
           meeting_location: settings.meeting_location,
           meeting_notes: settings.meeting_notes
-        });
+        }]);
     }
     
     if (result.error) {
