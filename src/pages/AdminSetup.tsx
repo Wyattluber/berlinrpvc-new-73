@@ -15,9 +15,9 @@ const AdminSetup = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Hardcoded admin credentials as requested
+  // Updated admin credentials as requested
   const adminEmail = "info@berlinrpvc.de";
-  const adminPassword = "GrueneSau1.6";
+  const adminPassword = "Wasserwoo123";
 
   useEffect(() => {
     // Check if the admin account already exists
@@ -94,6 +94,7 @@ const AdminSetup = () => {
           toast({
             title: "Admin-Konto existiert bereits",
             description: "Erfolgreich als Administrator angemeldet!",
+            variant: "default"
           });
         } else {
           // Create a new admin account
@@ -104,6 +105,7 @@ const AdminSetup = () => {
           toast({
             title: "Admin-Konto erstellt",
             description: "Das Admin-Konto wurde erfolgreich eingerichtet!",
+            variant: "default"
           });
         }
       }
