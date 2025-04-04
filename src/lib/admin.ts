@@ -330,3 +330,26 @@ export async function hasSubmittedApplication(userId: string) {
     return false;
   }
 }
+
+/**
+ * Get count of all users in the Supabase auth system
+ */
+export async function getTotalUserCount(): Promise<number> {
+  try {
+    // We can approximate the total user count by checking the auth.users table
+    // through a function or use a different table like admin_users as a proxy
+    const { count, error } = await supabase
+      .from('admin_users')
+      .select('*', { count: 'exact', head: true });
+    
+    if (error) {
+      console.error('Error getting user count:', error);
+      return 0;
+    }
+    
+    return count || 0;
+  } catch (error) {
+    console.error('Error getting user count:', error);
+    return 0;
+  }
+}

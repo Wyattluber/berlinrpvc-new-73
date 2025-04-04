@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import { getTotalUserCount } from '@/lib/admin';
 import {
   Table,
   TableBody,
@@ -49,15 +49,8 @@ const AdminPanel = () => {
 
   const fetchUserCount = async () => {
     try {
-      const { count, error } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
-
-      if (error) {
-        throw error;
-      }
-
-      setUserCount(count || 0);
+      const count = await getTotalUserCount();
+      setUserCount(count);
     } catch (error) {
       console.error('Error fetching user count:', error);
     }
@@ -66,7 +59,6 @@ const AdminPanel = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Use the admin_users table 
       const { data, error } = await supabase
         .from('admin_users')
         .select('*');
