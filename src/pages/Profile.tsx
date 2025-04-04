@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -37,308 +36,225 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from '@/components/ui/toaster';
+import ProfileImageUpload from '@/components/ProfileImageUpload';
 
 interface UserProfile {
   id: string;
   name: string;
   email: string;
-  role: string;
-  discordId?: string;
-  robloxId?: string;
   avatar_url?: string;
-  last_username_change?: string;
-  email_changed?: boolean;
+  discord_id?: string;
+  roblox_id?: string;
+  username_changed_at?: string;
+  role?: string;
 }
 
 interface Application {
   id: string;
-  status: string;
+  user_id: string;
+  roblox_username: string;
+  discord_username: string;
+  age: number;
+  experience: string;
+  motivation: string;
+  status: 'pending' | 'approved' | 'rejected';
   created_at: string;
   updated_at: string;
-  notes?: string;
+  admin_notes?: string;
 }
 
 interface AdminUser {
   id: string;
   user_id: string;
-  role: string;
+  role: 'admin' | 'moderator';
   created_at: string;
 }
 
 const Profile = () => {
-  const [searchParams] = useSearchParams();
-  const tabParam = searchParams.get('tab');
-  
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { session } = useContext(SessionContext);
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [discordId, setDiscordId] = useState('');
-  const [robloxId, setRobloxId] = useState('');
-  const [username, setUsername] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState(tabParam || 'dashboard');
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [isLoadingApplications, setIsLoadingApplications] = useState(false);
-  const session = useContext(SessionContext);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isModerator, setIsModerator] = useState(false);
-  const [teamSettings, setTeamSettings] = useState<any>(null);
-  const [isLoadingTeamSettings, setIsLoadingTeamSettings] = useState(false);
-  const [editTeamSettings, setEditTeamSettings] = useState(false);
-  const [newTeamSettings, setNewTeamSettings] = useState({
-    meeting_day: '',
-    meeting_time: '',
-    meeting_frequency: '',
-    meeting_location: '',
-    meeting_notes: ''
-  });
-
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [isLoading, setIsLoading] = useState(false);
+  const [username, setUsername] = useState('');
+  const [newUsername, setNewUsername] = useState('');
+  const [discordId, setDiscordId] = useState('');
+  const [robloxId, setRobloxId] = useState('');
+  const [verifiedDiscordId, setVerifiedDiscordId] = useState('');
+  const [verifiedRobloxId, setVerifiedRobloxId] = useState('');
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [allApplications, setAllApplications] = useState<Application[]>([]);
+  const [loadingAllApplications, setLoadingAllApplications] = useState(false);
+  const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
+  const [adminNotes, setAdminNotes] = useState('');
+  const [isUsernameDialogOpen, setIsUsernameDialogOpen] = useState(false);
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [isApplicationDialogOpen, setIsApplicationDialogOpen] = useState(false);
+  const [isDeleteAccountDialogOpen, setIsDeleteAccountDialogOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState(false);
-  
-  const [newEmail, setNewEmail] = useState('');
-  const [showEmailChangeDialog, setShowEmailChangeDialog] = useState(false);
-  const [emailChangeError, setEmailChangeError] = useState<string | null>(null);
-  
-  const [passwordValidation, setPasswordValidation] = useState({
-    length: false,
-    hasLetter: false,
-    hasNumber: false
-  });
-
-  const [showVerifyDialog, setShowVerifyDialog] = useState(false);
-  const [verifiedDiscordId, setVerifiedDiscordId] = useState('');
-  const [verifiedRobloxId, setVerifiedRobloxId] = useState('');
-  const [hasModifiedIds, setHasModifiedIds] = useState(false);
-  
-  const [showUsernameChangeDialog, setShowUsernameChangeDialog] = useState(false);
-  const [newUsername, setNewUsername] = useState('');
-  const [usernameValidationResult, setUsernameValidationResult] = useState<{valid: boolean; reason?: string}>({ valid: true });
-  const [isUsernameTakenCheck, setIsUsernameTakenCheck] = useState<boolean | null>(null);
-  const [usernameCooldown, setUsernameCooldown] = useState<{canChange: boolean; daysRemaining: number; nextChangeDate: Date | null}>({
-    canChange: true,
-    daysRemaining: 0,
-    nextChangeDate: null
-  });
-
-  // Admin functionality
+  const [usernameCooldown, setUsernameCooldown] = useState({ canChange: true, daysRemaining: 0, nextChangeDate: null });
+  const [greeting, setGreeting] = useState('');
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loadingAdminUsers, setLoadingAdminUsers] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
+  const [newRole, setNewRole] = useState<'admin' | 'moderator'>('moderator');
   const [userCount, setUserCount] = useState(0);
-  const [usernames, setUsernames] = useState<Record<string, string>>({});
-  const [editUserId, setEditUserId] = useState<string | null>(null);
-  const [editRole, setEditRole] = useState('');
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [confirmDeleteDialog, setConfirmDeleteDialog] = useState(false);
-  const [applicationToDelete, setApplicationToDelete] = useState<string | null>(null);
-  const [allApplications, setAllApplications] = useState<any[]>([]);
-  const [loadingAllApplications, setLoadingAllApplications] = useState(false);
-  const [viewApplicationDialog, setViewApplicationDialog] = useState(false);
-  const [currentViewApplication, setCurrentViewApplication] = useState<any>(null);
-  
-  // Profile image upload
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [greeting, setGreeting] = useState('');
+  const [teamSettings, setTeamSettings] = useState({
+    applications_open: true,
+    maintenance_mode: false,
+    maintenance_message: 'Wir führen gerade Wartungsarbeiten durch. Bitte versuche es später erneut.'
+  });
 
-  // Time-based greeting update
+  // Set active tab from URL parameter if present
   useEffect(() => {
-    const updateGreeting = () => {
-      setGreeting(getTimeBasedGreeting());
-    };
-    
-    // Set initial greeting
-    updateGreeting();
-    
-    // Update greeting every minute
-    const interval = setInterval(updateGreeting, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    const newTab = searchParams.get('tab');
-    if (newTab) {
-      setActiveTab(newTab);
+    const tab = searchParams.get('tab');
+    if (tab && ['dashboard', 'applications', 'team', 'admin', 'security'].includes(tab)) {
+      setActiveTab(tab);
     }
   }, [searchParams]);
 
+  // Fetch user data on mount
   useEffect(() => {
-    setPasswordValidation({
-      length: newPassword.length >= 8,
-      hasLetter: /[a-zA-Z]/.test(newPassword),
-      hasNumber: /[0-9]/.test(newPassword)
-    });
-  }, [newPassword]);
-
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    const resetPassword = url.searchParams.get('reset_password');
-
-    if (resetPassword === 'true') {
-      setActiveTab('security');
-      toast({
-        title: "Passwort zurücksetzen",
-        description: "Du kannst jetzt ein neues Passwort festlegen.",
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    const checkUser = async () => {
+    const fetchUserData = async () => {
       if (!session) {
         navigate('/login');
         return;
       }
 
-      const { user } = session;
-      
-      if (!user) {
-        navigate('/login');
-        return;
-      }
-
-      const userProfile: UserProfile = {
-        id: user.id,
-        name: user.user_metadata?.name || user.user_metadata?.full_name || user.user_metadata?.username || 'User',
-        email: user.email || '',
-        role: 'user',
-        discordId: user.user_metadata?.discord_id || '',
-        robloxId: user.user_metadata?.roblox_id || '',
-        avatar_url: user.user_metadata?.avatar_url || '',
-        last_username_change: user.user_metadata?.last_username_change || null,
-        email_changed: user.user_metadata?.email_changed || false,
-      };
-
-      setUser(userProfile);
-      setDiscordId(userProfile.discordId || '');
-      setVerifiedDiscordId(userProfile.discordId || '');
-      setRobloxId(userProfile.robloxId || '');
-      setVerifiedRobloxId(userProfile.robloxId || '');
-      setUsername(userProfile.name || '');
-      setNewUsername(userProfile.name || '');
-      setNewEmail(userProfile.email || '');
-      
-      // Check username cooldown
-      if (userProfile.last_username_change) {
-        const cooldownInfo = checkUsernameCooldown(new Date(userProfile.last_username_change));
-        setUsernameCooldown(cooldownInfo);
-      }
-      
-      fetchApplicationsHistory(user.id);
-      fetchTeamSettings();
-    };
-
-    checkUser();
-  }, [navigate, session]);
-
-  useEffect(() => {
-    const checkUserRole = async () => {
-      if (session?.user) {
-        try {
-          const adminStatus = await checkIsAdmin();
-          const modStatus = await checkIsModerator();
-          const role = await getUserRole();
-          
-          setIsAdmin(adminStatus);
-          setIsModerator(modStatus);
-          
-          if (adminStatus) {
-            fetchUserCount();
-            fetchAdminUsersData();
-            fetchAllApplications();
-          }
-          
-          if (user && role) {
-            setUser(prev => prev ? {...prev, role} : null);
-          }
-        } catch (error) {
-          console.error("Error checking user status:", error);
-          setIsAdmin(false);
-          setIsModerator(false);
-        }
-      }
-    };
-    
-    checkUserRole();
-  }, [session, user]);
-
-  useEffect(() => {
-    if (teamSettings && editTeamSettings) {
-      setNewTeamSettings({
-        meeting_day: teamSettings.meeting_day || '',
-        meeting_time: teamSettings.meeting_time || '',
-        meeting_frequency: teamSettings.meeting_frequency || '',
-        meeting_location: teamSettings.meeting_location || '',
-        meeting_notes: teamSettings.meeting_notes || ''
-      });
-    }
-  }, [teamSettings, editTeamSettings]);
-
-  useEffect(() => {
-    if (
-      (verifiedDiscordId && discordId !== verifiedDiscordId) || 
-      (verifiedRobloxId && robloxId !== verifiedRobloxId)
-    ) {
-      setHasModifiedIds(true);
-    } else {
-      setHasModifiedIds(false);
-    }
-  }, [discordId, robloxId, verifiedDiscordId, verifiedRobloxId]);
-  
-  // Validate username when it changes
-  useEffect(() => {
-    const validateNewUsername = () => {
-      if (newUsername) {
-        const validationResult = validateUsername(newUsername);
-        setUsernameValidationResult(validationResult);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
         
-        // Check if username is taken (but only if it passed basic validation)
-        if (validationResult.valid && user?.email) {
-          checkIfUsernameTaken(newUsername, user.email);
-        } else {
-          setIsUsernameTakenCheck(null);
+        if (!user) {
+          navigate('/login');
+          return;
         }
-      } else {
-        setUsernameValidationResult({ valid: false, reason: "Benutzername darf nicht leer sein" });
-        setIsUsernameTakenCheck(null);
+
+        // Get user profile data
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (error) throw error;
+
+        const userData: UserProfile = {
+          id: user.id,
+          name: profile.full_name || user.email?.split('@')[0] || 'User',
+          email: user.email || '',
+          avatar_url: user.user_metadata?.avatar_url || profile.avatar_url,
+          discord_id: profile.discord_id || '',
+          roblox_id: profile.roblox_id || '',
+          username_changed_at: profile.username_changed_at,
+        };
+
+        setUser(userData);
+        setUsername(profile.username || user.email?.split('@')[0] || 'User');
+        setDiscordId(profile.discord_id || '');
+        setRobloxId(profile.roblox_id || '');
+        setVerifiedDiscordId(profile.discord_id || '');
+        setVerifiedRobloxId(profile.roblox_id || '');
+
+        // Check username cooldown
+        const cooldownData = await checkUsernameCooldown(profile.username_changed_at);
+        setUsernameCooldown(cooldownData);
+
+        // Check if user is admin or moderator
+        const adminStatus = await checkIsAdmin();
+        const moderatorStatus = await checkIsModerator();
+        setIsAdmin(adminStatus);
+        setIsModerator(moderatorStatus);
+
+        // Set greeting
+        setGreeting(getTimeBasedGreeting());
+
+        // Fetch applications if user is admin or moderator
+        if (adminStatus || moderatorStatus) {
+          fetchTeamSettings();
+        }
+
+        // Fetch user's applications
+        fetchUserApplications(user.id);
+
+        // Fetch all applications if user is admin or moderator
+        if (adminStatus || moderatorStatus) {
+          fetchAllApplications();
+          fetchAdminUsersList();
+          fetchUserCount();
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        toast({
+          title: "Fehler",
+          description: "Deine Profildaten konnten nicht geladen werden.",
+          variant: "destructive"
+        });
       }
     };
-    
-    validateNewUsername();
-  }, [newUsername, user?.email]);
 
-  const fetchApplicationsHistory = async (userId: string) => {
-    setIsLoadingApplications(true);
+    fetchUserData();
+  }, [session, navigate]);
+
+  const fetchUserApplications = async (userId: string) => {
     try {
-      const applicationHistory = await getUserApplicationsHistory(userId);
-      if (applicationHistory) {
-        setApplications(applicationHistory);
-      } else {
-        setApplications([]);
-      }
+      const { data, error } = await supabase
+        .from('applications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setApplications(data || []);
     } catch (error) {
-      console.error('Error fetching applications history:', error);
+      console.error('Error fetching applications:', error);
+    }
+  };
+
+  const fetchAllApplications = async () => {
+    setLoadingAllApplications(true);
+    try {
+      const { data, error } = await supabase
+        .from('applications')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setAllApplications(data || []);
+    } catch (error) {
+      console.error('Error fetching all applications:', error);
     } finally {
-      setIsLoadingApplications(false);
+      setLoadingAllApplications(false);
     }
   };
 
   const fetchTeamSettings = async () => {
-    setIsLoadingTeamSettings(true);
     try {
       const settings = await getTeamSettings();
-      if (settings) {
-        setTeamSettings(settings);
-      }
+      setTeamSettings(settings);
     } catch (error) {
       console.error('Error fetching team settings:', error);
+    }
+  };
+
+  const fetchAdminUsersList = async () => {
+    setLoadingAdminUsers(true);
+    try {
+      const adminUsers = await fetchAdminUsers();
+      setUsers(adminUsers);
+    } catch (error) {
+      console.error('Error fetching admin users:', error);
     } finally {
-      setIsLoadingTeamSettings(false);
+      setLoadingAdminUsers(false);
     }
   };
 
@@ -351,184 +267,100 @@ const Profile = () => {
     }
   };
 
-  const fetchAdminUsersData = async () => {
-    setLoadingAdminUsers(true);
-    try {
-      const users = await fetchAdminUsers();
-      setUsers(users);
-      
-      // Fetch usernames for all user IDs
-      if (users && users.length > 0) {
-        const userIds = users.map(user => user.user_id);
-        fetchUsernames(userIds);
-      }
-    } catch (error) {
-      console.error('Error fetching admin users:', error);
-      toast({
-        title: "Fehler",
-        description: "Fehler beim Laden der Admin-Benutzer.",
-        variant: "destructive"
-      });
-    } finally {
-      setLoadingAdminUsers(false);
-    }
-  };
-
-  const fetchAllApplications = async () => {
-    setLoadingAllApplications(true);
-    try {
-      const { data, error } = await supabase
-        .from('applications')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      setAllApplications(data || []);
-    } catch (error) {
-      console.error("Error fetching applications:", error);
-      toast({
-        title: "Fehler",
-        description: "Bewerbungen konnten nicht geladen werden.",
-        variant: "destructive"
-      });
-    } finally {
-      setLoadingAllApplications(false);
-    }
-  };
-
-  const fetchUsernames = async (userIds: string[]) => {
-    if (!userIds.length) return;
+  const handleSaveProfile = async () => {
+    if (!user) return;
     
-    try {
-      const usernameMap: Record<string, string> = {};
-      
-      // Default fallback naming pattern
-      userIds.forEach(userId => {
-        usernameMap[userId] = `User ${userId.substring(0, 6)}`;
-      });
-      
-      setUsernames(usernameMap);
-    } catch (error) {
-      console.error('Error in fetchUsernames:', error);
-    }
-  };
-  
-  const checkIfUsernameTaken = async (username: string, currentEmail: string) => {
-    const result = await isUsernameTaken(username, currentEmail);
-    setIsUsernameTakenCheck(result);
-  };
-
-  const handleSaveProfile = () => {
-    if (hasModifiedIds) {
-      setShowVerifyDialog(true);
-      return;
-    }
-    
-    saveProfileData();
-  };
-
-  const saveProfileData = async () => {
     setIsLoading(true);
-    
     try {
-      const { error } = await supabase.auth.updateUser({
-        data: { 
+      const { error } = await supabase
+        .from('profiles')
+        .update({
           discord_id: discordId,
           roblox_id: robloxId,
-          name: username,
-        }
-      });
+        })
+        .eq('id', user.id);
 
       if (error) throw error;
 
-      if (user) {
-        setUser({
-          ...user,
-          discordId,
-          robloxId,
-          name: username
-        });
-      }
-      
       setVerifiedDiscordId(discordId);
       setVerifiedRobloxId(robloxId);
-      setHasModifiedIds(false);
-      
+
       toast({
-        title: "Profil gespeichert",
-        description: "Dein Profil wurde erfolgreich aktualisiert.",
+        title: "Profil aktualisiert",
+        description: "Deine Profildaten wurden erfolgreich aktualisiert.",
       });
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
         title: "Fehler",
-        description: "Es gab ein Problem beim Speichern deines Profils.",
+        description: "Deine Profildaten konnten nicht aktualisiert werden.",
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const handleInitiateUsernameChange = () => {
-    if (!usernameCooldown.canChange) {
+    setNewUsername(username);
+    setIsUsernameDialogOpen(true);
+  };
+
+  const handleUsernameChange = async () => {
+    if (!user) return;
+    
+    // Validate username
+    const validation = validateUsername(newUsername);
+    if (!validation.valid) {
       toast({
-        title: "Änderung nicht möglich",
-        description: `Du kannst deinen Benutzernamen erst in ${usernameCooldown.daysRemaining} Tagen wieder ändern.`,
+        title: "Ungültiger Benutzername",
+        description: validation.message,
         variant: "destructive"
       });
       return;
     }
-    
-    setNewUsername(username);
-    setShowUsernameChangeDialog(true);
-  };
-  
-  const confirmUsernameChange = async () => {
-    if (!newUsername || !usernameValidationResult.valid || isUsernameTakenCheck) {
-      return;
-    }
-    
+
     setIsLoading(true);
-    
     try {
-      const now = new Date().toISOString();
-      
-      const { error } = await supabase.auth.updateUser({
-        data: { 
-          name: newUsername,
-          last_username_change: now
-        }
-      });
+      // Check if username is taken
+      const isTaken = await isUsernameTaken(newUsername, user.id);
+      if (isTaken) {
+        toast({
+          title: "Benutzername vergeben",
+          description: "Dieser Benutzername ist bereits vergeben.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Update username
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          username: newUsername,
+          username_changed_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
 
       if (error) throw error;
 
-      if (user) {
-        setUser({
-          ...user,
-          name: newUsername,
-          last_username_change: now
-        });
-      }
-      
       setUsername(newUsername);
+      setIsUsernameDialogOpen(false);
       
-      // Update cooldown information
-      const cooldownInfo = checkUsernameCooldown(new Date(now));
-      setUsernameCooldown(cooldownInfo);
-      
+      // Update cooldown
+      const cooldownData = await checkUsernameCooldown(new Date().toISOString());
+      setUsernameCooldown(cooldownData);
+
       toast({
         title: "Benutzername geändert",
-        description: "Dein Benutzername wurde erfolgreich aktualisiert.",
+        description: "Dein Benutzername wurde erfolgreich geändert.",
       });
-      
-      setShowUsernameChangeDialog(false);
     } catch (error) {
-      console.error('Error updating username:', error);
+      console.error('Error changing username:', error);
       toast({
         title: "Fehler",
-        description: "Es gab ein Problem beim Ändern deines Benutzernamens.",
+        description: "Dein Benutzername konnte nicht geändert werden.",
         variant: "destructive"
       });
     } finally {
@@ -536,122 +368,121 @@ const Profile = () => {
     }
   };
 
-  const confirmIdChange = () => {
-    setShowVerifyDialog(false);
-    saveProfileData();
+  const handleInitiateEmailChange = () => {
+    if (!user) return;
+    setNewEmail(user.email);
+    setIsEmailDialogOpen(true);
   };
 
-  const cancelIdChange = () => {
-    setShowVerifyDialog(false);
-    setDiscordId(verifiedDiscordId);
-    setRobloxId(verifiedRobloxId);
-  };
-
-  const handleChangePassword = async () => {
-    setPasswordError(null);
-    setPasswordChangeSuccess(false);
+  const handleEmailChange = async () => {
+    if (!user) return;
     
-    if (newPassword !== confirmPassword) {
-      setPasswordError("Die neuen Passwörter stimmen nicht überein");
-      return;
-    }
-    
-    if (newPassword.length < 8 || !(/[a-zA-Z]/.test(newPassword)) || !(/[0-9]/.test(newPassword))) {
-      setPasswordError("Das neue Passwort muss mindestens 8 Zeichen lang sein und mindestens einen Buchstaben und eine Ziffer enthalten");
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    try {
-      const { error } = await supabase.auth.updateUser({ 
-        password: newPassword 
+    if (!newEmail || !newEmail.includes('@')) {
+      toast({
+        title: "Ungültige E-Mail",
+        description: "Bitte gib eine gültige E-Mail-Adresse ein.",
+        variant: "destructive"
       });
+      return;
+    }
+
+    if (!currentPassword) {
+      toast({
+        title: "Passwort erforderlich",
+        description: "Bitte gib dein aktuelles Passwort ein.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await updateUserEmail(newEmail, currentPassword);
       
+      if (result.success) {
+        setUser({
+          ...user,
+          email: newEmail
+        });
+        setIsEmailDialogOpen(false);
+        setCurrentPassword('');
+        
+        toast({
+          title: "E-Mail geändert",
+          description: "Deine E-Mail-Adresse wurde erfolgreich geändert.",
+        });
+      } else {
+        throw new Error(result.message || "Fehler beim Ändern der E-Mail-Adresse");
+      }
+    } catch (error: any) {
+      console.error('Error changing email:', error);
+      toast({
+        title: "Fehler",
+        description: error.message || "Deine E-Mail-Adresse konnte nicht geändert werden.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleInitiatePasswordChange = () => {
+    setIsPasswordDialogOpen(true);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+  };
+
+  const handlePasswordChange = async () => {
+    if (!currentPassword) {
+      toast({
+        title: "Passwort erforderlich",
+        description: "Bitte gib dein aktuelles Passwort ein.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      toast({
+        title: "Passwort zu kurz",
+        description: "Dein neues Passwort muss mindestens 8 Zeichen lang sein.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Passwörter stimmen nicht überein",
+        description: "Die eingegebenen Passwörter stimmen nicht überein.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
       if (error) throw error;
-      
-      setPasswordChangeSuccess(true);
+
+      setIsPasswordDialogOpen(false);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       
       toast({
         title: "Passwort geändert",
-        description: "Dein Passwort wurde erfolgreich aktualisiert.",
+        description: "Dein Passwort wurde erfolgreich geändert.",
       });
     } catch (error: any) {
       console.error('Error changing password:', error);
-      setPasswordError(error.message || "Es gab ein Problem bei der Änderung des Passworts");
-      
       toast({
         title: "Fehler",
-        description: error.message || "Es gab ein Problem bei der Änderung des Passworts",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const handleShowEmailChangeDialog = () => {
-    if (user?.email_changed) {
-      toast({
-        title: "Hinweis",
-        description: "Du hast deine E-Mail bereits geändert. Weitere Änderungen sind nicht möglich.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setNewEmail(user?.email || '');
-    setEmailChangeError(null);
-    setShowEmailChangeDialog(true);
-  };
-  
-  const handleChangeEmail = async () => {
-    setEmailChangeError(null);
-    setIsLoading(true);
-    
-    if (!newEmail || newEmail === user?.email) {
-      setEmailChangeError("Bitte gib eine neue E-Mail-Adresse ein");
-      setIsLoading(false);
-      return;
-    }
-    
-    try {
-      // Mark that the user has changed their email
-      await supabase.auth.updateUser({
-        data: { 
-          email_changed: true
-        }
-      });
-      
-      const result = await updateUserEmail(newEmail);
-      
-      if (!result.success) {
-        throw new Error(result.message);
-      }
-      
-      if (user) {
-        setUser({
-          ...user,
-          email_changed: true
-        });
-      }
-      
-      setShowEmailChangeDialog(false);
-      
-      toast({
-        title: "E-Mail-Änderung",
-        description: result.message,
-      });
-    } catch (error: any) {
-      console.error('Error updating email:', error);
-      setEmailChangeError(error.message || "Es gab ein Problem bei der Änderung der E-Mail");
-      
-      toast({
-        title: "Fehler",
-        description: error.message || "Es gab ein Problem bei der Änderung der E-Mail",
+        description: error.message || "Dein Passwort konnte nicht geändert werden.",
         variant: "destructive"
       });
     } finally {
@@ -659,69 +490,120 @@ const Profile = () => {
     }
   };
 
-  const handleSaveTeamSettings = async () => {
-    setIsLoading(true);
+  const handleViewApplication = (application: Application) => {
+    setSelectedApplication(application);
+    setAdminNotes(application.admin_notes || '');
+    setIsApplicationDialogOpen(true);
+  };
+
+  const handleUpdateApplicationStatus = async (status: 'pending' | 'approved' | 'rejected') => {
+    if (!selectedApplication) return;
     
+    setIsLoading(true);
     try {
-      const result = await updateTeamSettings({
-        meeting_day: newTeamSettings.meeting_day,
-        meeting_time: newTeamSettings.meeting_time,
-        meeting_frequency: newTeamSettings.meeting_frequency,
-        meeting_location: newTeamSettings.meeting_location,
-        meeting_notes: newTeamSettings.meeting_notes
-      });
+      const { error } = await supabase
+        .from('applications')
+        .update({
+          status,
+          admin_notes: adminNotes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedApplication.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setAllApplications(prev => 
+        prev.map(app => 
+          app.id === selectedApplication.id 
+            ? { ...app, status, admin_notes: adminNotes, updated_at: new Date().toISOString() } 
+            : app
+        )
+      );
       
-      if (!result.success) {
-        throw new Error(result.message);
-      }
-      
-      await fetchTeamSettings();
-      setEditTeamSettings(false);
+      setApplications(prev => 
+        prev.map(app => 
+          app.id === selectedApplication.id 
+            ? { ...app, status, admin_notes: adminNotes, updated_at: new Date().toISOString() } 
+            : app
+        )
+      );
+
+      setIsApplicationDialogOpen(false);
       
       toast({
-        title: "Einstellungen gespeichert",
-        description: "Die Team-Einstellungen wurden erfolgreich aktualisiert.",
+        title: "Bewerbung aktualisiert",
+        description: `Die Bewerbung wurde als "${status === 'approved' ? 'angenommen' : status === 'rejected' ? 'abgelehnt' : 'ausstehend'}" markiert.`,
       });
-    } catch (error: any) {
-      console.error('Error updating team settings:', error);
-      
+    } catch (error) {
+      console.error('Error updating application:', error);
       toast({
         title: "Fehler",
-        description: error.message || "Es gab ein Problem beim Aktualisieren der Team-Einstellungen.",
+        description: "Die Bewerbung konnte nicht aktualisiert werden.",
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDeleteApplication = async (id: string) => {
+    if (!confirm('Möchtest du diese Bewerbung wirklich löschen?')) return;
+    
+    try {
+      await deleteApplication(id);
+      
+      // Update local state
+      setAllApplications(prev => prev.filter(app => app.id !== id));
+      setApplications(prev => prev.filter(app => app.id !== id));
+      
+      toast({
+        title: "Bewerbung gelöscht",
+        description: "Die Bewerbung wurde erfolgreich gelöscht.",
+      });
+    } catch (error) {
+      console.error('Error deleting application:', error);
+      toast({
+        title: "Fehler",
+        description: "Die Bewerbung konnte nicht gelöscht werden.",
+        variant: "destructive"
+      });
     }
   };
 
   const handleEditUser = (user: AdminUser) => {
-    setEditUserId(user.id);
-    setEditRole(user.role);
-    setEditDialogOpen(true);
+    setSelectedUser(user);
+    setNewRole(user.role);
+    setIsEditUserDialogOpen(true);
   };
 
-  const handleSaveUser = async () => {
+  const handleUpdateUserRole = async () => {
+    if (!selectedUser) return;
+    
     setIsLoading(true);
     try {
-      const result = await updateAdminUser(editUserId!, editRole);
+      await updateAdminUser(selectedUser.id, newRole);
       
-      if (!result.success) {
-        throw new Error(result.message);
-      }
+      // Update local state
+      setUsers(prev => 
+        prev.map(u => 
+          u.id === selectedUser.id 
+            ? { ...u, role: newRole } 
+            : u
+        )
+      );
+      
+      setIsEditUserDialogOpen(false);
       
       toast({
-        title: "Erfolgreich",
-        description: result.message,
+        title: "Benutzerrolle aktualisiert",
+        description: `Die Rolle wurde erfolgreich auf "${newRole === 'admin' ? 'Administrator' : 'Moderator'}" geändert.`,
       });
-      
-      fetchAdminUsersData();
-      setEditDialogOpen(false);
-    } catch (error: any) {
-      console.error('Error updating user:', error);
+    } catch (error) {
+      console.error('Error updating user role:', error);
       toast({
         title: "Fehler",
-        description: error.message || "Fehler beim Aktualisieren des Benutzers.",
+        description: "Die Benutzerrolle konnte nicht aktualisiert werden.",
         variant: "destructive"
       });
     } finally {
@@ -730,255 +612,181 @@ const Profile = () => {
   };
 
   const handleDeleteUser = async (id: string) => {
-    setIsLoading(true);
-    try {
-      const result = await deleteAdminUser(id);
-      
-      if (!result.success) {
-        throw new Error(result.message);
-      }
-      
-      toast({
-        title: "Erfolgreich",
-        description: result.message,
-      });
-      
-      fetchAdminUsersData();
-    } catch (error: any) {
-      console.error('Error deleting user:', error);
-      toast({
-        title: "Fehler",
-        description: error.message || "Fehler beim Löschen des Benutzers.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleViewApplication = (application: any) => {
-    setCurrentViewApplication(application);
-    setViewApplicationDialog(true);
-  };
-
-  const handleDeleteApplication = (id: string) => {
-    setApplicationToDelete(id);
-    setConfirmDeleteDialog(true);
-  };
-
-  const confirmDeleteApplication = async () => {
-    if (!applicationToDelete) return;
-    
-    setIsLoading(true);
-    try {
-      const result = await deleteApplication(applicationToDelete);
-      
-      if (!result.success) {
-        throw new Error(result.message);
-      }
-      
-      toast({
-        title: "Erfolgreich",
-        description: "Bewerbung erfolgreich gelöscht.",
-      });
-      
-      // Refresh applications list
-      fetchAllApplications();
-      if (session?.user) {
-        fetchApplicationsHistory(session.user.id);
-      }
-      
-    } catch (error: any) {
-      console.error('Error deleting application:', error);
-      toast({
-        title: "Fehler",
-        description: error.message || "Fehler beim Löschen der Bewerbung.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-      setConfirmDeleteDialog(false);
-      setApplicationToDelete(null);
-    }
-  };
-  
-  const handleFileUpload = () => {
-    fileInputRef.current?.click();
-  };
-  
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    
-    // Check file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "Datei zu groß",
-        description: "Das Bild darf maximal 5MB groß sein.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Check file type
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Ungültiger Dateityp",
-        description: "Bitte wähle ein Bild (JPG, PNG, etc.).",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setUploadingImage(true);
+    if (!confirm('Möchtest du diesen Benutzer wirklich aus dem Administratorenteam entfernen?')) return;
     
     try {
-      // Upload image to Supabase Storage
-      const fileName = `avatar-${user?.id}-${Date.now()}`;
-      const { data, error } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, file);
-      
-      if (error) throw error;
-      
-      // Get public URL for the uploaded image
-      const { data: urlData } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(fileName);
-      
-      if (!urlData.publicUrl) throw new Error("Couldn't get public URL");
-      
-      // Update user metadata with avatar URL
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: { 
-          avatar_url: urlData.publicUrl
-        }
-      });
-      
-      if (updateError) throw updateError;
+      await deleteAdminUser(id);
       
       // Update local state
-      if (user) {
-        setUser({
-          ...user,
-          avatar_url: urlData.publicUrl
-        });
-      }
+      setUsers(prev => prev.filter(u => u.id !== id));
       
       toast({
-        title: "Bild hochgeladen",
-        description: "Dein Profilbild wurde erfolgreich aktualisiert.",
+        title: "Benutzer entfernt",
+        description: "Der Benutzer wurde erfolgreich aus dem Administratorenteam entfernt.",
       });
-    } catch (error: any) {
-      console.error('Error uploading avatar:', error);
+    } catch (error) {
+      console.error('Error deleting admin user:', error);
       toast({
         title: "Fehler",
-        description: error.message || "Es gab ein Problem beim Hochladen des Bildes.",
+        description: "Der Benutzer konnte nicht entfernt werden.",
         variant: "destructive"
       });
-    } finally {
-      setUploadingImage(false);
-      // Clear the file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+    }
+  };
+
+  const handleToggleApplications = async () => {
+    try {
+      const newSettings = {
+        ...teamSettings,
+        applications_open: !teamSettings.applications_open
+      };
+      
+      await updateTeamSettings(newSettings);
+      setTeamSettings(newSettings);
+      
+      toast({
+        title: "Einstellungen aktualisiert",
+        description: `Bewerbungen sind jetzt ${newSettings.applications_open ? 'geöffnet' : 'geschlossen'}.`,
+      });
+    } catch (error) {
+      console.error('Error updating team settings:', error);
+      toast({
+        title: "Fehler",
+        description: "Die Einstellungen konnten nicht aktualisiert werden.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleToggleMaintenance = async () => {
+    try {
+      const newSettings = {
+        ...teamSettings,
+        maintenance_mode: !teamSettings.maintenance_mode
+      };
+      
+      await updateTeamSettings(newSettings);
+      setTeamSettings(newSettings);
+      
+      toast({
+        title: "Einstellungen aktualisiert",
+        description: `Der Wartungsmodus ist jetzt ${newSettings.maintenance_mode ? 'aktiviert' : 'deaktiviert'}.`,
+      });
+    } catch (error) {
+      console.error('Error updating team settings:', error);
+      toast({
+        title: "Fehler",
+        description: "Die Einstellungen konnten nicht aktualisiert werden.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleUpdateMaintenanceMessage = async (message: string) => {
+    try {
+      const newSettings = {
+        ...teamSettings,
+        maintenance_message: message
+      };
+      
+      await updateTeamSettings(newSettings);
+      setTeamSettings(newSettings);
+      
+      toast({
+        title: "Einstellungen aktualisiert",
+        description: "Die Wartungsnachricht wurde aktualisiert.",
+      });
+    } catch (error) {
+      console.error('Error updating team settings:', error);
+      toast({
+        title: "Fehler",
+        description: "Die Einstellungen konnten nicht aktualisiert werden.",
+        variant: "destructive"
+      });
     }
   };
 
   const handleLogout = async () => {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      
-      if (!sessionData.session) {
-        toast({
-          title: "Bereits abgemeldet",
-          description: "Du bist bereits abgemeldet."
-        });
-        
-        navigate('/');
-        return;
-      }
-      
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error('Error signing out:', error);
-        
-        if (error.name === "AuthSessionMissingError") {
-          localStorage.removeItem('supabase.auth.token');
-          window.location.href = '/';
-          return;
-        }
-        
-        throw error;
-      }
-      
-      toast({
-        title: "Abgemeldet",
-        description: "Du wurdest erfolgreich abgemeldet.",
-      });
-      
-      navigate('/');
+      await supabase.auth.signOut();
+      navigate('/login');
     } catch (error) {
       console.error('Error signing out:', error);
+      toast({
+        title: "Fehler",
+        description: "Du konntest nicht abgemeldet werden.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleInitiateDeleteAccount = () => {
+    setIsDeleteAccountDialogOpen(true);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    
+    if (!currentPassword) {
+      toast({
+        title: "Passwort erforderlich",
+        description: "Bitte gib dein aktuelles Passwort ein.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // First verify the password
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+
+      if (signInError) throw signInError;
+
+      // Delete user data from profiles table
+      const { error: deleteProfileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', user.id);
+
+      if (deleteProfileError) throw deleteProfileError;
+
+      // Delete user from auth
+      const { error: deleteUserError } = await supabase.auth.admin.deleteUser(
+        user.id
+      );
+
+      if (deleteUserError) throw deleteUserError;
+
+      // Sign out
+      await supabase.auth.signOut();
+      
+      setIsDeleteAccountDialogOpen(false);
+      navigate('/');
       
       toast({
-        title: "Abmeldeversuch",
-        description: "Deine Sitzung wurde zurückgesetzt.",
-        variant: "default"
+        title: "Konto gelöscht",
+        description: "Dein Konto wurde erfolgreich gelöscht.",
       });
-      
-      localStorage.removeItem('supabase.auth.token');
-      window.location.href = '/';
+    } catch (error: any) {
+      console.error('Error deleting account:', error);
+      toast({
+        title: "Fehler",
+        description: error.message || "Dein Konto konnte nicht gelöscht werden.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const getUserRoleName = () => {
-    if (isAdmin) {
-      return 'Administrator';
-    } else if (isModerator) {
-      return 'Moderator';
-    }
+    if (isAdmin) return 'Administrator';
+    if (isModerator) return 'Moderator';
     return 'Benutzer';
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return (
-          <Badge variant="outline" className="flex items-center gap-1 bg-yellow-50 text-yellow-700 border-yellow-200">
-            <Clock size={14} />
-            Ausstehend
-          </Badge>
-        );
-      case 'approved':
-        return (
-          <Badge variant="outline" className="flex items-center gap-1 bg-green-50 text-green-700 border-green-200">
-            <CheckCircle size={14} />
-            Genehmigt
-          </Badge>
-        );
-      case 'rejected':
-        return (
-          <Badge variant="outline" className="flex items-center gap-1 bg-red-50 text-red-700 border-red-200">
-            <AlertCircle size={14} />
-            Abgelehnt
-          </Badge>
-        );
-      case 'waitlist':
-        return (
-          <Badge variant="outline" className="flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-200">
-            <Clock size={14} />
-            Warteliste
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="flex items-center gap-1">
-            {status}
-          </Badge>
-        );
-    }
   };
 
   const formatDate = (dateString: string) => {
@@ -992,18 +800,50 @@ const Profile = () => {
     }).format(date);
   };
 
-  const getUsernameById = (userId: string) => {
-    return usernames[userId] || 'Unbekannter Benutzer';
-  };
-  
-  const formatNextChangeDate = (date: Date | null) => {
-    if (!date) return '';
-    
+  const formatNextChangeDate = (dateString: string | null) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
     return new Intl.DateTimeFormat('de-DE', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
     }).format(date);
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Ausstehend</Badge>;
+      case 'approved':
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Angenommen</Badge>;
+      case 'rejected':
+        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Abgelehnt</Badge>;
+      default:
+        return <Badge variant="outline">Unbekannt</Badge>;
+    }
+  };
+
+  const getUsernameById = (userId: string) => {
+    // This is a placeholder function - in a real app, you would fetch the username from your database
+    return userId.substring(0, 8) + '...';
+  };
+
+  const get30DaysAgo = () => {
+    const date = new Date();
+    date.setDate(date.getDate() - 30);
+    return date.toISOString();
+  };
+
+  const hasModifiedIds = discordId !== verifiedDiscordId || robloxId !== verifiedRobloxId;
+
+  // Replace handleFileUpload and handleFileChange with the new component integration
+  const handleProfileImageUpdated = (newAvatarUrl: string) => {
+    if (user) {
+      setUser({
+        ...user,
+        avatar_url: newAvatarUrl
+      });
+    }
   };
 
   if (!user) return null;
@@ -1018,643 +858,314 @@ const Profile = () => {
             <div className="w-full md:w-64">
               <Card>
                 <CardHeader className="pb-3">
-                  <div className="flex items-center space-x-2">
-                    {user.avatar_url ? (
-                      <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-blue-100">
-                        <img 
-                          src={user.avatar_url} 
-                          alt={user.name}
-                          className="w-full h-full object-cover" 
-                        />
-                      </div>
-                    ) : (
-                      <div className="bg-blue-600 text-white p-3 rounded-full w-16 h-16 flex items-center justify-center">
-                        <User size={32} />
-                      </div>
-                    )}
-                    <div>
-                      <h2 className="text-lg font-semibold">{user.name}</h2>
+                  <div className="flex flex-col items-center space-y-3">
+                    <ProfileImageUpload 
+                      userId={user.id}
+                      existingImageUrl={user.avatar_url}
+                      onImageUploaded={handleProfileImageUpdated}
+                    />
+                    <div className="text-center">
+                      <h2 className="text-xl font-semibold">{user.name}</h2>
                       <p className="text-sm text-gray-500">{user.email}</p>
-                      <Badge variant="outline" className="mt-1 text-xs">
+                      <Badge variant="outline" className="mt-1 flex items-center justify-center gap-1">
+                        <ShieldCheck size={14} className="text-blue-600" />
                         {getUserRoleName()}
                       </Badge>
                     </div>
                   </div>
-                  
-                  <div className="mt-3">
-                    <input 
-                      type="file" 
-                      ref={fileInputRef} 
-                      accept="image/*" 
-                      className="hidden" 
-                      onChange={handleFileChange}
-                    />
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="w-full"
-                      onClick={handleFileUpload}
-                      disabled={uploadingImage}
-                    >
-                      {uploadingImage ? (
-                        <>Hochladen...</>
-                      ) : (
-                        <>
-                          <Upload className="mr-2" size={14} />
-                          Profilbild ändern
-                        </>
-                      )}
-                    </Button>
-                  </div>
                 </CardHeader>
-                
                 <CardContent className="pb-2">
-                  <Tabs defaultValue={activeTab} onValueChange={setActiveTab} orientation="vertical" className="w-full">
-                    <TabsList className="flex flex-col h-full space-y-1 w-full">
-                      <TabsTrigger value="dashboard" className="justify-start">
-                        <BarChart className="mr-2" size={16} />
-                        Dashboard
-                      </TabsTrigger>
-                      <TabsTrigger value="profile" className="justify-start">
-                        <User className="mr-2" size={16} />
-                        Profil
-                      </TabsTrigger>
-                      <TabsTrigger value="security" className="justify-start">
-                        <KeyRound className="mr-2" size={16} />
-                        Sicherheit
-                      </TabsTrigger>
-                      <TabsTrigger value="applications" className="justify-start">
-                        <Mail className="mr-2" size={16} />
-                        Bewerbungen
-                      </TabsTrigger>
-                      {isModerator && (
-                        <TabsTrigger value="team" className="justify-start">
-                          <Users className="mr-2" size={16} />
-                          Team
-                        </TabsTrigger>
-                      )}
-                      {isAdmin && (
-                        <TabsTrigger value="admin" className="justify-start">
-                          <ShieldCheck className="mr-2" size={16} />
-                          Admin
-                        </TabsTrigger>
-                      )}
-                      <TabsTrigger value="settings" className="justify-start">
-                        <Settings className="mr-2" size={16} />
-                        Einstellungen
-                      </TabsTrigger>
-                    </TabsList>
-                  </Tabs>
+                  <p className="text-xl font-medium mb-3">{greeting}</p>
+                  <p className="text-sm text-gray-500">
+                    Hier kannst du dein Profil verwalten und deine Bewerbungen einsehen.
+                  </p>
                 </CardContent>
-                
                 <CardFooter>
-                  <Button 
-                    variant="outline" 
-                    className="w-full" 
-                    onClick={handleLogout}
-                  >
-                    Abmelden
-                  </Button>
+                  <Button onClick={handleLogout} variant="outline" className="w-full">Abmelden</Button>
                 </CardFooter>
               </Card>
+              
+              <div className="mt-6">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 md:grid-cols-1 gap-1">
+                    <TabsTrigger value="dashboard" className="flex items-center justify-start gap-2">
+                      <User size={16} />
+                      <span>Profil</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="applications" className="flex items-center justify-start gap-2">
+                      <Calendar size={16} />
+                      <span>Bewerbungen</span>
+                    </TabsTrigger>
+                    {(isModerator || isAdmin) && (
+                      <TabsTrigger value="team" className="flex items-center justify-start gap-2">
+                        <Users size={16} />
+                        <span>Team</span>
+                      </TabsTrigger>
+                    )}
+                    {isAdmin && (
+                      <TabsTrigger value="admin" className="flex items-center justify-start gap-2">
+                        <ShieldCheck size={16} />
+                        <span>Admin</span>
+                      </TabsTrigger>
+                    )}
+                    <TabsTrigger value="security" className="flex items-center justify-start gap-2">
+                      <KeyRound size={16} />
+                      <span>Sicherheit</span>
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
             </div>
             
+            {/* Tabs Content */}
             <div className="flex-1">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsContent value="dashboard" className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>{greeting}, {user.name}!</CardTitle>
-                      <CardDescription>
-                        Hier siehst du eine Übersicht zu deinem Benutzerkonto.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-4">
-                        <div className="flex flex-col space-y-1.5">
-                          <h3 className="text-lg font-semibold">Willkommen zurück!</h3>
-                          <p className="text-sm text-gray-500">
-                            Hier kannst du dein Profil verwalten, deine Bewerbungen einsehen
-                            und deine Accounteinstellungen ändern.
-                          </p>
-                        </div>
-                        
-                        <Alert className="bg-blue-50 border-blue-200">
-                          <Calendar className="h-4 w-4 text-blue-600" />
-                          <AlertTitle>Hilfe benötigt?</AlertTitle>
-                          <AlertDescription>
-                            Wenn du Hilfe benötigst, kannst du uns gerne über Discord kontaktieren.
-                          </AlertDescription>
-                        </Alert>
-                        
-                        {applications.length > 0 && (
-                          <div className="mt-4">
-                            <h3 className="text-lg font-semibold mb-2">Deine letzten Bewerbungen</h3>
-                            <div className="space-y-2">
-                              {applications.slice(0, 3).map((app) => (
-                                <div key={app.id} className="p-3 border rounded-md flex justify-between items-center bg-gray-50">
-                                  <div>
-                                    <p className="text-sm font-medium">Bewerbung vom {formatDate(app.created_at)}</p>
-                                    {getStatusBadge(app.status)}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="profile" className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Profil</CardTitle>
-                      <CardDescription>
-                        Hier kannst du deine Profilinformationen bearbeiten.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Benutzername</Label>
-                        <div className="flex flex-wrap gap-2">
-                          <Input 
-                            id="name" 
-                            value={username} 
-                            onChange={(e) => setUsername(e.target.value)} 
-                            disabled={isLoading}
-                            className="flex-1"
-                          />
-                          <Button 
-                            type="button" 
-                            variant="outline"
-                            onClick={handleInitiateUsernameChange}
-                            disabled={isLoading}
-                            className="flex items-center"
-                          >
-                            <Edit size={16} className="mr-2" />
-                            Ändern
-                          </Button>
-                        </div>
-                        {!usernameCooldown.canChange && (
-                          <p className="text-xs text-orange-500 mt-1">
-                            Du kannst deinen Benutzernamen erst wieder ändern am {formatNextChangeDate(usernameCooldown.nextChangeDate)}.
-                          </p>
-                        )}
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="email">E-Mail Adresse</Label>
-                        <div className="flex flex-wrap gap-2">
-                          <Input 
-                            id="email" 
-                            value={user.email} 
-                            disabled
-                            className="flex-1 bg-gray-50"
-                          />
-                          <Button 
-                            type="button" 
-                            variant="outline"
-                            onClick={handleShowEmailChangeDialog}
-                            disabled={isLoading || user.email_changed}
-                            className="flex items-center"
-                          >
-                            <Edit size={16} className="mr-2" />
-                            Ändern
-                          </Button>
-                        </div>
-                        {user.email_changed && (
-                          <p className="text-xs text-orange-500 mt-1">
-                            E-Mail-Adressen können nur einmal geändert werden.
-                          </p>
-                        )}
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="discord">Discord ID</Label>
+              <TabsContent value="dashboard" className="space-y-4 mt-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Profil bearbeiten</CardTitle>
+                    <CardDescription>
+                      Verwalte deine persönlichen Informationen
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="username">Benutzername</Label>
+                      <div className="flex gap-2">
                         <Input 
-                          id="discord" 
-                          value={discordId} 
-                          onChange={(e) => setDiscordId(e.target.value)} 
-                          placeholder="z.B. username#1234" 
+                          id="username" 
+                          value={username} 
+                          onChange={(e) => setUsername(e.target.value)}
                           disabled={isLoading}
+                          readOnly
+                          className="flex-1"
                         />
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          onClick={handleInitiateUsernameChange}
+                          disabled={isLoading || !usernameCooldown.canChange}
+                          title={!usernameCooldown.canChange ? `Änderung erst in ${usernameCooldown.daysRemaining} Tagen wieder möglich` : 'Benutzername ändern'}
+                        >
+                          <Edit size={16} />
+                        </Button>
                       </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="roblox">Roblox ID</Label>
-                        <Input 
-                          id="roblox" 
-                          value={robloxId} 
-                          onChange={(e) => setRobloxId(e.target.value)} 
-                          placeholder="Deine Roblox ID" 
-                          disabled={isLoading}
-                        />
-                      </div>
-                    </CardContent>
-                    <CardFooter className="border-t px-6 py-4">
-                      <Button 
-                        onClick={handleSaveProfile} 
+                      {!usernameCooldown.canChange && usernameCooldown.nextChangeDate && (
+                        <p className="text-xs text-gray-500">
+                          Die nächste Änderung ist am {formatNextChangeDate(usernameCooldown.nextChangeDate)} möglich.
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="discord_id">Discord ID</Label>
+                      <Input 
+                        id="discord_id" 
+                        value={discordId} 
+                        onChange={(e) => setDiscordId(e.target.value)}
                         disabled={isLoading}
-                        className="ml-auto"
-                      >
-                        {isLoading ? "Speichern..." : "Speichern"}
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </TabsContent>
-                
-                {/* Security Tab */}
-                <TabsContent value="security" className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Sicherheit</CardTitle>
-                      <CardDescription>
-                        Hier kannst du dein Passwort ändern.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="currentPassword">Aktuelles Passwort</Label>
-                        <div className="relative">
-                          <Input 
-                            id="currentPassword" 
-                            type={showCurrentPassword ? "text" : "password"}
-                            value={currentPassword} 
-                            onChange={(e) => setCurrentPassword(e.target.value)} 
-                            disabled={isLoading}
-                          />
-                          <button 
-                            type="button"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                          >
-                            {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="roblox_id">Roblox ID</Label>
+                      <Input 
+                        id="roblox_id" 
+                        value={robloxId} 
+                        onChange={(e) => setRobloxId(e.target.value)}
+                        disabled={isLoading}
+                      />
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex justify-between">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setDiscordId(verifiedDiscordId);
+                        setRobloxId(verifiedRobloxId);
+                      }}
+                      disabled={isLoading || !hasModifiedIds}
+                    >
+                      Abbrechen
+                    </Button>
+                    <Button 
+                      onClick={handleSaveProfile} 
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Wird gespeichert...' : 'Speichern'}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="applications" className="space-y-4 mt-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Meine Bewerbungen</CardTitle>
+                    <CardDescription>
+                      Hier siehst du den Status deiner Bewerbungen
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {applications.length === 0 ? (
+                      <div className="text-center py-8">
+                        <AlertCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-1">Keine Bewerbungen</h3>
+                        <p className="text-gray-500">
+                          Du hast noch keine Bewerbungen eingereicht.
+                        </p>
+                        <Button className="mt-4" onClick={() => navigate('/apply')}>
+                          Jetzt bewerben
+                        </Button>
                       </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="newPassword">Neues Passwort</Label>
-                        <div className="relative">
-                          <Input 
-                            id="newPassword" 
-                            type={showNewPassword ? "text" : "password"}
-                            value={newPassword} 
-                            onChange={(e) => setNewPassword(e.target.value)} 
-                            disabled={isLoading}
-                          />
-                          <button 
-                            type="button"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                            onClick={() => setShowNewPassword(!showNewPassword)}
-                          >
-                            {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
-                          <div className={`p-2 rounded-md text-xs ${passwordValidation.length ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-500'}`}>
-                            <span className="flex items-center">
-                              {passwordValidation.length ? <CheckCircle size={12} className="mr-1" /> : <AlertCircle size={12} className="mr-1" />}
-                              Mindestens 8 Zeichen
-                            </span>
-                          </div>
-                          <div className={`p-2 rounded-md text-xs ${passwordValidation.hasLetter ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-500'}`}>
-                            <span className="flex items-center">
-                              {passwordValidation.hasLetter ? <CheckCircle size={12} className="mr-1" /> : <AlertCircle size={12} className="mr-1" />}
-                              Mind. 1 Buchstabe
-                            </span>
-                          </div>
-                          <div className={`p-2 rounded-md text-xs ${passwordValidation.hasNumber ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-500'}`}>
-                            <span className="flex items-center">
-                              {passwordValidation.hasNumber ? <CheckCircle size={12} className="mr-1" /> : <AlertCircle size={12} className="mr-1" />}
-                              Mind. 1 Ziffer
-                            </span>
-                          </div>
-                        </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {applications.map((application) => (
+                          <Card key={application.id} className="overflow-hidden">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-medium">{application.roblox_username}</h3>
+                                  {getStatusBadge(application.status)}
+                                </div>
+                                <p className="text-sm text-gray-500">
+                                  Eingereicht am {formatDate(application.created_at)}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleViewApplication(application)}
+                                >
+                                  Details
+                                </Button>
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
                       </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="confirmPassword">Passwort bestätigen</Label>
-                        <div className="relative">
-                          <Input 
-                            id="confirmPassword" 
-                            type={showConfirmPassword ? "text" : "password"}
-                            value={confirmPassword} 
-                            onChange={(e) => setConfirmPassword(e.target.value)} 
-                            disabled={isLoading}
-                          />
-                          <button 
-                            type="button"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          >
-                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="team" className="space-y-4 mt-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Team-Einstellungen</CardTitle>
+                    <CardDescription>
+                      Verwalte die Einstellungen für dein Team
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <h3 className="font-medium">Bewerbungen</h3>
+                        <p className="text-sm text-gray-500">
+                          Aktiviere oder deaktiviere die Möglichkeit, Bewerbungen einzureichen
+                        </p>
                       </div>
-                      
-                      {passwordError && (
-                        <Alert variant="destructive" className="mt-2">
-                          <AlertCircle className="h-4 w-4" />
-                          <AlertTitle>Fehler</AlertTitle>
-                          <AlertDescription>{passwordError}</AlertDescription>
-                        </Alert>
-                      )}
-                      
-                      {passwordChangeSuccess && (
-                        <Alert className="bg-green-50 border-green-200 text-green-800">
-                          <CheckCircle className="h-4 w-4" />
-                          <AlertTitle>Erfolg</AlertTitle>
-                          <AlertDescription>Dein Passwort wurde erfolgreich geändert.</AlertDescription>
-                        </Alert>
-                      )}
-                    </CardContent>
-                    <CardFooter className="border-t px-6 py-4">
                       <Button 
-                        onClick={handleChangePassword} 
-                        disabled={isLoading || !newPassword || !confirmPassword}
-                        className="ml-auto"
+                        variant={teamSettings.applications_open ? "default" : "outline"}
+                        onClick={handleToggleApplications}
                       >
-                        {isLoading ? "Speichern..." : "Passwort ändern"}
+                        {teamSettings.applications_open ? 'Geöffnet' : 'Geschlossen'}
                       </Button>
-                    </CardFooter>
-                  </Card>
-                </TabsContent>
-                
-                {/* Applications Tab */}
-                <TabsContent value="applications" className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Deine Bewerbungen</CardTitle>
-                      <CardDescription>
-                        Hier siehst du deine bisherigen Bewerbungen und deren Status.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      {isLoadingApplications ? (
-                        <div className="flex justify-center py-8">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                        </div>
-                      ) : applications.length > 0 ? (
-                        <div className="overflow-x-auto">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Datum</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Aktualisiert</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {applications.map((application) => (
-                                <TableRow key={application.id}>
-                                  <TableCell>{formatDate(application.created_at)}</TableCell>
-                                  <TableCell>{getStatusBadge(application.status)}</TableCell>
-                                  <TableCell className="text-muted-foreground">
-                                    {formatDate(application.updated_at)}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <Mail className="mx-auto h-12 w-12 text-gray-300" />
-                          <p className="mt-2 text-gray-500">Du hast noch keine Bewerbungen eingereicht.</p>
-                          <Button 
-                            className="mt-4" 
-                            onClick={() => navigate('/apply/form')}
-                          >
-                            Jetzt bewerben
-                          </Button>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                
-                {/* Team Tab */}
-                {isModerator && (
-                  <TabsContent value="team" className="space-y-4">
-                    <Card>
-                      <CardHeader>
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle>Team-Einstellungen</CardTitle>
-                            <CardDescription>
-                              Verwalte die Team-Einstellungen und Termine.
-                            </CardDescription>
-                          </div>
-                          {!editTeamSettings && (
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => setEditTeamSettings(true)}
-                            >
-                              <Edit size={16} className="mr-2" />
-                              Bearbeiten
-                            </Button>
-                          )}
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        {isLoadingTeamSettings ? (
-                          <div className="flex justify-center py-8">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                          </div>
-                        ) : teamSettings ? (
-                          editTeamSettings ? (
-                            <div className="space-y-4">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="meeting_day">Meeting-Tag</Label>
-                                  <Input 
-                                    id="meeting_day" 
-                                    value={newTeamSettings.meeting_day} 
-                                    onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_day: e.target.value})} 
-                                    placeholder="z.B. Montag" 
-                                    disabled={isLoading}
-                                  />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <Label htmlFor="meeting_time">Meeting-Zeit</Label>
-                                  <Input 
-                                    id="meeting_time" 
-                                    value={newTeamSettings.meeting_time} 
-                                    onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_time: e.target.value})} 
-                                    placeholder="z.B. 19:00 Uhr" 
-                                    disabled={isLoading}
-                                  />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <Label htmlFor="meeting_frequency">Meeting-Häufigkeit</Label>
-                                  <Input 
-                                    id="meeting_frequency" 
-                                    value={newTeamSettings.meeting_frequency} 
-                                    onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_frequency: e.target.value})} 
-                                    placeholder="z.B. Wöchentlich" 
-                                    disabled={isLoading}
-                                  />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <Label htmlFor="meeting_location">Meeting-Ort</Label>
-                                  <Input 
-                                    id="meeting_location" 
-                                    value={newTeamSettings.meeting_location} 
-                                    onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_location: e.target.value})} 
-                                    placeholder="z.B. Discord Voice Channel #team" 
-                                    disabled={isLoading}
-                                  />
-                                </div>
-                              </div>
-                              
-                              <div className="space-y-2">
-                                <Label htmlFor="meeting_notes">Notizen</Label>
-                                <Textarea 
-                                  id="meeting_notes" 
-                                  value={newTeamSettings.meeting_notes} 
-                                  onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_notes: e.target.value})} 
-                                  placeholder="Zusätzliche Informationen für das Team" 
-                                  disabled={isLoading}
-                                  rows={4}
-                                />
-                              </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <h3 className="font-medium">Wartungsmodus</h3>
+                        <p className="text-sm text-gray-500">
+                          Aktiviere den Wartungsmodus, um die Seite vorübergehend zu deaktivieren
+                        </p>
+                      </div>
+                      <Button 
+                        variant={teamSettings.maintenance_mode ? "destructive" : "outline"}
+                        onClick={handleToggleMaintenance}
+                      >
+                        {teamSettings.maintenance_mode ? 'Aktiviert' : 'Deaktiviert'}
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="maintenance_message">Wartungsnachricht</Label>
+                      <Textarea 
+                        id="maintenance_message" 
+                        value={teamSettings.maintenance_message}
+                        onChange={(e) => setTeamSettings({
+                          ...teamSettings,
+                          maintenance_message: e.target.value
+                        })}
+                        rows={3}
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleUpdateMaintenanceMessage(teamSettings.maintenance_message)}
+                      >
+                        Nachricht speichern
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="admin" className="space-y-4 mt-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Admin-Bereich</CardTitle>
+                    <CardDescription>
+                      Verwalte die Servereinstellungen und Benutzer
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-lg">Admin-Benutzer</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-sm text-gray-500 mb-2">
+                            {users.length} Administratoren und Moderatoren
+                          </p>
+                          {loadingAdminUsers ? (
+                            <div className="flex justify-center py-4">
+                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-700"></div>
                             </div>
                           ) : (
-                            <div className="space-y-4">
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="bg-gray-50 p-4 rounded-md">
-                                  <h3 className="font-medium text-gray-700 mb-1">Meeting-Tag</h3>
-                                  <p className="text-gray-900">{teamSettings.meeting_day || 'Nicht festgelegt'}</p>
-                                </div>
-                                
-                                <div className="bg-gray-50 p-4 rounded-md">
-                                  <h3 className="font-medium text-gray-700 mb-1">Meeting-Zeit</h3>
-                                  <p className="text-gray-900">{teamSettings.meeting_time || 'Nicht festgelegt'}</p>
-                                </div>
-                                
-                                <div className="bg-gray-50 p-4 rounded-md">
-                                  <h3 className="font-medium text-gray-700 mb-1">Häufigkeit</h3>
-                                  <p className="text-gray-900">{teamSettings.meeting_frequency || 'Nicht festgelegt'}</p>
-                                </div>
-                                
-                                <div className="bg-gray-50 p-4 rounded-md">
-                                  <h3 className="font-medium text-gray-700 mb-1">Ort</h3>
-                                  <p className="text-gray-900">{teamSettings.meeting_location || 'Nicht festgelegt'}</p>
-                                </div>
-                              </div>
-                              
-                              {teamSettings.meeting_notes && (
-                                <div className="bg-gray-50 p-4 rounded-md">
-                                  <h3 className="font-medium text-gray-700 mb-1">Notizen</h3>
-                                  <p className="text-gray-900 whitespace-pre-line">{teamSettings.meeting_notes}</p>
-                                </div>
-                              )}
-                            </div>
-                          )
-                        ) : (
-                          <div className="text-center py-8">
-                            <Calendar className="mx-auto h-12 w-12 text-gray-300" />
-                            <p className="mt-2 text-gray-500">Keine Team-Einstellungen vorhanden.</p>
-                          </div>
-                        )}
-                      </CardContent>
-                      {editTeamSettings && (
-                        <CardFooter className="border-t px-6 py-4 flex justify-between">
-                          <Button 
-                            variant="outline" 
-                            onClick={() => setEditTeamSettings(false)}
-                            disabled={isLoading}
-                          >
-                            Abbrechen
-                          </Button>
-                          <Button 
-                            onClick={handleSaveTeamSettings} 
-                            disabled={isLoading}
-                          >
-                            {isLoading ? "Speichern..." : "Speichern"}
-                          </Button>
-                        </CardFooter>
-                      )}
-                    </Card>
-                  </TabsContent>
-                )}
-                
-                {/* Admin Tab */}
-                {isAdmin && (
-                  <TabsContent value="admin" className="space-y-4">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Admin-Bereich</CardTitle>
-                        <CardDescription>
-                          Verwalte Benutzer und Bewerbungen.
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-6">
-                        {/* Users Section */}
-                        <div>
-                          <h3 className="text-lg font-semibold mb-4">Benutzer-Verwaltung</h3>
-                          <div className="bg-blue-50 p-4 rounded-md mb-4 flex justify-between items-center">
-                            <div className="flex items-center">
-                              <Users className="h-5 w-5 text-blue-600 mr-2" />
-                              <span>Insgesamt <strong>{userCount}</strong> Benutzer registriert</span>
-                            </div>
-                          </div>
-                          
-                          {loadingAdminUsers ? (
-                            <div className="flex justify-center py-8">
-                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                            </div>
-                          ) : users.length > 0 ? (
-                            <div className="overflow-x-auto">
+                            <div className="max-h-96 overflow-y-auto">
                               <Table>
                                 <TableHeader>
                                   <TableRow>
-                                    <TableHead>Benutzer</TableHead>
                                     <TableHead>Rolle</TableHead>
-                                    <TableHead>Hinzugefügt am</TableHead>
-                                    <TableHead className="text-right">Aktionen</TableHead>
+                                    <TableHead>Aktionen</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                   {users.map((user) => (
                                     <TableRow key={user.id}>
-                                      <TableCell>{getUsernameById(user.user_id)}</TableCell>
                                       <TableCell>
-                                        <Badge variant="outline" className={
-                                          user.role === 'admin' 
-                                            ? 'bg-red-50 text-red-700 border-red-200' 
-                                            : user.role === 'moderator'
-                                              ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                              : ''
-                                        }>
-                                          {user.role === 'admin' ? 'Administrator' : user.role === 'moderator' ? 'Moderator' : user.role}
-                                        </Badge>
+                                        <div className="flex flex-col">
+                                          <span className="font-medium">{getUsernameById(user.user_id)}</span>
+                                          <Badge variant="outline" className="w-fit mt-1">
+                                            {user.role === 'admin' ? 'Administrator' : 'Moderator'}
+                                          </Badge>
+                                        </div>
                                       </TableCell>
-                                      <TableCell>{formatDate(user.created_at)}</TableCell>
-                                      <TableCell className="text-right">
-                                        <div className="flex justify-end items-center space-x-2">
+                                      <TableCell>
+                                        <div className="flex items-center gap-2">
                                           <Button 
-                                            variant="outline" 
-                                            size="sm"
+                                            variant="ghost" 
+                                            size="icon"
                                             onClick={() => handleEditUser(user)}
                                           >
-                                            <Edit size={14} />
+                                            <Edit size={16} />
                                           </Button>
                                           <Button 
-                                            variant="outline" 
-                                            size="sm"
-                                            className="text-red-600 border-red-200 hover:text-red-700 hover:bg-red-50"
+                                            variant="ghost" 
+                                            size="icon"
                                             onClick={() => handleDeleteUser(user.id)}
                                           >
-                                            <Trash2 size={14} />
+                                            <Trash2 size={16} className="text-red-500" />
                                           </Button>
                                         </div>
                                       </TableCell>
@@ -1663,393 +1174,495 @@ const Profile = () => {
                                 </TableBody>
                               </Table>
                             </div>
-                          ) : (
-                            <div className="text-center py-8">
-                              <Users className="mx-auto h-12 w-12 text-gray-300" />
-                              <p className="mt-2 text-gray-500">Keine Benutzer vorhanden.</p>
-                            </div>
                           )}
-                        </div>
-                        
-                        {/* Applications Section */}
-                        <div className="mt-8 pt-8 border-t border-gray-100">
-                          <h3 className="text-lg font-semibold mb-4">Bewerbungs-Verwaltung</h3>
-                          
-                          {loadingAllApplications ? (
-                            <div className="flex justify-center py-8">
-                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-lg">Statistiken</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Users size={20} className="text-blue-600" />
+                                <span>Gesamt Benutzer</span>
+                              </div>
+                              <Badge variant="outline">{userCount}</Badge>
                             </div>
-                          ) : allApplications.length > 0 ? (
-                            <div className="overflow-x-auto">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>ID</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Datum</TableHead>
-                                    <TableHead className="text-right">Aktionen</TableHead>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="w-full"
+                              onClick={() => invalidateAdminCache().then(() => fetchUserCount())}
+                            >
+                              Statistiken aktualisieren
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                    
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-lg">Bewerbungs-Verwaltung</CardTitle>
+                        <CardDescription>
+                          Verwalte alle eingehenden Bewerbungen
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {loadingAllApplications ? (
+                          <div className="flex justify-center py-4">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-700"></div>
+                          </div>
+                        ) : allApplications.length === 0 ? (
+                          <div className="text-center py-4 text-gray-500">
+                            <AlertCircle className="mx-auto h-10 w-10 text-gray-400 mb-2" />
+                            <p>Keine Bewerbungen vorhanden</p>
+                          </div>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Roblox Name</TableHead>
+                                  <TableHead>Status</TableHead>
+                                  <TableHead>Datum</TableHead>
+                                  <TableHead>Aktionen</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {allApplications.map((application) => (
+                                  <TableRow key={application.id}>
+                                    <TableCell>{application.roblox_username}</TableCell>
+                                    <TableCell>{getStatusBadge(application.status)}</TableCell>
+                                    <TableCell>{formatDate(application.created_at)}</TableCell>
+                                    <TableCell>
+                                      <div className="flex items-center gap-2">
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon"
+                                          onClick={() => handleViewApplication(application)}
+                                        >
+                                          <Eye size={16} />
+                                        </Button>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon"
+                                          onClick={() => handleDeleteApplication(application.id)}
+                                        >
+                                          <Trash2 size={16} className="text-red-500" />
+                                        </Button>
+                                      </div>
+                                    </TableCell>
                                   </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {allApplications.map((application) => (
-                                    <TableRow key={application.id}>
-                                      <TableCell className="font-mono text-xs">
-                                        {application.id.substring(0, 8)}...
-                                      </TableCell>
-                                      <TableCell>{getStatusBadge(application.status)}</TableCell>
-                                      <TableCell>{formatDate(application.created_at)}</TableCell>
-                                      <TableCell className="text-right">
-                                        <div className="flex justify-end items-center space-x-2">
-                                          <Button 
-                                            variant="outline" 
-                                            size="sm"
-                                            onClick={() => handleViewApplication(application)}
-                                          >
-                                            <Eye size={14} />
-                                          </Button>
-                                          <Button 
-                                            variant="outline" 
-                                            size="sm"
-                                            className="text-red-600 border-red-200 hover:text-red-700 hover:bg-red-50"
-                                            onClick={() => handleDeleteApplication(application.id)}
-                                          >
-                                            <Trash2 size={14} />
-                                          </Button>
-                                        </div>
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          ) : (
-                            <div className="text-center py-8">
-                              <Mail className="mx-auto h-12 w-12 text-gray-300" />
-                              <p className="mt-2 text-gray-500">Keine Bewerbungen vorhanden.</p>
-                            </div>
-                          )}
-                        </div>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
-                  </TabsContent>
-                )}
-                
-                {/* Settings Tab */}
-                <TabsContent value="settings" className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Einstellungen</CardTitle>
-                      <CardDescription>
-                        Verwalte deine Account-Einstellungen und Präferenzen.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <Alert className="bg-amber-50 border-amber-200">
-                        <AlertTriangle className="h-4 w-4 text-amber-600" />
-                        <AlertTitle>Achtung</AlertTitle>
-                        <AlertDescription>
-                          Das Löschen deines Accounts ist permanent und kann nicht rückgängig gemacht werden.
-                        </AlertDescription>
-                      </Alert>
-                    </CardContent>
-                    <CardFooter className="flex-col items-start space-y-2">
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="security" className="space-y-4 mt-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Sicherheitseinstellungen</CardTitle>
+                    <CardDescription>
+                      Verwalte deine Sicherheitseinstellungen und Zugangsdaten
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                      <h3 className="font-medium">E-Mail-Adresse</h3>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-gray-500">{user.email}</p>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={handleInitiateEmailChange}
+                        >
+                          Ändern
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h3 className="font-medium">Passwort</h3>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-gray-500">••••••••</p>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={handleInitiatePasswordChange}
+                        >
+                          Ändern
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="pt-4 border-t">
+                      <h3 className="font-medium text-red-600 mb-2">Gefahrenzone</h3>
+                      <p className="text-sm text-gray-500 mb-4">
+                        Wenn du dein Konto löschst, werden alle deine Daten unwiderruflich gelöscht.
+                      </p>
                       <Button 
                         variant="destructive" 
-                        className="flex items-center"
+                        size="sm"
+                        onClick={handleInitiateDeleteAccount}
                       >
-                        <Trash2 size={16} className="mr-2" />
-                        Account löschen
+                        Konto löschen
                       </Button>
-                      <p className="text-xs text-gray-500">
-                        Diese Aktion löscht alle deine Daten und kann nicht rückgängig gemacht werden.
-                      </p>
-                    </CardFooter>
-                  </Card>
-                </TabsContent>
-              </Tabs>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </div>
           </div>
         </div>
       </main>
-      
       <Footer />
-
+      
       {/* Username Change Dialog */}
-      <Dialog open={showUsernameChangeDialog} onOpenChange={setShowUsernameChangeDialog}>
+      <Dialog open={isUsernameDialogOpen} onOpenChange={setIsUsernameDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Benutzernamen ändern</DialogTitle>
+            <DialogTitle>Benutzername ändern</DialogTitle>
             <DialogDescription>
-              Gib deinen neuen Benutzernamen ein. Diese Änderung wird für alle sichtbar sein.
+              Gib deinen neuen Benutzernamen ein. Du kannst deinen Benutzernamen nur alle 30 Tage ändern.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="newUsername">Neuer Benutzername</Label>
+              <Label htmlFor="new-username">Neuer Benutzername</Label>
               <Input 
-                id="newUsername" 
+                id="new-username" 
                 value={newUsername} 
-                onChange={(e) => setNewUsername(e.target.value)} 
-                placeholder="Neuer Benutzername" 
+                onChange={(e) => setNewUsername(e.target.value)}
+                placeholder="Neuer Benutzername"
               />
-              
-              {!usernameValidationResult.valid && newUsername && (
-                <p className="text-sm text-red-500">{usernameValidationResult.reason}</p>
-              )}
-              
-              {isUsernameTakenCheck && (
-                <p className="text-sm text-red-500">Dieser Benutzername ist bereits vergeben.</p>
-              )}
-              
-              <p className="text-xs text-gray-500 mt-2">
-                Hinweis: Du kannst deinen Benutzernamen nur alle 30 Tage ändern.
-              </p>
             </div>
           </div>
           <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowUsernameChangeDialog(false)}
-            >
-              Abbrechen
-            </Button>
-            <Button 
-              onClick={confirmUsernameChange} 
-              disabled={!newUsername || !usernameValidationResult.valid || isUsernameTakenCheck === true || isLoading}
-            >
-              Bestätigen
+            <Button variant="outline" onClick={() => setIsUsernameDialogOpen(false)}>Abbrechen</Button>
+            <Button onClick={handleUsernameChange} disabled={isLoading}>
+              {isLoading ? 'Wird geändert...' : 'Ändern'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* ID Verification Dialog */}
-      <Dialog open={showVerifyDialog} onOpenChange={setShowVerifyDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Bestätigung erforderlich</DialogTitle>
-            <DialogDescription>
-              Du hast deine Discord oder Roblox ID geändert. Bitte bestätige, dass die Änderungen korrekt sind.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {discordId !== verifiedDiscordId && (
-              <div className="space-y-2">
-                <Label>Discord ID</Label>
-                <div className="flex items-center gap-2">
-                  <div className="bg-gray-100 p-2 rounded flex-1">
-                    <span className="text-gray-500">Aktuell:</span> {verifiedDiscordId || 'Nicht gesetzt'}
-                  </div>
-                  <span className="text-gray-400">→</span>
-                  <div className="bg-blue-50 p-2 rounded flex-1">
-                    <span className="text-blue-500">Neu:</span> {discordId || 'Nicht gesetzt'}
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {robloxId !== verifiedRobloxId && (
-              <div className="space-y-2">
-                <Label>Roblox ID</Label>
-                <div className="flex items-center gap-2">
-                  <div className="bg-gray-100 p-2 rounded flex-1">
-                    <span className="text-gray-500">Aktuell:</span> {verifiedRobloxId || 'Nicht gesetzt'}
-                  </div>
-                  <span className="text-gray-400">→</span>
-                  <div className="bg-blue-50 p-2 rounded flex-1">
-                    <span className="text-blue-500">Neu:</span> {robloxId || 'Nicht gesetzt'}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={cancelIdChange}
-            >
-              Abbrechen
-            </Button>
-            <Button 
-              onClick={confirmIdChange}
-            >
-              Bestätigen
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
+      
       {/* Email Change Dialog */}
-      <Dialog open={showEmailChangeDialog} onOpenChange={setShowEmailChangeDialog}>
+      <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>E-Mail-Adresse ändern</DialogTitle>
             <DialogDescription>
-              Gib deine neue E-Mail-Adresse ein. Du erhältst eine Bestätigungs-E-Mail an die neue Adresse.
+              Gib deine neue E-Mail-Adresse und dein aktuelles Passwort ein.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="newEmail">Neue E-Mail-Adresse</Label>
+              <Label htmlFor="new-email">Neue E-Mail-Adresse</Label>
               <Input 
-                id="newEmail" 
+                id="new-email" 
                 type="email"
                 value={newEmail} 
-                onChange={(e) => setNewEmail(e.target.value)} 
-                placeholder="neue@email.de" 
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="neue@email.de"
               />
-              
-              {emailChangeError && (
-                <p className="text-sm text-red-500">{emailChangeError}</p>
-              )}
-              
-              <Alert className="mt-4" variant="default">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Wichtiger Hinweis</AlertTitle>
-                <AlertDescription>
-                  Du kannst deine E-Mail-Adresse nur einmal ändern. Bitte stelle sicher, dass die neue Adresse korrekt ist.
-                </AlertDescription>
-              </Alert>
             </div>
-          </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowEmailChangeDialog(false)}
-            >
-              Abbrechen
-            </Button>
-            <Button 
-              onClick={handleChangeEmail} 
-              disabled={!newEmail || newEmail === user.email || isLoading}
-            >
-              Bestätigen
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Admin User Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Benutzer bearbeiten</DialogTitle>
-            <DialogDescription>
-              Ändere die Rolle des Benutzers.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="role">Rolle</Label>
-              <select 
-                id="role"
-                value={editRole}
-                onChange={(e) => setEditRole(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md"
-              >
-                <option value="user">Benutzer</option>
-                <option value="moderator">Moderator</option>
-                <option value="admin">Administrator</option>
-              </select>
+              <Label htmlFor="current-password-email">Aktuelles Passwort</Label>
+              <div className="relative">
+                <Input 
+                  id="current-password-email" 
+                  type={showPassword ? "text" : "password"}
+                  value={currentPassword} 
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Dein aktuelles Passwort"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </Button>
+              </div>
             </div>
           </div>
           <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setEditDialogOpen(false)}
-            >
+            <Button variant="outline" onClick={() => {
+              setIsEmailDialogOpen(false);
+              setCurrentPassword('');
+            }}>
               Abbrechen
             </Button>
-            <Button 
-              onClick={handleSaveUser} 
-              disabled={isLoading}
-            >
-              Speichern
+            <Button onClick={handleEmailChange} disabled={isLoading}>
+              {isLoading ? 'Wird geändert...' : 'Ändern'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Delete Application Confirmation Dialog */}
-      <Dialog open={confirmDeleteDialog} onOpenChange={setConfirmDeleteDialog}>
+      
+      {/* Password Change Dialog */}
+      <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Bewerbung löschen</DialogTitle>
+            <DialogTitle>Passwort ändern</DialogTitle>
             <DialogDescription>
-              Möchtest du diese Bewerbung wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+              Gib dein aktuelles Passwort und dein neues Passwort ein.
             </DialogDescription>
           </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="current-password">Aktuelles Passwort</Label>
+              <div className="relative">
+                <Input 
+                  id="current-password" 
+                  type={showPassword ? "text" : "password"}
+                  value={currentPassword} 
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Dein aktuelles Passwort"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Neues Passwort</Label>
+              <div className="relative">
+                <Input 
+                  id="new-password" 
+                  type={showNewPassword ? "text" : "password"}
+                  value={newPassword} 
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Dein neues Passwort"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                >
+                  {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Passwort bestätigen</Label>
+              <Input 
+                id="confirm-password" 
+                type={showNewPassword ? "text" : "password"}
+                value={confirmPassword} 
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Passwort wiederholen"
+              />
+            </div>
+          </div>
           <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setConfirmDeleteDialog(false)}
-            >
+            <Button variant="outline" onClick={() => {
+              setIsPasswordDialogOpen(false);
+              setCurrentPassword('');
+              setNewPassword('');
+              setConfirmPassword('');
+            }}>
               Abbrechen
             </Button>
-            <Button 
-              variant="destructive"
-              onClick={confirmDeleteApplication} 
-              disabled={isLoading}
-            >
-              Löschen
+            <Button onClick={handlePasswordChange} disabled={isLoading}>
+              {isLoading ? 'Wird geändert...' : 'Ändern'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* View Application Dialog */}
-      <Dialog open={viewApplicationDialog} onOpenChange={setViewApplicationDialog}>
-        <DialogContent className="sm:max-w-[600px]">
+      
+      {/* Application View Dialog */}
+      <Dialog open={isApplicationDialogOpen} onOpenChange={setIsApplicationDialogOpen}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Bewerbungsdetails</DialogTitle>
             <DialogDescription>
-              Vollständige Informationen zur Bewerbung.
+              Details zur Bewerbung von {selectedApplication?.roblox_username}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-            {currentViewApplication && (
-              <div className="space-y-4">
-                <div className="bg-gray-50 p-4 rounded-md">
-                  <h3 className="font-medium text-gray-700 mb-1">ID</h3>
-                  <p className="text-xs font-mono">{currentViewApplication.id}</p>
+          {selectedApplication && (
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Roblox Username</Label>
+                  <p className="text-sm font-medium">{selectedApplication.roblox_username}</p>
                 </div>
-                
-                <div className="bg-gray-50 p-4 rounded-md">
-                  <h3 className="font-medium text-gray-700 mb-1">Status</h3>
-                  <div>{getStatusBadge(currentViewApplication.status)}</div>
+                <div className="space-y-2">
+                  <Label>Discord Username</Label>
+                  <p className="text-sm font-medium">{selectedApplication.discord_username}</p>
                 </div>
-                
-                <div className="bg-gray-50 p-4 rounded-md">
-                  <h3 className="font-medium text-gray-700 mb-1">Eingereicht am</h3>
-                  <p>{formatDate(currentViewApplication.created_at)}</p>
+                <div className="space-y-2">
+                  <Label>Alter</Label>
+                  <p className="text-sm font-medium">{selectedApplication.age} Jahre</p>
                 </div>
-                
-                <div className="bg-gray-50 p-4 rounded-md">
-                  <h3 className="font-medium text-gray-700 mb-1">Aktualisiert am</h3>
-                  <p>{formatDate(currentViewApplication.updated_at)}</p>
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <div>{getStatusBadge(selectedApplication.status)}</div>
                 </div>
-                
-                {currentViewApplication.notes && (
-                  <div className="bg-gray-50 p-4 rounded-md">
-                    <h3 className="font-medium text-gray-700 mb-1">Notizen</h3>
-                    <p className="whitespace-pre-line">{currentViewApplication.notes}</p>
-                  </div>
-                )}
-                
-                {/* Additional application fields would be displayed here */}
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Erfahrung</Label>
+                <div className="text-sm p-3 bg-gray-50 rounded-md">
+                  {selectedApplication.experience}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Motivation</Label>
+                <div className="text-sm p-3 bg-gray-50 rounded-md">
+                  {selectedApplication.motivation}
+                </div>
+              </div>
+              
+              {(isAdmin || isModerator) && (
+                <div className="space-y-2">
+                  <Label htmlFor="admin-notes">Admin-Notizen</Label>
+                  <Textarea 
+                    id="admin-notes" 
+                    value={adminNotes} 
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    placeholder="Interne Notizen zur Bewerbung"
+                    rows={3}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            {(isAdmin || isModerator) && selectedApplication && (
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 sm:flex-initial"
+                  onClick={() => handleUpdateApplicationStatus('rejected')}
+                >
+                  Ablehnen
+                </Button>
+                <Button 
+                  variant="default" 
+                  className="flex-1 sm:flex-initial"
+                  onClick={() => handleUpdateApplicationStatus('approved')}
+                >
+                  Annehmen
+                </Button>
               </div>
             )}
-          </div>
-          <DialogFooter>
             <Button 
-              variant="outline" 
-              onClick={() => setViewApplicationDialog(false)}
+              variant="ghost" 
+              onClick={() => setIsApplicationDialogOpen(false)}
             >
               Schließen
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Edit User Dialog */}
+      <Dialog open={isEditUserDialogOpen} onOpenChange={setIsEditUserDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Benutzerrolle bearbeiten</DialogTitle>
+            <DialogDescription>
+              Ändere die Rolle des Benutzers
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="user-role">Rolle</Label>
+              <select 
+                id="user-role" 
+                value={newRole} 
+                onChange={(e) => setNewRole(e.target.value as 'admin' | 'moderator')}
+                className="w-full p-2 border rounded-md"
+              >
+                <option value="admin">Administrator</option>
+                <option value="moderator">Moderator</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditUserDialogOpen(false)}>Abbrechen</Button>
+            <Button onClick={handleUpdateUserRole} disabled={isLoading}>
+              {isLoading ? 'Wird gespeichert...' : 'Speichern'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Account Dialog */}
+      <Dialog open={isDeleteAccountDialogOpen} onOpenChange={setIsDeleteAccountDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Konto löschen</DialogTitle>
+            <DialogDescription>
+              Diese Aktion kann nicht rückgängig gemacht werden. Alle deine Daten werden unwiderruflich gelöscht.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Achtung</AlertTitle>
+              <AlertDescription>
+                Durch das Löschen deines Kontos verlierst du den Zugriff auf alle deine Daten und Einstellungen.
+              </AlertDescription>
+            </Alert>
+            <div className="space-y-2">
+              <Label htmlFor="delete-password">Gib dein Passwort ein, um fortzufahren</Label>
+              <div className="relative">
+                <Input 
+                  id="delete-password" 
+                  type={showPassword ? "text" : "password"}
+                  value={currentPassword} 
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Dein Passwort"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsDeleteAccountDialogOpen(false);
+              setCurrentPassword('');
+            }}>
+              Abbrechen
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteAccount} disabled={isLoading}>
+              {isLoading ? 'Wird gelöscht...' : 'Konto löschen'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
     </div>
   );
 };
