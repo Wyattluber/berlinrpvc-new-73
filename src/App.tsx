@@ -1,10 +1,11 @@
 
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useState, useEffect, createContext, ErrorBoundary } from "react";
+import { useState, useEffect, createContext } from "react";
 import { supabase } from '@/integrations/supabase/client';
 import { checkIsAdmin, checkIsModerator, getUserRole } from '@/lib/admin';
 import Index from "./pages/Index";
@@ -25,14 +26,14 @@ export const UserRoleContext = createContext<string | null>(null);
 const queryClient = new QueryClient();
 
 // Error boundary component
-class ErrorFallback extends React.Component {
+class ErrorFallback extends React.Component<{ children: React.ReactNode }> {
   state = { hasError: false, error: null };
   
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError(error: any) {
     return { hasError: true, error };
   }
   
-  componentDidCatch(error, info) {
+  componentDidCatch(error: any, info: { componentStack: string }) {
     console.error("App error:", error, info);
   }
   
