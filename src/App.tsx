@@ -65,15 +65,6 @@ const App = () => {
   useEffect(() => {
     let isMounted = true;
     
-    // Safety timeout to prevent infinite loading
-    const safetyTimeout = setTimeout(() => {
-      if (isMounted && loading) {
-        console.log("Loading timeout triggered - forcing app to render");
-        setLoading(false);
-        setLoadingError("Loading timed out. Some features may not be available.");
-      }
-    }, 2000); // Reduced to 2 seconds for faster fallback
-
     // Check current auth status
     const initializeAuth = async () => {
       try {
@@ -82,6 +73,7 @@ const App = () => {
           console.log("Auth state changed:", _event);
           if (!isMounted) return;
           setSession(session);
+          setLoading(false);
         });
 
         // Then check current session
@@ -109,7 +101,6 @@ const App = () => {
 
     return () => {
       isMounted = false;
-      clearTimeout(safetyTimeout);
     };
   }, []);
 
