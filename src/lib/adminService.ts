@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { checkIsAdmin, getTotalUserCount, TeamSettings } from './admin';
 
@@ -46,7 +47,7 @@ export async function fetchApplications() {
     // Transform data to include username from profiles
     const transformedData = data.map(app => ({
       ...app,
-      username: app.profiles?.username || null
+      username: app.profiles ? app.profiles.username : null
     }));
     
     // Cache the result
