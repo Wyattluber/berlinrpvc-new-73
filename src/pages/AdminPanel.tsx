@@ -3,10 +3,14 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { checkIsAdmin } from '@/lib/admin';
 import { toast } from '@/hooks/use-toast';
-import { fetchAdminUsers, getCachedUserCount } from '@/lib/adminService';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { fetchAdminUsers, getCachedUserCount, updateAdminUser, deleteAdminUser, updateTeamSettings, getTeamSettings } from '@/lib/adminService';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { LoaderIcon, Users, FileText, Settings, LayoutDashboard, ChevronRight } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { LoaderIcon, Users, FileText, Settings, LayoutDashboard, UserCog, ShieldCheck, BellRing, ChevronRight, Trash2, PencilLine } from 'lucide-react';
 import { 
   SidebarProvider, 
   Sidebar, 
@@ -43,7 +47,7 @@ const DashboardOverview = ({ userCount, adminUsers }: { userCount: number, admin
           <CardTitle className="text-sm font-medium">
             Admin-Benutzer
           </CardTitle>
-          <Settings className="h-4 w-4 text-muted-foreground" />
+          <ShieldCheck className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{adminUsers.length}</div>
@@ -65,36 +69,82 @@ const DashboardOverview = ({ userCount, adminUsers }: { userCount: number, admin
   </div>
 );
 
-const UsersManagement = ({ adminUsers }: { adminUsers: any[] }) => (
-  <div className="space-y-6">
-    <h2 className="text-2xl font-bold">Benutzerverwaltung</h2>
-    <Card>
-      <CardHeader>
-        <CardTitle>Administratoren</CardTitle>
-        <CardDescription>
-          Verwalte Benutzer mit administrativen Berechtigungen
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {adminUsers.length === 0 ? (
-          <p>Keine Admin-Benutzer gefunden.</p>
-        ) : (
-          <div className="space-y-2">
-            {adminUsers.map((user) => (
-              <div key={user.id} className="flex items-center justify-between p-2 border rounded">
-                <div>
-                  <p className="font-medium">{user.email || "Kein E-Mail"}</p>
-                  <p className="text-sm text-muted-foreground">{user.role}</p>
+const UsersManagement = ({ adminUsers, handleUpdateRole, handleDeleteUser }: { 
+  adminUsers: any[], 
+  handleUpdateRole: (userId: string, role: string) => void,
+  handleDeleteUser: (userId: string) => void
+}) => {
+  const [editingUser, setEditingUser] = useState<string | null>(null);
+  const [selectedRole, setSelectedRole] = useState<string>('');
+
+  const startEditing = (userId: string, currentRole: string) => {
+    setEditingUser(userId);
+    setSelectedRole(currentRole);
+  };
+
+  const saveChanges = async (userId: string) => {
+    await handleUpdateRole(userId, selectedRole);
+    setEditingUser(null);
+  };
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">Benutzerverwaltung</h2>
+      <Card>
+        <CardHeader>
+          <CardTitle>Administratoren</CardTitle>
+          <CardDescription>
+            Verwalte Benutzer mit administrativen Berechtigungen
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {adminUsers.length === 0 ? (
+            <p>Keine Admin-Benutzer gefunden.</p>
+          ) : (
+            <div className="space-y-2">
+              {adminUsers.map((user) => (
+                <div key={user.id} className="flex items-center justify-between p-3 border rounded hover:bg-gray-50">
+                  <div>
+                    <p className="font-medium">{user.email || "Kein E-Mail"}</p>
+                    {editingUser === user.id ? (
+                      <Select value={selectedRole} onValueChange={setSelectedRole}>
+                        <SelectTrigger className="w-[180px] h-8 mt-1">
+                          <SelectValue placeholder="Rolle auswählen" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="moderator">Moderator</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{user.role}</p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    {editingUser === user.id ? (
+                      <Button variant="outline" size="sm" onClick={() => saveChanges(user.id)}>
+                        Speichern
+                      </Button>
+                    ) : (
+                      <>
+                        <Button variant="outline" size="sm" onClick={() => startEditing(user.id, user.role)}>
+                          <PencilLine className="h-4 w-4 mr-1" /> Bearbeiten
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDeleteUser(user.id)}>
+                          <Trash2 className="h-4 w-4 mr-1" /> Löschen
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <Button variant="outline" size="sm">Bearbeiten</Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  </div>
-);
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
 
 const ApplicationsManagement = () => (
   <div className="space-y-6">
@@ -113,18 +163,275 @@ const ApplicationsManagement = () => (
   </div>
 );
 
-const SettingsManagement = () => (
+const TeamSettings = () => {
+  const [settings, setSettings] = useState({
+    meeting_day: '',
+    meeting_time: '',
+    meeting_frequency: '',
+    meeting_location: '',
+    meeting_notes: ''
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      setLoading(true);
+      try {
+        const teamSettings = await getTeamSettings();
+        if (teamSettings) {
+          setSettings({
+            meeting_day: teamSettings.meeting_day || '',
+            meeting_time: teamSettings.meeting_time || '',
+            meeting_frequency: teamSettings.meeting_frequency || '',
+            meeting_location: teamSettings.meeting_location || '',
+            meeting_notes: teamSettings.meeting_notes || ''
+          });
+        }
+      } catch (error) {
+        console.error('Error loading settings:', error);
+        toast({
+          title: 'Fehler',
+          description: 'Die Einstellungen konnten nicht geladen werden.',
+          variant: 'destructive'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    
+    try {
+      const result = await updateTeamSettings(settings);
+      if (result.success) {
+        toast({
+          title: 'Erfolg',
+          description: 'Die Einstellungen wurden gespeichert.'
+        });
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Fehler',
+        description: error.message || 'Die Einstellungen konnten nicht gespeichert werden.',
+        variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">Teameinstellungen</h2>
+      <Card>
+        <CardHeader>
+          <CardTitle>Team Meetings</CardTitle>
+          <CardDescription>
+            Konfiguriere die Einstellungen für Team-Meetings
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center p-4">
+              <LoaderIcon className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="meeting_day">Meeting-Tag</Label>
+                  <Select 
+                    value={settings.meeting_day} 
+                    onValueChange={(value) => setSettings({...settings, meeting_day: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Tag auswählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monday">Montag</SelectItem>
+                      <SelectItem value="tuesday">Dienstag</SelectItem>
+                      <SelectItem value="wednesday">Mittwoch</SelectItem>
+                      <SelectItem value="thursday">Donnerstag</SelectItem>
+                      <SelectItem value="friday">Freitag</SelectItem>
+                      <SelectItem value="saturday">Samstag</SelectItem>
+                      <SelectItem value="sunday">Sonntag</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="meeting_time">Meeting-Zeit</Label>
+                  <Input 
+                    id="meeting_time" 
+                    type="time" 
+                    value={settings.meeting_time} 
+                    onChange={(e) => setSettings({...settings, meeting_time: e.target.value})}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="meeting_frequency">Meeting-Häufigkeit</Label>
+                  <Select 
+                    value={settings.meeting_frequency} 
+                    onValueChange={(value) => setSettings({...settings, meeting_frequency: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Häufigkeit auswählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="weekly">Wöchentlich</SelectItem>
+                      <SelectItem value="biweekly">Zweiwöchentlich</SelectItem>
+                      <SelectItem value="monthly">Monatlich</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="meeting_location">Meeting-Ort</Label>
+                  <Input 
+                    id="meeting_location" 
+                    value={settings.meeting_location} 
+                    onChange={(e) => setSettings({...settings, meeting_location: e.target.value})}
+                    placeholder="Discord, TeamSpeak, etc."
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="meeting_notes">Notizen</Label>
+                <Textarea 
+                  id="meeting_notes" 
+                  value={settings.meeting_notes} 
+                  onChange={(e) => setSettings({...settings, meeting_notes: e.target.value})}
+                  placeholder="Zusätzliche Informationen zu den Meetings..."
+                  rows={3}
+                />
+              </div>
+            </form>
+          )}
+        </CardContent>
+        <CardFooter>
+          <Button onClick={handleSubmit} disabled={saving || loading}>
+            {saving ? (
+              <>
+                <LoaderIcon className="h-4 w-4 mr-2 animate-spin" />
+                Speichern...
+              </>
+            ) : 'Einstellungen speichern'}
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+};
+
+const SecuritySettings = () => (
   <div className="space-y-6">
-    <h2 className="text-2xl font-bold">Systemeinstellungen</h2>
+    <h2 className="text-2xl font-bold">Sicherheitseinstellungen</h2>
     <Card>
       <CardHeader>
-        <CardTitle>Teameinstellungen</CardTitle>
+        <CardTitle>Administratorzugriff</CardTitle>
         <CardDescription>
-          Verwalte Teameinstellungen wie Meetings und Benachrichtigungen
+          Verwalte Zugriffsrechte und Sicherheitseinstellungen
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <p>Einstellungen werden geladen...</p>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="two-factor">Zwei-Faktor-Authentifizierung</Label>
+          <div className="flex justify-between items-center border p-3 rounded">
+            <div>
+              <p className="font-medium">2FA für Admin-Zugänge</p>
+              <p className="text-sm text-muted-foreground">Erhöhte Sicherheit für Administratoren</p>
+            </div>
+            <Button variant="outline">Konfigurieren</Button>
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="access-logs">Zugriffsprotokoll</Label>
+          <div className="border p-3 rounded">
+            <p className="font-medium">Letzte Zugriffsversuche</p>
+            <div className="mt-2 text-sm text-muted-foreground">
+              <p>Keine Zugriffsversuche protokolliert.</p>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+);
+
+const AccountDetails = () => (
+  <div className="space-y-6">
+    <h2 className="text-2xl font-bold">Kontoverwaltung</h2>
+    <Card>
+      <CardHeader>
+        <CardTitle>Kontoinformationen</CardTitle>
+        <CardDescription>
+          Verwalte die Details deines Administrator-Kontos
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="admin-email">E-Mail-Adresse</Label>
+          <Input id="admin-email" disabled value="admin@example.com" />
+          <p className="text-xs text-muted-foreground">Die E-Mail-Adresse kann nicht geändert werden.</p>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="admin-role">Rolle</Label>
+          <Input id="admin-role" disabled value="Administrator" />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="admin-since">Administrator seit</Label>
+          <Input id="admin-since" disabled value="01.01.2024" />
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+);
+
+const NotificationSettings = () => (
+  <div className="space-y-6">
+    <h2 className="text-2xl font-bold">Benachrichtigungen</h2>
+    <Card>
+      <CardHeader>
+        <CardTitle>Benachrichtigungseinstellungen</CardTitle>
+        <CardDescription>
+          Verwalte, wie und wann du benachrichtigt wirst
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label>Neue Bewerbungen</Label>
+          <div className="flex justify-between items-center border p-3 rounded">
+            <div>
+              <p className="font-medium">Benachrichtigung bei neuen Bewerbungen</p>
+              <p className="text-sm text-muted-foreground">E-Mail und Browser-Benachrichtigungen</p>
+            </div>
+            <Button variant="outline">Aktivieren</Button>
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <Label>Sicherheitsbenachrichtigungen</Label>
+          <div className="flex justify-between items-center border p-3 rounded">
+            <div>
+              <p className="font-medium">Wichtige Sicherheitswarnungen</p>
+              <p className="text-sm text-muted-foreground">Sofortige Benachrichtigung bei verdächtigen Aktivitäten</p>
+            </div>
+            <Button variant="outline">Aktivieren</Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   </div>
@@ -170,6 +477,62 @@ const AdminPanel = () => {
     
     checkAccess();
   }, []);
+
+  const handleUpdateRole = async (userId: string, role: string) => {
+    try {
+      const result = await updateAdminUser(userId, role);
+      
+      if (result.success) {
+        toast({
+          title: "Erfolg",
+          description: "Benutzerrolle erfolgreich aktualisiert."
+        });
+        
+        // Update local state
+        setAdminUsers(prevUsers => prevUsers.map(user => 
+          user.id === userId ? { ...user, role } : user
+        ));
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error: any) {
+      console.error("Error updating user role:", error);
+      toast({
+        title: "Fehler",
+        description: error.message || "Fehler beim Aktualisieren der Benutzerrolle.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!window.confirm("Möchtest du diesen Benutzer wirklich löschen?")) {
+      return;
+    }
+    
+    try {
+      const result = await deleteAdminUser(userId);
+      
+      if (result.success) {
+        toast({
+          title: "Erfolg",
+          description: "Benutzer erfolgreich gelöscht."
+        });
+        
+        // Update local state
+        setAdminUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+      toast({
+        title: "Fehler",
+        description: error.message || "Fehler beim Löschen des Benutzers.",
+        variant: "destructive"
+      });
+    }
+  };
   
   if (loading) {
     return (
@@ -197,7 +560,10 @@ const AdminPanel = () => {
     { title: "Dashboard", id: "dashboard", icon: LayoutDashboard },
     { title: "Benutzer", id: "users", icon: Users },
     { title: "Bewerbungen", id: "applications", icon: FileText },
-    { title: "Einstellungen", id: "settings", icon: Settings }
+    { title: "Teameinstellungen", id: "team-settings", icon: Settings },
+    { title: "Sicherheit", id: "security", icon: ShieldCheck },
+    { title: "Kontoverwaltung", id: "account", icon: UserCog },
+    { title: "Benachrichtigungen", id: "notifications", icon: BellRing }
   ];
   
   // Render the selected content based on activeSection
@@ -206,11 +572,17 @@ const AdminPanel = () => {
       case 'dashboard':
         return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
       case 'users':
-        return <UsersManagement adminUsers={adminUsers} />;
+        return <UsersManagement adminUsers={adminUsers} handleUpdateRole={handleUpdateRole} handleDeleteUser={handleDeleteUser} />;
       case 'applications':
         return <ApplicationsManagement />;
-      case 'settings':
-        return <SettingsManagement />;
+      case 'team-settings':
+        return <TeamSettings />;
+      case 'security':
+        return <SecuritySettings />;
+      case 'account':
+        return <AccountDetails />;
+      case 'notifications':
+        return <NotificationSettings />;
       default:
         return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
     }
@@ -258,3 +630,4 @@ const AdminPanel = () => {
 };
 
 export default AdminPanel;
+

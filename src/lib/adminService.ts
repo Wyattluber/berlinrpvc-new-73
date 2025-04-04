@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { checkIsAdmin, getTotalUserCount } from './admin';
+import { checkIsAdmin, getTotalUserCount, TeamSettings } from './admin';
 
 // Improve cache TTL to reduce unnecessary fetches
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -10,6 +10,9 @@ let userCountCache: { count: number; timestamp: number } | null = null;
 
 // Cache admin users
 let adminUsersCache: { users: any[]; timestamp: number } | null = null;
+
+// Cache team settings
+let teamSettingsCache: { settings: TeamSettings | null; timestamp: number } | null = null;
 
 /**
  * Fetch admin users with caching
@@ -62,6 +65,36 @@ export async function getCachedUserCount() {
   } catch (error) {
     console.error('Error getting user count:', error);
     return userCountCache?.count || 0;
+  }
+}
+
+/**
+ * Get cached team settings
+ */
+export async function getTeamSettings(): Promise<TeamSettings | null> {
+  const now = Date.now();
+  
+  // Return cached data if valid
+  if (teamSettingsCache && (now - teamSettingsCache.timestamp < CACHE_TTL)) {
+    return teamSettingsCache.settings;
+  }
+  
+  try {
+    const { data, error } = await supabase
+      .from('team_settings')
+      .select('*')
+      .maybeSingle();
+      
+    if (error) {
+      throw error;
+    }
+    
+    const settings = data as TeamSettings | null;
+    teamSettingsCache = { settings, timestamp: now };
+    return settings;
+  } catch (error) {
+    console.error('Error getting team settings:', error);
+    return teamSettingsCache?.settings || null;
   }
 }
 
@@ -134,6 +167,72 @@ export async function updateAdminUser(id: string, role: string) {
 }
 
 /**
+ * Update team settings
+ */
+export async function updateTeamSettings(settings: {
+  meeting_day?: string;
+  meeting_time?: string;
+  meeting_frequency?: string;
+  meeting_location?: string;
+  meeting_notes?: string;
+}) {
+  const isAdmin = await checkIsAdmin();
+  if (!isAdmin) {
+    return { success: false, message: 'Nur Admins können Team-Einstellungen bearbeiten' };
+  }
+  
+  try {
+    // Check if settings already exist
+    const existingSettings = await getTeamSettings();
+    let result;
+    
+    if (existingSettings && existingSettings.id) {
+      // Update existing settings
+      result = await supabase
+        .from('team_settings')
+        .update({
+          meeting_day: settings.meeting_day,
+          meeting_time: settings.meeting_time,
+          meeting_frequency: settings.meeting_frequency,
+          meeting_location: settings.meeting_location,
+          meeting_notes: settings.meeting_notes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingSettings.id);
+    } else {
+      // Insert new settings
+      result = await supabase
+        .from('team_settings')
+        .insert([{
+          meeting_day: settings.meeting_day,
+          meeting_time: settings.meeting_time,
+          meeting_frequency: settings.meeting_frequency,
+          meeting_location: settings.meeting_location,
+          meeting_notes: settings.meeting_notes
+        }]);
+    }
+    
+    if (result.error) {
+      throw result.error;
+    }
+    
+    // Invalidate cache to force refresh on next request
+    teamSettingsCache = null;
+    
+    return {
+      success: true,
+      message: 'Team-Einstellungen erfolgreich aktualisiert'
+    };
+  } catch (error: any) {
+    console.error('Error updating team settings:', error);
+    return {
+      success: false,
+      message: error.message || 'Ein Fehler ist aufgetreten'
+    };
+  }
+}
+
+/**
  * Check if a username is already taken
  */
 export async function isUsernameTaken(username: string, currentUserEmail?: string): Promise<boolean> {
@@ -176,4 +275,5 @@ export async function updateUserEmail(newEmail: string): Promise<{success: boole
 export function invalidateAdminCache() {
   adminUsersCache = null;
   userCountCache = null;
+  teamSettingsCache = null;
 }

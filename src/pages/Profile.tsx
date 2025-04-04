@@ -294,12 +294,12 @@ const Profile = () => {
                 onValueChange={handleTabChange}
                 className="space-y-4"
               >
-                <TabsList>
+                <TabsList className="w-full">
                   <TabsTrigger value="account">Konto</TabsTrigger>
                   <TabsTrigger value="applications">Bewerbungen</TabsTrigger>
                   <TabsTrigger value="security">Sicherheit</TabsTrigger>
                   {(isAdmin || session?.user?.email === 'admin@berlinrpvc.de') && (
-                    <TabsTrigger value="admin">Admin</TabsTrigger>
+                    <TabsTrigger value="admin">Admin Panel</TabsTrigger>
                   )}
                 </TabsList>
                 
@@ -431,10 +431,8 @@ const Profile = () => {
                 </TabsContent>
                 
                 {(isAdmin || session?.user?.email === 'admin@berlinrpvc.de') && (
-                  <TabsContent value="admin" className="pt-4">
-                    <div className="h-full overflow-hidden rounded-md border">
-                      <AdminPanel />
-                    </div>
+                  <TabsContent value="admin" className="h-[70vh] overflow-hidden rounded-md border">
+                    <AdminPanel />
                   </TabsContent>
                 )}
               </Tabs>
