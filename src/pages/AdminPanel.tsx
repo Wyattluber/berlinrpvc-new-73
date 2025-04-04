@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -22,7 +23,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, Users, Loader2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,23 +32,41 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const AdminPanel = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editUserId, setEditUserId] = useState(null);
-  const [editUsername, setEditUsername] = useState('');
-  const [editEmail, setEditEmail] = useState('');
-  const [open, setOpen] = React.useState(false)
+  const [editRole, setEditRole] = useState('');
+  const [open, setOpen] = React.useState(false);
+  const [userCount, setUserCount] = useState(0);
 
   useEffect(() => {
     fetchUsers();
+    fetchUserCount();
   }, []);
+
+  const fetchUserCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+
+      if (error) {
+        throw error;
+      }
+
+      setUserCount(count || 0);
+    } catch (error) {
+      console.error('Error fetching user count:', error);
+    }
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Use the profiles table or admin_users table instead of auth.users
+      // Use the admin_users table 
       const { data, error } = await supabase
         .from('admin_users')
         .select('*');
@@ -71,8 +90,7 @@ const AdminPanel = () => {
 
   const handleEdit = (user) => {
     setEditUserId(user.id);
-    setEditUsername(user.username);
-    setEditEmail(user.email);
+    setEditRole(user.role);
     setOpen(true);
   };
 
@@ -81,7 +99,7 @@ const AdminPanel = () => {
     try {
       const { error } = await supabase
         .from('admin_users')
-        .update({ username: editUsername, email: editEmail })
+        .update({ role: editRole })
         .eq('id', editUserId);
 
       if (error) {
@@ -141,79 +159,99 @@ const AdminPanel = () => {
     <div className="container mx-auto py-10">
       <h1 className="text-3xl font-bold mb-5">Admin Panel</h1>
 
-      {loading ? (
-        <p>Loading users...</p>
-      ) : (
-        <Table>
-          <TableCaption>A list of your registered users.</TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[100px]">ID</TableHead>
-              <TableHead>Username</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.id}</TableCell>
-                <TableCell>{user.username}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Open menu</span>
-                        <Edit className="h-4 w-4 mr-2" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => handleEdit(user)}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleDelete(user.id)}>
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-2xl">Registrierte Benutzer</CardTitle>
+            <CardDescription>Gesamtzahl der registrierten Benutzer</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-bold">{userCount}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="bg-white p-6 rounded-lg shadow mb-8">
+        <h2 className="text-xl font-bold mb-4 flex items-center">
+          <Users className="mr-2 h-5 w-5 text-blue-500" />
+          Teamverwaltung
+        </h2>
+        
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+          </div>
+        ) : (
+          <Table>
+            <TableCaption>Admin-Benutzer mit speziellen Rechten.</TableCaption>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[100px]">ID</TableHead>
+                <TableHead>Benutzer ID</TableHead>
+                <TableHead>Rolle</TableHead>
+                <TableHead>Erstellt am</TableHead>
+                <TableHead className="text-right">Aktionen</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+            </TableHeader>
+            <TableBody>
+              {users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">{user.id}</TableCell>
+                  <TableCell>{user.user_id}</TableCell>
+                  <TableCell>{user.role || 'admin'}</TableCell>
+                  <TableCell>{new Date(user.created_at).toLocaleString('de-DE')}</TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <span className="sr-only">Open menu</span>
+                          <Edit className="h-4 w-4 mr-2" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Aktionen</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => handleEdit(user)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Bearbeiten
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleDelete(user.id)}>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Löschen
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline">Edit User</Button>
-        </DialogTrigger>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
+            <DialogTitle>Benutzer bearbeiten</DialogTitle>
             <DialogDescription>
-              Make changes to the user here. Click save when you're done.
+              Änderungen am Benutzer vornehmen. Klicke auf Speichern, wenn du fertig bist.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="username" className="text-right">
-                Username
+              <Label htmlFor="role" className="text-right">
+                Rolle
               </Label>
-              <Input id="username" value={editUsername} onChange={(e) => setEditUsername(e.target.value)} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right">
-                Email
-              </Label>
-              <Input id="email" type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="col-span-3" />
+              <Input 
+                id="role" 
+                value={editRole} 
+                onChange={(e) => setEditRole(e.target.value)} 
+                className="col-span-3" 
+                placeholder="admin oder moderator"
+              />
             </div>
           </div>
-          <Button onClick={handleSave}>Save changes</Button>
+          <Button onClick={handleSave}>Änderungen speichern</Button>
         </DialogContent>
       </Dialog>
     </div>
