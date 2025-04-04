@@ -99,6 +99,39 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          discord_id: string | null
+          id: string
+          roblox_id: string | null
+          updated_at: string | null
+          username: string | null
+          username_changed_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          discord_id?: string | null
+          id: string
+          roblox_id?: string | null
+          updated_at?: string | null
+          username?: string | null
+          username_changed_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          discord_id?: string | null
+          id?: string
+          roblox_id?: string | null
+          updated_at?: string | null
+          username?: string | null
+          username_changed_at?: string | null
+        }
+        Relationships: []
+      }
       server_stats: {
         Row: {
           discordMembers: number

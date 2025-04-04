@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -19,7 +18,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { SessionContext } from '@/App';
 import { 
   checkIsAdmin, checkIsModerator, getTeamSettings, getUserRole, updateTeamSettings, 
-  getTotalUserCount, deleteApplication, getUserApplicationsHistory 
+  getTotalUserCount, deleteApplication, getUserApplicationsHistory, TeamSettings
 } from '@/lib/admin';
 import {
   fetchAdminUsers, getCachedUserCount, deleteAdminUser, updateAdminUser,
@@ -43,250 +42,308 @@ interface UserProfile {
   id: string;
   name: string;
   email: string;
+  role: string;
+  discordId?: string;
+  robloxId?: string;
   avatar_url?: string;
-  discord_id?: string;
-  roblox_id?: string;
-  username_changed_at?: string;
-  role?: string;
+  last_username_change?: string;
+  email_changed?: boolean;
 }
 
 interface Application {
   id: string;
-  user_id: string;
-  roblox_username: string;
-  discord_username: string;
-  age: number;
-  experience: string;
-  motivation: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: string;
   created_at: string;
   updated_at: string;
-  admin_notes?: string;
+  notes?: string;
 }
 
 interface AdminUser {
   id: string;
   user_id: string;
-  role: 'admin' | 'moderator';
+  role: string;
   created_at: string;
 }
 
+// Define a proper type for the team settings state
+interface TeamSettingsState {
+  meeting_day: string;
+  meeting_time: string;
+  meeting_frequency: string;
+  meeting_location: string;
+  meeting_notes: string;
+}
+
 const Profile = () => {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const session = useContext(SessionContext);
+  const tabParam = searchParams.get('tab');
+  
+  const navigate = useNavigate();
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isModerator, setIsModerator] = useState(false);
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [isLoading, setIsLoading] = useState(false);
-  const [username, setUsername] = useState('');
-  const [newUsername, setNewUsername] = useState('');
   const [discordId, setDiscordId] = useState('');
   const [robloxId, setRobloxId] = useState('');
-  const [verifiedDiscordId, setVerifiedDiscordId] = useState('');
-  const [verifiedRobloxId, setVerifiedRobloxId] = useState('');
+  const [username, setUsername] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState(tabParam || 'dashboard');
   const [applications, setApplications] = useState<Application[]>([]);
-  const [allApplications, setAllApplications] = useState<Application[]>([]);
-  const [loadingAllApplications, setLoadingAllApplications] = useState(false);
-  const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
-  const [adminNotes, setAdminNotes] = useState('');
-  const [isUsernameDialogOpen, setIsUsernameDialogOpen] = useState(false);
-  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
-  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
-  const [isApplicationDialogOpen, setIsApplicationDialogOpen] = useState(false);
-  const [isDeleteAccountDialogOpen, setIsDeleteAccountDialogOpen] = useState(false);
-  const [newEmail, setNewEmail] = useState('');
+  const [isLoadingApplications, setIsLoadingApplications] = useState(false);
+  const session = useContext(SessionContext);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isModerator, setIsModerator] = useState(false);
+  const [teamSettings, setTeamSettings] = useState<TeamSettings | null>(null);
+  const [isLoadingTeamSettings, setIsLoadingTeamSettings] = useState(false);
+  const [editTeamSettings, setEditTeamSettings] = useState(false);
+  const [newTeamSettings, setNewTeamSettings] = useState<TeamSettingsState>({
+    meeting_day: '',
+    meeting_time: '',
+    meeting_frequency: '',
+    meeting_location: '',
+    meeting_notes: ''
+  });
+
+  // Password change state
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
-  const [usernameCooldown, setUsernameCooldown] = useState({ canChange: true, daysRemaining: 0, nextChangeDate: null });
-  const [greeting, setGreeting] = useState('');
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [passwordStrength, setPasswordStrength] = useState(0);
+  const [passwordFeedback, setPasswordFeedback] = useState('');
+  
+  // Email change state
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
+  
+  // Username change state
+  const [showUsernameDialog, setShowUsernameDialog] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [usernameError, setUsernameError] = useState('');
+  const [usernameCooldown, setUsernameCooldown] = useState({
+    canChange: true,
+    daysRemaining: 0,
+    nextChangeDate: new Date()
+  });
+  
+  // Verification state
+  const [verifyingUsername, setVerifyingUsername] = useState(false);
+  
+  // Validation state
+  const [usernameValid, setUsernameValid] = useState(true);
+  const [usernameValidationMessage, setUsernameValidationMessage] = useState('');
+
+  // Admin functionality
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loadingAdminUsers, setLoadingAdminUsers] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
-  const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
-  const [newRole, setNewRole] = useState<'admin' | 'moderator'>('moderator');
   const [userCount, setUserCount] = useState(0);
-  const [teamSettings, setTeamSettings] = useState({
-    applications_open: true,
-    maintenance_mode: false,
-    maintenance_message: 'Wir führen gerade Wartungsarbeiten durch. Bitte versuche es später erneut.'
-  });
-
-  // Set active tab from URL parameter if present
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab && ['dashboard', 'applications', 'team', 'admin', 'security'].includes(tab)) {
-      setActiveTab(tab);
-    }
-  }, [searchParams]);
+  const [usernames, setUsernames] = useState<Record<string, string>>({});
+  const [editUserId, setEditUserId] = useState<string | null>(null);
+  const [editRole, setEditRole] = useState('');
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [confirmDeleteDialog, setConfirmDeleteDialog] = useState(false);
+  const [applicationToDelete, setApplicationToDelete] = useState<string | null>(null);
+  const [allApplications, setAllApplications] = useState<any[]>([]);
+  const [loadingAllApplications, setLoadingAllApplications] = useState(false);
+  const [viewApplicationDialog, setViewApplicationDialog] = useState(false);
+  const [currentViewApplication, setCurrentViewApplication] = useState<any>(null);
+  
+  // Profile image upload
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [greeting, setGreeting] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   // Set greeting based on time of day
   useEffect(() => {
     setGreeting(getTimeBasedGreeting());
   }, []);
 
-  // Fetch user data on mount
+  // Set active tab from URL parameter
   useEffect(() => {
-    const fetchUserData = async () => {
+    if (tabParam) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
+  // Password validation
+  useEffect(() => {
+    if (!newPassword) {
+      setPasswordStrength(0);
+      setPasswordFeedback('');
+      return;
+    }
+
+    // Simple password strength check
+    let strength = 0;
+    let feedback = '';
+
+    if (newPassword.length >= 8) strength += 1;
+    if (/[A-Z]/.test(newPassword)) strength += 1;
+    if (/[a-z]/.test(newPassword)) strength += 1;
+    if (/[0-9]/.test(newPassword)) strength += 1;
+    if (/[^A-Za-z0-9]/.test(newPassword)) strength += 1;
+
+    switch (strength) {
+      case 0:
+      case 1:
+        feedback = 'Sehr schwach';
+        break;
+      case 2:
+        feedback = 'Schwach';
+        break;
+      case 3:
+        feedback = 'Mittel';
+        break;
+      case 4:
+        feedback = 'Stark';
+        break;
+      case 5:
+        feedback = 'Sehr stark';
+        break;
+      default:
+        feedback = '';
+    }
+
+    setPasswordStrength(strength);
+    setPasswordFeedback(feedback);
+  }, [newPassword]);
+
+  useEffect(() => {
+    const checkUser = async () => {
       if (!session) {
         navigate('/login');
         return;
       }
 
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          navigate('/login');
-          return;
-        }
-
-        // Get user profile data from auth metadata first
-        const userData: UserProfile = {
-          id: user.id,
-          name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
-          email: user.email || '',
-          avatar_url: user.user_metadata?.avatar_url,
-          discord_id: user.user_metadata?.discord_id,
-          roblox_id: user.user_metadata?.roblox_id,
-          username_changed_at: user.user_metadata?.username_changed_at,
-        };
-
-        setUser(userData);
-        setUsername(userData.name);
-        setDiscordId(userData.discord_id || '');
-        setRobloxId(userData.roblox_id || '');
-        setVerifiedDiscordId(userData.discord_id || '');
-        setVerifiedRobloxId(userData.roblox_id || '');
-
-        // Check username cooldown
-        if (userData.username_changed_at) {
-          const cooldownData = await checkUsernameCooldown(new Date(userData.username_changed_at));
-          setUsernameCooldown(cooldownData);
-        }
-
-        // Check if user is admin or moderator
-        const adminStatus = await checkIsAdmin();
-        const moderatorStatus = await checkIsModerator();
-        setIsAdmin(adminStatus);
-        setIsModerator(moderatorStatus);
-
-        // Set greeting
-        setGreeting(getTimeBasedGreeting());
-
-        // Fetch applications if user is admin or moderator
-        if (adminStatus || moderatorStatus) {
-          fetchTeamSettings();
-        }
-
-        // Fetch user's applications
-        fetchUserApplications(user.id);
-
-        // Fetch all applications if user is admin or moderator
-        if (adminStatus || moderatorStatus) {
-          fetchAllApplications();
-          fetchAdminUsersList();
-          fetchUserCount();
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-        toast({
-          title: "Fehler",
-          description: "Deine Profildaten konnten nicht geladen werden.",
-          variant: "destructive"
-        });
+      const { user } = session;
+      
+      if (!user) {
+        navigate('/login');
+        return;
       }
+
+      const userProfile: UserProfile = {
+        id: user.id,
+        name: user.user_metadata?.name || user.user_metadata?.full_name || user.user_metadata?.username || 'User',
+        email: user.email || '',
+        role: 'user',
+        discordId: user.user_metadata?.discord_id || '',
+        robloxId: user.user_metadata?.roblox_id || '',
+        avatar_url: user.user_metadata?.avatar_url || '',
+        last_username_change: user.user_metadata?.last_username_change || null,
+        email_changed: user.user_metadata?.email_changed || false,
+      };
+
+      setUser(userProfile);
+      setDiscordId(userProfile.discordId || '');
+      setAvatarUrl(userProfile.avatar_url || null);
+      setRobloxId(userProfile.robloxId || '');
+      setUsername(userProfile.name);
+      
+      fetchApplicationsHistory(user.id);
+      fetchTeamSettings();
     };
 
-    fetchUserData();
-  }, [session, navigate]);
+    checkUser();
+  }, [navigate, session]);
 
-  const fetchUserApplications = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('applications')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+  // Check user role
+  useEffect(() => {
+    const checkUserRole = async () => {
+      if (!session?.user?.id) return;
+      
+      const adminCheck = await checkIsAdmin();
+      const modCheck = await checkIsModerator();
+      
+      setIsAdmin(adminCheck);
+      setIsModerator(modCheck);
+      
+      if (adminCheck || modCheck) {
+        fetchUserCount();
+        fetchAdminUsersData();
+        fetchAllApplications();
+      }
+    };
+    
+    checkUserRole();
+  }, [session]);
 
-      if (error) throw error;
-      
-      // Transform the data to match the Application interface
-      const formattedApplications = data.map(app => ({
-        id: app.id,
-        user_id: app.user_id,
-        roblox_username: app.roblox_username,
-        discord_username: app.discord_id,
-        age: app.age,
-        experience: app.admin_experience || '',
-        motivation: app.notes || '',
-        status: app.status as 'pending' | 'approved' | 'rejected',
-        created_at: app.created_at,
-        updated_at: app.updated_at,
-        admin_notes: app.notes
-      }));
-      
-      setApplications(formattedApplications);
-    } catch (error) {
-      console.error('Error fetching applications:', error);
+  // Initialize team settings form when settings are loaded
+  useEffect(() => {
+    if (teamSettings) {
+      setNewTeamSettings({
+        meeting_day: teamSettings.meeting_day || '',
+        meeting_time: teamSettings.meeting_time || '',
+        meeting_frequency: teamSettings.meeting_frequency || '',
+        meeting_location: teamSettings.meeting_location || '',
+        meeting_notes: teamSettings.meeting_notes || ''
+      });
     }
-  };
+  }, [teamSettings]);
 
-  const fetchAllApplications = async () => {
-    setLoadingAllApplications(true);
-    try {
-      const { data, error } = await supabase
-        .from('applications')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      
-      // Transform the data to match the Application interface
-      const formattedApplications = data.map(app => ({
-        id: app.id,
-        user_id: app.user_id,
-        roblox_username: app.roblox_username,
-        discord_username: app.discord_id,
-        age: app.age,
-        experience: app.admin_experience || '',
-        motivation: app.notes || '',
-        status: app.status as 'pending' | 'approved' | 'rejected',
-        created_at: app.created_at,
-        updated_at: app.updated_at,
-        admin_notes: app.notes
-      }));
-      
-      setAllApplications(formattedApplications);
-    } catch (error) {
-      console.error('Error fetching all applications:', error);
-    } finally {
-      setLoadingAllApplications(false);
+  // Check username cooldown
+  useEffect(() => {
+    if (user?.last_username_change) {
+      const cooldown = checkUsernameCooldown(user.last_username_change);
+      setUsernameCooldown(cooldown);
     }
-  };
+  }, [user]);
 
+  // Fetch usernames for admin users
+  useEffect(() => {
+    const fetchUsernames = async () => {
+      if (!users.length) return;
+      
+      const userIds = users.map(user => user.user_id);
+      const modifiedIds = [...new Set(userIds)];
+      
+      try {
+        const { data, error } = await supabase.auth.admin.listUsers();
+        
+        if (error) throw error;
+        
+        const usernameMap: Record<string, string> = {};
+        
+        if (data && Array.isArray(data.users)) {
+          data.users.forEach(user => {
+            if (modifiedIds.includes(user.id)) {
+              usernameMap[user.id] = user.user_metadata?.name || user.email || 'Unknown';
+            }
+          });
+        }
+        
+        setUsernames(usernameMap);
+      } catch (error) {
+        console.error('Error fetching usernames:', error);
+      }
+    };
+    
+    fetchUsernames();
+  }, [users]);
+  
   const fetchTeamSettings = async () => {
+    setIsLoadingTeamSettings(true);
     try {
       const settings = await getTeamSettings();
-      setTeamSettings(settings);
+      if (settings) {
+        setTeamSettings(settings);
+        // Initialize newTeamSettings with the current settings
+        setNewTeamSettings({
+          meeting_day: settings.meeting_day || '',
+          meeting_time: settings.meeting_time || '',
+          meeting_frequency: settings.meeting_frequency || '',
+          meeting_location: settings.meeting_location || '',
+          meeting_notes: settings.meeting_notes || ''
+        });
+      }
     } catch (error) {
       console.error('Error fetching team settings:', error);
-    }
-  };
-
-  const fetchAdminUsersList = async () => {
-    setLoadingAdminUsers(true);
-    try {
-      const adminUsers = await fetchAdminUsers();
-      setUsers(adminUsers);
-    } catch (error) {
-      console.error('Error fetching admin users:', error);
     } finally {
-      setLoadingAdminUsers(false);
+      setIsLoadingTeamSettings(false);
     }
   };
 
@@ -299,441 +356,91 @@ const Profile = () => {
     }
   };
 
-  const handleSaveProfile = async () => {
-    if (!user) return;
-    
+  const fetchAdminUsersData = async () => {
+    setLoadingAdminUsers(true);
+    try {
+      const adminUsers = await fetchAdminUsers();
+      setUsers(adminUsers);
+    } catch (error) {
+      console.error('Error fetching admin users:', error);
+    } finally {
+      setLoadingAdminUsers(false);
+    }
+  };
+
+  const fetchAllApplications = async () => {
+    setLoadingAllApplications(true);
+    try {
+      const { data, error } = await supabase
+        .from('applications')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (error) throw error;
+      
+      setAllApplications(data || []);
+    } catch (error) {
+      console.error('Error fetching applications:', error);
+    } finally {
+      setLoadingAllApplications(false);
+    }
+  };
+
+  const fetchApplicationsHistory = async (userId: string) => {
+    setIsLoadingApplications(true);
+    try {
+      const applicationsHistory = await getUserApplicationsHistory(userId);
+      if (applicationsHistory) {
+        setApplications(applicationsHistory);
+      }
+    } catch (error) {
+      console.error('Error fetching applications history:', error);
+    } finally {
+      setIsLoadingApplications(false);
+    }
+  };
+
+  const saveProfileData = async () => {
     setIsLoading(true);
+    
     try {
       const { error } = await supabase.auth.updateUser({
-        data: {
+        data: { 
           discord_id: discordId,
           roblox_id: robloxId,
+          name: username,
         }
       });
 
       if (error) throw error;
 
-      setVerifiedDiscordId(discordId);
-      setVerifiedRobloxId(robloxId);
-
+      if (user) {
+        setUser({
+          ...user,
+          discordId,
+          robloxId,
+          name: username
+        });
+      }
+      
       toast({
-        title: "Profil aktualisiert",
-        description: "Deine Profildaten wurden erfolgreich aktualisiert.",
+        title: "Profil gespeichert",
+        description: "Dein Profil wurde erfolgreich aktualisiert.",
       });
     } catch (error) {
       console.error('Error updating profile:', error);
       toast({
         title: "Fehler",
-        description: "Deine Profildaten konnten nicht aktualisiert werden.",
+        description: "Es gab ein Problem beim Speichern deines Profils.",
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-
-  const handleInitiateUsernameChange = () => {
-    setNewUsername(username);
-    setIsUsernameDialogOpen(true);
-  };
-
-  const handleUsernameChange = async () => {
-    if (!user) return;
-    
-    // Validate username
-    const validation = validateUsername(newUsername);
-    if (!validation.valid) {
-      toast({
-        title: "Ungültiger Benutzername",
-        description: validation.reason || "Der Benutzername ist ungültig",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // Check if username is taken
-      const isTaken = await isUsernameTaken(newUsername, user.id);
-      if (isTaken) {
-        toast({
-          title: "Benutzername vergeben",
-          description: "Dieser Benutzername ist bereits vergeben.",
-          variant: "destructive"
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      // Update username in auth metadata
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          name: newUsername,
-          username_changed_at: new Date().toISOString(),
-        }
-      });
-
-      if (error) throw error;
-
-      setUsername(newUsername);
-      setIsUsernameDialogOpen(false);
-      
-      // Update cooldown
-      const cooldownData = await checkUsernameCooldown(new Date());
-      setUsernameCooldown(cooldownData);
-
-      toast({
-        title: "Benutzername geändert",
-        description: "Dein Benutzername wurde erfolgreich geändert.",
-      });
-    } catch (error) {
-      console.error('Error changing username:', error);
-      toast({
-        title: "Fehler",
-        description: "Dein Benutzername konnte nicht geändert werden.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleInitiateEmailChange = () => {
-    if (!user) return;
-    setNewEmail(user.email);
-    setIsEmailDialogOpen(true);
-  };
-
-  const handleEmailChange = async () => {
-    if (!user) return;
-    
-    if (!newEmail || !newEmail.includes('@')) {
-      toast({
-        title: "Ungültige E-Mail",
-        description: "Bitte gib eine gültige E-Mail-Adresse ein.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (!currentPassword) {
-      toast({
-        title: "Passwort erforderlich",
-        description: "Bitte gib dein aktuelles Passwort ein.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const result = await updateUserEmail(newEmail, currentPassword);
-      
-      if (result.success) {
-        setUser({
-          ...user,
-          email: newEmail
-        });
-        setIsEmailDialogOpen(false);
-        setCurrentPassword('');
-        
-        toast({
-          title: "E-Mail geändert",
-          description: "Deine E-Mail-Adresse wurde erfolgreich geändert.",
-        });
-      } else {
-        throw new Error(result.message || "Fehler beim Ändern der E-Mail-Adresse");
-      }
-    } catch (error: any) {
-      console.error('Error changing email:', error);
-      toast({
-        title: "Fehler",
-        description: error.message || "Deine E-Mail-Adresse konnte nicht geändert werden.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleInitiatePasswordChange = () => {
-    setIsPasswordDialogOpen(true);
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-  };
-
-  const handlePasswordChange = async () => {
-    if (!currentPassword) {
-      toast({
-        title: "Passwort erforderlich",
-        description: "Bitte gib dein aktuelles Passwort ein.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      toast({
-        title: "Passwort zu kurz",
-        description: "Dein neues Passwort muss mindestens 8 Zeichen lang sein.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      toast({
-        title: "Passwörter stimmen nicht überein",
-        description: "Die eingegebenen Passwörter stimmen nicht überein.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-
-      if (error) throw error;
-
-      setIsPasswordDialogOpen(false);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      
-      toast({
-        title: "Passwort geändert",
-        description: "Dein Passwort wurde erfolgreich geändert.",
-      });
-    } catch (error: any) {
-      console.error('Error changing password:', error);
-      toast({
-        title: "Fehler",
-        description: error.message || "Dein Passwort konnte nicht geändert werden.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleViewApplication = (application: Application) => {
-    setSelectedApplication(application);
-    setAdminNotes(application.admin_notes || '');
-    setIsApplicationDialogOpen(true);
-  };
-
-  const handleUpdateApplicationStatus = async (status: 'pending' | 'approved' | 'rejected') => {
-    if (!selectedApplication) return;
-    
-    setIsLoading(true);
-    try {
-      const { error } = await supabase
-        .from('applications')
-        .update({
-          status,
-          notes: adminNotes,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', selectedApplication.id);
-
-      if (error) throw error;
-
-      // Update local state
-      setAllApplications(prev => 
-        prev.map(app => 
-          app.id === selectedApplication.id 
-            ? { ...app, status, admin_notes: adminNotes, updated_at: new Date().toISOString() } 
-            : app
-        )
-      );
-      
-      setApplications(prev => 
-        prev.map(app => 
-          app.id === selectedApplication.id 
-            ? { ...app, status, admin_notes: adminNotes, updated_at: new Date().toISOString() } 
-            : app
-        )
-      );
-
-      setIsApplicationDialogOpen(false);
-      
-      toast({
-        title: "Bewerbung aktualisiert",
-        description: `Die Bewerbung wurde als "${status === 'approved' ? 'angenommen' : status === 'rejected' ? 'abgelehnt' : 'ausstehend'}" markiert.`,
-      });
-    } catch (error) {
-      console.error('Error updating application:', error);
-      toast({
-        title: "Fehler",
-        description: "Die Bewerbung konnte nicht aktualisiert werden.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDeleteApplication = async (id: string) => {
-    if (!confirm('Möchtest du diese Bewerbung wirklich löschen?')) return;
-    
-    try {
-      await deleteApplication(id);
-      
-      // Update local state
-      setAllApplications(prev => prev.filter(app => app.id !== id));
-      setApplications(prev => prev.filter(app => app.id !== id));
-      
-      toast({
-        title: "Bewerbung gelöscht",
-        description: "Die Bewerbung wurde erfolgreich gelöscht.",
-      });
-    } catch (error) {
-      console.error('Error deleting application:', error);
-      toast({
-        title: "Fehler",
-        description: "Die Bewerbung konnte nicht gelöscht werden.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleEditUser = (user: AdminUser) => {
-    setSelectedUser(user);
-    setNewRole(user.role);
-    setIsEditUserDialogOpen(true);
-  };
-
-  const handleUpdateUserRole = async () => {
-    if (!selectedUser) return;
-    
-    setIsLoading(true);
-    try {
-      await updateAdminUser(selectedUser.id, newRole);
-      
-      // Update local state
-      setUsers(prev => 
-        prev.map(u => 
-          u.id === selectedUser.id 
-            ? { ...u, role: newRole } 
-            : u
-        )
-      );
-      
-      setIsEditUserDialogOpen(false);
-      
-      toast({
-        title: "Benutzerrolle aktualisiert",
-        description: `Die Rolle wurde erfolgreich auf "${newRole === 'admin' ? 'Administrator' : 'Moderator'}" geändert.`,
-      });
-    } catch (error) {
-      console.error('Error updating user role:', error);
-      toast({
-        title: "Fehler",
-        description: "Die Benutzerrolle konnte nicht aktualisiert werden.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDeleteUser = async (id: string) => {
-    if (!confirm('Möchtest du diesen Benutzer wirklich aus dem Administratorenteam entfernen?')) return;
-    
-    try {
-      await deleteAdminUser(id);
-      
-      // Update local state
-      setUsers(prev => prev.filter(u => u.id !== id));
-      
-      toast({
-        title: "Benutzer entfernt",
-        description: "Der Benutzer wurde erfolgreich aus dem Administratorenteam entfernt.",
-      });
-    } catch (error) {
-      console.error('Error deleting admin user:', error);
-      toast({
-        title: "Fehler",
-        description: "Der Benutzer konnte nicht entfernt werden.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleToggleApplications = async () => {
-    try {
-      const newSettings = {
-        ...teamSettings,
-        applications_open: !teamSettings.applications_open
-      };
-      
-      await updateTeamSettings(newSettings);
-      setTeamSettings(newSettings);
-      
-      toast({
-        title: "Einstellungen aktualisiert",
-        description: `Bewerbungen sind jetzt ${newSettings.applications_open ? 'geöffnet' : 'geschlossen'}.`,
-      });
-    } catch (error) {
-      console.error('Error updating team settings:', error);
-      toast({
-        title: "Fehler",
-        description: "Die Einstellungen konnten nicht aktualisiert werden.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleToggleMaintenance = async () => {
-    try {
-      const newSettings = {
-        ...teamSettings,
-        maintenance_mode: !teamSettings.maintenance_mode
-      };
-      
-      await updateTeamSettings(newSettings);
-      setTeamSettings(newSettings);
-      
-      toast({
-        title: "Einstellungen aktualisiert",
-        description: `Der Wartungsmodus ist jetzt ${newSettings.maintenance_mode ? 'aktiviert' : 'deaktiviert'}.`,
-      });
-    } catch (error) {
-      console.error('Error updating team settings:', error);
-      toast({
-        title: "Fehler",
-        description: "Die Einstellungen konnten nicht aktualisiert werden.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleUpdateMaintenanceMessage = async (message: string) => {
-    try {
-      const newSettings = {
-        ...teamSettings,
-        maintenance_message: message
-      };
-      
-      await updateTeamSettings(newSettings);
-      setTeamSettings(newSettings);
-      
-      toast({
-        title: "Einstellungen aktualisiert",
-        description: "Die Wartungsnachricht wurde aktualisiert.",
-      });
-    } catch (error) {
-      console.error('Error updating team settings:', error);
-      toast({
-        title: "Fehler",
-        description: "Die Einstellungen konnten nicht aktualisiert werden.",
-        variant: "destructive"
-      });
-    }
+  
+  const handleSaveProfile = () => {
+    saveProfileData();
   };
 
   const handleLogout = async () => {
@@ -744,64 +451,380 @@ const Profile = () => {
       console.error('Error signing out:', error);
       toast({
         title: "Fehler",
-        description: "Du konntest nicht abgemeldet werden.",
+        description: "Es gab ein Problem beim Abmelden.",
         variant: "destructive"
       });
     }
   };
 
-  const handleInitiateDeleteAccount = () => {
-    setIsDeleteAccountDialogOpen(true);
-  };
-
-  const handleDeleteAccount = async () => {
-    if (!user) return;
-    
-    if (!currentPassword) {
+  const handleInitiateUsernameChange = () => {
+    if (!usernameCooldown.canChange) {
       toast({
-        title: "Passwort erforderlich",
-        description: "Bitte gib dein aktuelles Passwort ein.",
+        title: "Änderung nicht möglich",
+        description: `Du kannst deinen Benutzernamen erst in ${usernameCooldown.daysRemaining} Tagen wieder ändern.`,
         variant: "destructive"
       });
       return;
     }
+    
+    setNewUsername(username);
+    setUsernameError('');
+    setShowUsernameDialog(true);
+  };
 
-    setIsLoading(true);
+  const handleUsernameChange = async () => {
+    setVerifyingUsername(true);
+    setUsernameError('');
+    
     try {
-      // First verify the password
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: currentPassword,
-      });
-
-      if (signInError) throw signInError;
-
-      // Delete user from auth
-      const { error: deleteUserError } = await supabase.auth.admin.deleteUser(
-        user.id
-      );
-
-      if (deleteUserError) throw deleteUserError;
-
-      // Sign out
-      await supabase.auth.signOut();
+      // Validate username format
+      const validationResult = validateUsername(newUsername);
+      if (!validationResult.valid) {
+        setUsernameError(validationResult.message);
+        setVerifyingUsername(false);
+        return;
+      }
       
-      setIsDeleteAccountDialogOpen(false);
-      navigate('/');
+      // Check if username is taken
+      const isTaken = await isUsernameTaken(newUsername, user?.email);
+      if (isTaken) {
+        setUsernameError('Dieser Benutzername ist bereits vergeben.');
+        setVerifyingUsername(false);
+        return;
+      }
+      
+      // Update username
+      const { error } = await supabase.auth.updateUser({
+        data: { 
+          name: newUsername,
+          last_username_change: new Date().toISOString()
+        }
+      });
+      
+      if (error) throw error;
+      
+      // Update local state
+      setUsername(newUsername);
+      if (user) {
+        setUser({
+          ...user,
+          name: newUsername,
+          last_username_change: new Date().toISOString()
+        });
+      }
+      
+      // Update cooldown
+      setUsernameCooldown({
+        canChange: false,
+        daysRemaining: 30,
+        nextChangeDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      });
+      
+      setShowUsernameDialog(false);
       
       toast({
-        title: "Konto gelöscht",
-        description: "Dein Konto wurde erfolgreich gelöscht.",
+        title: "Benutzername geändert",
+        description: "Dein Benutzername wurde erfolgreich aktualisiert.",
+      });
+    } catch (error) {
+      console.error('Error updating username:', error);
+      setUsernameError('Es gab ein Problem beim Ändern des Benutzernamens.');
+    } finally {
+      setVerifyingUsername(false);
+    }
+  };
+
+  const handleShowEmailChangeDialog = () => {
+    if (user?.email_changed) {
+      toast({
+        title: "Änderung nicht möglich",
+        description: "Du hast deine E-Mail-Adresse bereits geändert. Weitere Änderungen sind nicht möglich.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setNewEmail('');
+    setEmailError('');
+    setShowEmailDialog(true);
+  };
+
+  const handleEmailChange = async () => {
+    setIsLoading(true);
+    setEmailError('');
+    
+    try {
+      if (!newEmail) {
+        setEmailError('Bitte gib eine E-Mail-Adresse ein.');
+        setIsLoading(false);
+        return;
+      }
+      
+      if (newEmail === user?.email) {
+        setEmailError('Die neue E-Mail-Adresse muss sich von der aktuellen unterscheiden.');
+        setIsLoading(false);
+        return;
+      }
+      
+      const result = await updateUserEmail(newEmail);
+      
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+      
+      // Mark email as changed in user metadata
+      await supabase.auth.updateUser({
+        data: { 
+          email_changed: true
+        }
+      });
+      
+      if (user) {
+        setUser({
+          ...user,
+          email_changed: true
+        });
+      }
+      
+      setShowEmailDialog(false);
+      
+      toast({
+        title: "E-Mail-Änderung initiiert",
+        description: "Bitte überprüfe dein E-Mail-Postfach, um die Änderung zu bestätigen.",
       });
     } catch (error: any) {
-      console.error('Error deleting account:', error);
+      console.error('Error updating email:', error);
+      setEmailError(error.message || 'Es gab ein Problem beim Ändern der E-Mail-Adresse.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleShowPasswordDialog = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError('');
+    setPasswordSuccess('');
+    setShowPasswordDialog(true);
+  };
+
+  const handlePasswordChange = async () => {
+    setIsLoading(true);
+    setPasswordError('');
+    setPasswordSuccess('');
+    
+    try {
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        setPasswordError('Bitte fülle alle Felder aus.');
+        setIsLoading(false);
+        return;
+      }
+      
+      if (newPassword !== confirmPassword) {
+        setPasswordError('Die Passwörter stimmen nicht überein.');
+        setIsLoading(false);
+        return;
+      }
+      
+      if (newPassword.length < 8) {
+        setPasswordError('Das neue Passwort muss mindestens 8 Zeichen lang sein.');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Update password
+      const { error } = await supabase.auth.updateUser({ 
+        password: newPassword 
+      });
+      
+      if (error) throw error;
+      
+      setPasswordSuccess('Dein Passwort wurde erfolgreich geändert.');
+      
+      // Clear form after successful change
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      
+      setTimeout(() => {
+        setShowPasswordDialog(false);
+        setPasswordSuccess('');
+      }, 2000);
+      
+      toast({
+        title: "Passwort geändert",
+        description: "Dein Passwort wurde erfolgreich aktualisiert.",
+      });
+    } catch (error: any) {
+      console.error('Error updating password:', error);
+      setPasswordError(error.message || 'Es gab ein Problem beim Ändern des Passworts.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveTeamSettings = async () => {
+    setIsLoading(true);
+    
+    try {
+      const result = await updateTeamSettings({
+        meeting_day: newTeamSettings.meeting_day,
+        meeting_time: newTeamSettings.meeting_time,
+        meeting_frequency: newTeamSettings.meeting_frequency,
+        meeting_location: newTeamSettings.meeting_location,
+        meeting_notes: newTeamSettings.meeting_notes
+      });
+      
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+      
+      await fetchTeamSettings();
+      setEditTeamSettings(false);
+      
+      toast({
+        title: "Einstellungen gespeichert",
+        description: "Die Team-Einstellungen wurden erfolgreich aktualisiert.",
+      });
+    } catch (error: any) {
+      console.error('Error updating team settings:', error);
+      
       toast({
         title: "Fehler",
-        description: error.message || "Dein Konto konnte nicht gelöscht werden.",
+        description: error.message || "Es gab ein Problem beim Aktualisieren der Team-Einstellungen.",
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleEditUser = (user: AdminUser) => {
+    setEditUserId(user.id);
+    setEditRole(user.role);
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editUserId) return;
+    
+    setIsLoading(true);
+    
+    try {
+      const result = await updateAdminUser(editUserId, editRole);
+      
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+      
+      // Update local state
+      setUsers(users.map(user => 
+        user.id === editUserId ? { ...user, role: editRole } : user
+      ));
+      
+      setEditDialogOpen(false);
+      
+      toast({
+        title: "Benutzer aktualisiert",
+        description: "Die Benutzerrolle wurde erfolgreich aktualisiert.",
+      });
+    } catch (error: any) {
+      console.error('Error updating user:', error);
+      
+      toast({
+        title: "Fehler",
+        description: error.message || "Es gab ein Problem beim Aktualisieren des Benutzers.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    setIsLoading(true);
+    
+    try {
+      const result = await deleteAdminUser(id);
+      
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+      
+      // Update local state
+      setUsers(users.filter(user => user.id !== id));
+      
+      toast({
+        title: "Benutzer gelöscht",
+        description: "Der Benutzer wurde erfolgreich gelöscht.",
+      });
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      
+      toast({
+        title: "Fehler",
+        description: error.message || "Es gab ein Problem beim Löschen des Benutzers.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleConfirmDeleteApplication = (id: string) => {
+    setApplicationToDelete(id);
+    setConfirmDeleteDialog(true);
+  };
+
+  const handleDeleteApplication = async () => {
+    if (!applicationToDelete) return;
+    
+    setIsLoading(true);
+    
+    try {
+      const result = await deleteApplication(applicationToDelete);
+      
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+      
+      // Update local state
+      setAllApplications(allApplications.filter(app => app.id !== applicationToDelete));
+      
+      setConfirmDeleteDialog(false);
+      setApplicationToDelete(null);
+      
+      toast({
+        title: "Bewerbung gelöscht",
+        description: "Die Bewerbung wurde erfolgreich gelöscht.",
+      });
+    } catch (error: any) {
+      console.error('Error deleting application:', error);
+      
+      toast({
+        title: "Fehler",
+        description: error.message || "Es gab ein Problem beim Löschen der Bewerbung.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleViewApplication = (application: any) => {
+    setCurrentViewApplication(application);
+    setViewApplicationDialog(true);
+  };
+
+  // Updated profile image handling
+  const handleAvatarChange = (url: string | null) => {
+    setAvatarUrl(url);
+    if (user) {
+      setUser({
+        ...user,
+        avatar_url: url || undefined
+      });
     }
   };
 
@@ -812,6 +835,8 @@ const Profile = () => {
   };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return 'Unbekannt';
+    
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('de-DE', {
       day: '2-digit',
@@ -822,9 +847,7 @@ const Profile = () => {
     }).format(date);
   };
 
-  const formatNextChangeDate = (dateString: string | null) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
+  const formatNextChangeDate = (date: Date) => {
     return new Intl.DateTimeFormat('de-DE', {
       day: '2-digit',
       month: '2-digit',
@@ -835,30 +858,15 @@ const Profile = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Ausstehend</Badge>;
+        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Ausstehend</Badge>;
       case 'approved':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Angenommen</Badge>;
+        return <Badge variant="outline" className="bg-green-100 text-green-800">Genehmigt</Badge>;
       case 'rejected':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Abgelehnt</Badge>;
+        return <Badge variant="outline" className="bg-red-100 text-red-800">Abgelehnt</Badge>;
+      case 'in_review':
+        return <Badge variant="outline" className="bg-blue-100 text-blue-800">In Prüfung</Badge>;
       default:
-        return <Badge variant="outline">Unbekannt</Badge>;
-    }
-  };
-
-  const getUsernameById = (userId: string) => {
-    // This is a placeholder function - in a real app, you would fetch the username from your database
-    return userId.substring(0, 8) + '...';
-  };
-
-  const hasModifiedIds = discordId !== verifiedDiscordId || robloxId !== verifiedRobloxId;
-
-  // Profile image update handler
-  const handleProfileImageUpdated = (newAvatarUrl: string) => {
-    if (user) {
-      setUser({
-        ...user,
-        avatar_url: newAvatarUrl
-      });
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
@@ -874,742 +882,882 @@ const Profile = () => {
             <div className="w-full md:w-64">
               <Card>
                 <CardHeader className="pb-3">
-                  <div className="flex flex-col items-center space-y-3">
+                  <div className="flex items-center space-x-2">
                     <ProfileImageUpload 
-                      userId={user.id}
-                      existingImageUrl={user.avatar_url}
-                      onImageUploaded={handleProfileImageUpdated}
+                      userId={user.id} 
+                      currentAvatarUrl={avatarUrl} 
+                      onAvatarChange={handleAvatarChange} 
                     />
-                    <div className="text-center">
-                      <h2 className="text-xl font-semibold">{user.name}</h2>
-                      <p className="text-sm text-gray-500">{user.email}</p>
-                      <Badge variant="outline" className="mt-1 flex items-center justify-center gap-1">
-                        <ShieldCheck size={14} className="text-blue-600" />
+                    <div>
+                      <h3 className="font-semibold text-lg">{username}</h3>
+                      <Badge 
+                        variant={isAdmin ? "destructive" : isModerator ? "secondary" : "outline"}
+                        className="mt-1"
+                      >
                         {getUserRoleName()}
                       </Badge>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="pb-2">
-                  <p className="text-xl font-medium mb-3">{greeting}</p>
-                  <p className="text-sm text-gray-500">
-                    Hier kannst du dein Profil verwalten und deine Bewerbungen einsehen.
-                  </p>
+                <CardContent className="space-y-1 text-sm">
+                  <div className="flex items-center space-x-2">
+                    <Mail size={16} />
+                    <span>{user.email}</span>
+                  </div>
+                  {discordId && (
+                    <div className="flex items-center space-x-2">
+                      <User size={16} />
+                      <span>Discord: {discordId}</span>
+                    </div>
+                  )}
+                  {robloxId && (
+                    <div className="flex items-center space-x-2">
+                      <User size={16} />
+                      <span>Roblox: {robloxId}</span>
+                    </div>
+                  )}
                 </CardContent>
-                <CardFooter>
-                  <Button onClick={handleLogout} variant="outline" className="w-full">Abmelden</Button>
+                
+                <CardFooter className="border-t pt-4">
+                  <Button onClick={handleLogout} variant="outline" className="w-full">
+                    Abmelden
+                  </Button>
                 </CardFooter>
               </Card>
               
-              <div className="mt-6">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 md:grid-cols-1 gap-1">
-                    <TabsTrigger value="dashboard" className="flex items-center justify-start gap-2">
-                      <User size={16} />
-                      <span>Profil</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="applications" className="flex items-center justify-start gap-2">
-                      <Calendar size={16} />
-                      <span>Bewerbungen</span>
-                    </TabsTrigger>
-                    {(isModerator || isAdmin) && (
-                      <TabsTrigger value="team" className="flex items-center justify-start gap-2">
-                        <Users size={16} />
-                        <span>Team</span>
-                      </TabsTrigger>
-                    )}
-                    {isAdmin && (
-                      <TabsTrigger value="admin" className="flex items-center justify-start gap-2">
-                        <ShieldCheck size={16} />
-                        <span>Admin</span>
-                      </TabsTrigger>
-                    )}
-                    <TabsTrigger value="security" className="flex items-center justify-start gap-2">
-                      <KeyRound size={16} />
-                      <span>Sicherheit</span>
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
+              <div className="mt-6 text-center">
+                <p className="text-sm text-gray-500">Beigetreten am {formatDate(session?.user?.created_at || '')}</p>
               </div>
             </div>
             
-            {/* Tabs Content */}
             <div className="flex-1">
-              <TabsContent value="dashboard" className="space-y-4 mt-0">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Profil bearbeiten</CardTitle>
-                    <CardDescription>
-                      Verwalte deine persönlichen Informationen
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="username">Benutzername</Label>
-                      <div className="flex gap-2">
-                        <Input 
-                          id="username" 
-                          value={username} 
-                          onChange={(e) => setUsername(e.target.value)}
-                          disabled={isLoading}
-                          readOnly
-                          className="flex-1"
-                        />
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          onClick={handleInitiateUsernameChange}
-                          disabled={isLoading || !usernameCooldown.canChange}
-                          title={!usernameCooldown.canChange ? `Änderung erst in ${usernameCooldown.daysRemaining} Tagen wieder möglich` : 'Benutzername ändern'}
-                        >
-                          <Edit size={16} />
-                        </Button>
-                      </div>
-                      {!usernameCooldown.canChange && usernameCooldown.nextChangeDate && (
-                        <p className="text-xs text-gray-500">
-                          Die nächste Änderung ist am {formatNextChangeDate(usernameCooldown.nextChangeDate)} möglich.
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="discord_id">Discord ID</Label>
-                      <Input 
-                        id="discord_id" 
-                        value={discordId} 
-                        onChange={(e) => setDiscordId(e.target.value)}
-                        disabled={isLoading}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="roblox_id">Roblox ID</Label>
-                      <Input 
-                        id="roblox_id" 
-                        value={robloxId} 
-                        onChange={(e) => setRobloxId(e.target.value)}
-                        disabled={isLoading}
-                      />
-                    </div>
-                  </CardContent>
-                  <CardFooter className="flex justify-between">
-                    <Button 
-                      variant="outline" 
-                      onClick={() => {
-                        setDiscordId(verifiedDiscordId);
-                        setRobloxId(verifiedRobloxId);
-                      }}
-                      disabled={isLoading || !hasModifiedIds}
-                    >
-                      Abbrechen
-                    </Button>
-                    <Button 
-                      onClick={handleSaveProfile} 
-                      disabled={isLoading}
-                    >
-                      {isLoading ? 'Wird gespeichert...' : 'Speichern'}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </TabsContent>
+              <div className="mb-6">
+                <h1 className="text-2xl font-bold">{greeting}</h1>
+                <p className="text-gray-600 mt-1">
+                  Willkommen in deinem Profil-Dashboard. Hier kannst du deine Einstellungen verwalten.
+                </p>
+              </div>
               
-              <TabsContent value="applications" className="space-y-4 mt-0">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Meine Bewerbungen</CardTitle>
-                    <CardDescription>
-                      Hier siehst du den Status deiner Bewerbungen
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {applications.length === 0 ? (
-                      <div className="text-center py-8">
-                        <AlertCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-1">Keine Bewerbungen</h3>
-                        <p className="text-gray-500">
-                          Du hast noch keine Bewerbungen eingereicht.
-                        </p>
-                        <Button className="mt-4" onClick={() => navigate('/apply')}>
-                          Jetzt bewerben
-                        </Button>
+              <Tabs defaultValue={activeTab} value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+                <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                  <TabsTrigger value="dashboard" className="flex items-center">
+                    <BarChart size={16} className="mr-2" />
+                    <span>Dashboard</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="profile" className="flex items-center">
+                    <User size={16} className="mr-2" />
+                    <span>Profil</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="security" className="flex items-center">
+                    <ShieldCheck size={16} className="mr-2" />
+                    <span>Sicherheit</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="applications" className="flex items-center">
+                    <Clock size={16} className="mr-2" />
+                    <span>Bewerbungen</span>
+                  </TabsTrigger>
+                  {(isAdmin || isModerator) && (
+                    <TabsTrigger value="admin" className="flex items-center">
+                      <Users size={16} className="mr-2" />
+                      <span>Administration</span>
+                    </TabsTrigger>
+                  )}
+                </TabsList>
+                
+                {/* Dashboard Tab */}
+                <TabsContent value="dashboard" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Übersicht</CardTitle>
+                      <CardDescription>
+                        Hier findest du eine Übersicht über dein Konto und aktuelle Informationen.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <h3 className="font-medium mb-2">Kontoinformationen</h3>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Benutzername:</span>
+                              <span>{username}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">E-Mail:</span>
+                              <span>{user.email}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Rolle:</span>
+                              <span>{getUserRoleName()}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {(isAdmin || isModerator) && teamSettings && (
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <h3 className="font-medium mb-2">Team-Informationen</h3>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Meeting-Tag:</span>
+                                <span>{teamSettings.meeting_day || 'Nicht festgelegt'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Meeting-Zeit:</span>
+                                <span>{teamSettings.meeting_time || 'Nicht festgelegt'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Häufigkeit:</span>
+                                <span>{teamSettings.meeting_frequency || 'Nicht festgelegt'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {applications.map((application) => (
-                          <Card key={application.id} className="overflow-hidden">
-                            <div className="flex flex-col md:flex-row md:items-center justify-between p-4 gap-4">
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <h3 className="font-medium">{application.roblox_username}</h3>
-                                  {getStatusBadge(application.status)}
+                      
+                      {applications.length > 0 && (
+                        <div className="mt-6">
+                          <h3 className="font-medium mb-2">Deine Bewerbungen</h3>
+                          <div className="bg-gray-50 p-4 rounded-lg">
+                            <div className="space-y-3">
+                              {applications.slice(0, 3).map((app) => (
+                                <div key={app.id} className="flex justify-between items-center">
+                                  <div>
+                                    <div className="text-sm font-medium">Bewerbung vom {formatDate(app.created_at)}</div>
+                                    <div className="text-xs text-gray-500">Letzte Aktualisierung: {formatDate(app.updated_at)}</div>
+                                  </div>
+                                  <div>
+                                    {getStatusBadge(app.status)}
+                                  </div>
                                 </div>
-                                <p className="text-sm text-gray-500">
-                                  Eingereicht am {formatDate(application.created_at)}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-2">
+                              ))}
+                              {applications.length > 3 && (
                                 <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => handleViewApplication(application)}
+                                  variant="link" 
+                                  className="p-0 h-auto text-sm"
+                                  onClick={() => setActiveTab('applications')}
                                 >
-                                  Details
+                                  Alle Bewerbungen anzeigen
                                 </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="mt-4">
+                        <Alert>
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertTitle>Hinweis</AlertTitle>
+                          <AlertDescription>
+                            Halte deine Kontaktdaten immer aktuell, damit wir dich bei Bedarf erreichen können.
+                          </AlertDescription>
+                        </Alert>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                {/* Profile Tab */}
+                <TabsContent value="profile" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Profilinformationen</CardTitle>
+                      <CardDescription>
+                        Aktualisiere deine persönlichen Informationen
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="username">Benutzername</Label>
+                          <div className="flex">
+                            <Input
+                              id="username"
+                              value={username}
+                              onChange={(e) => setUsername(e.target.value)}
+                              className="flex-1"
+                            />
+                            <Button 
+                              type="button" 
+                              variant="outline"
+                              onClick={handleInitiateUsernameChange}
+                              className="ml-2"
+                              title="Benutzername ändern"
+                            >
+                              <Edit size={16} />
+                            </Button>
+                          </div>
+                          {!usernameCooldown.canChange && (
+                            <p className="text-xs text-amber-500">
+                              Nächste Änderung in {usernameCooldown.daysRemaining} Tagen möglich 
+                              ({formatNextChangeDate(usernameCooldown.nextChangeDate)})
+                            </p>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="email">E-Mail-Adresse</Label>
+                          <div className="flex">
+                            <Input
+                              id="email"
+                              value={user.email}
+                              readOnly
+                              className="flex-1 bg-gray-50"
+                            />
+                            <Button 
+                              type="button" 
+                              variant="outline"
+                              onClick={handleShowEmailChangeDialog}
+                              className="ml-2"
+                              title="E-Mail ändern"
+                              disabled={user.email_changed}
+                            >
+                              <Edit size={16} />
+                            </Button>
+                          </div>
+                          {user.email_changed && (
+                            <p className="text-xs text-amber-500">
+                              E-Mail bereits geändert. Weitere Änderungen nicht möglich.
+                            </p>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="discord_id">Discord-ID</Label>
+                          <Input
+                            id="discord_id"
+                            value={discordId}
+                            onChange={(e) => setDiscordId(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="roblox_id">Roblox-ID</Label>
+                          <Input
+                            id="roblox_id"
+                            value={robloxId}
+                            onChange={(e) => setRobloxId(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="border-t pt-4">
+                      <Button 
+                        onClick={handleSaveProfile} 
+                        disabled={isLoading}
+                        className="ml-auto"
+                      >
+                        {isLoading ? 'Speichern...' : 'Profil speichern'}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </TabsContent>
+                
+                {/* Security Tab */}
+                <TabsContent value="security" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Sicherheitseinstellungen</CardTitle>
+                      <CardDescription>
+                        Verwalte deine Passwörter und Sicherheitsoptionen
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-4">
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <h3 className="font-medium">Passwort ändern</h3>
+                              <p className="text-sm text-gray-600 mt-1">
+                                Ändere dein Passwort regelmäßig für mehr Sicherheit
+                              </p>
+                            </div>
+                            <Button onClick={handleShowPasswordDialog}>
+                              Passwort ändern
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <h3 className="font-medium">E-Mail-Adresse ändern</h3>
+                              <p className="text-sm text-gray-600 mt-1">
+                                Aktualisiere deine E-Mail-Adresse
+                              </p>
+                            </div>
+                            <Button 
+                              onClick={handleShowEmailChangeDialog}
+                              disabled={user.email_changed}
+                            >
+                              E-Mail ändern
+                            </Button>
+                          </div>
+                          {user.email_changed && (
+                            <p className="text-xs text-amber-500 mt-2">
+                              E-Mail bereits geändert. Weitere Änderungen nicht möglich.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <Alert className="mt-6">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertTitle>Sicherheitshinweis</AlertTitle>
+                        <AlertDescription>
+                          Verwende ein starkes, einzigartiges Passwort und teile es niemals mit anderen.
+                        </AlertDescription>
+                      </Alert>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                {/* Applications Tab */}
+                <TabsContent value="applications" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Deine Bewerbungen</CardTitle>
+                      <CardDescription>
+                        Übersicht über deine eingereichten Bewerbungen
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {isLoadingApplications ? (
+                        <div className="flex justify-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+                        </div>
+                      ) : applications.length > 0 ? (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Datum</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Letzte Aktualisierung</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {applications.map((application) => (
+                              <TableRow key={application.id}>
+                                <TableCell>{formatDate(application.created_at)}</TableCell>
+                                <TableCell>{getStatusBadge(application.status)}</TableCell>
+                                <TableCell>{formatDate(application.updated_at)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      ) : (
+                        <div className="text-center py-8">
+                          <p className="text-gray-500">Du hast noch keine Bewerbungen eingereicht.</p>
+                          <Button 
+                            variant="outline" 
+                            className="mt-4"
+                            onClick={() => navigate('/apply')}
+                          >
+                            Jetzt bewerben
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                {/* Admin Tab */}
+                {(isAdmin || isModerator) && (
+                  <TabsContent value="admin" className="space-y-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Administration</CardTitle>
+                        <CardDescription>
+                          Verwalte Benutzer und Einstellungen
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {/* Team Settings */}
+                        {isAdmin && (
+                          <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                              <h3 className="text-lg font-medium">Team-Einstellungen</h3>
+                              <Button 
+                                variant="outline" 
+                                onClick={() => setEditTeamSettings(!editTeamSettings)}
+                              >
+                                {editTeamSettings ? 'Abbrechen' : 'Bearbeiten'}
+                              </Button>
+                            </div>
+                            
+                            {isLoadingTeamSettings ? (
+                              <div className="flex justify-center py-4">
+                                <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
                               </div>
-                            </div>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="team" className="space-y-4 mt-0">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Team-Einstellungen</CardTitle>
-                    <CardDescription>
-                      Verwalte die Einstellungen für dein Team
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <h3 className="font-medium">Bewerbungen</h3>
-                        <p className="text-sm text-gray-500">
-                          Aktiviere oder deaktiviere die Möglichkeit, Bewerbungen einzureichen
-                        </p>
-                      </div>
-                      <Button 
-                        variant={teamSettings.applications_open ? "default" : "outline"}
-                        onClick={handleToggleApplications}
-                      >
-                        {teamSettings.applications_open ? 'Geöffnet' : 'Geschlossen'}
-                      </Button>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <h3 className="font-medium">Wartungsmodus</h3>
-                        <p className="text-sm text-gray-500">
-                          Aktiviere den Wartungsmodus, um die Seite vorübergehend zu deaktivieren
-                        </p>
-                      </div>
-                      <Button 
-                        variant={teamSettings.maintenance_mode ? "destructive" : "outline"}
-                        onClick={handleToggleMaintenance}
-                      >
-                        {teamSettings.maintenance_mode ? 'Aktiviert' : 'Deaktiviert'}
-                      </Button>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="maintenance_message">Wartungsnachricht</Label>
-                      <Textarea 
-                        id="maintenance_message" 
-                        value={teamSettings.maintenance_message}
-                        onChange={(e) => setTeamSettings({
-                          ...teamSettings,
-                          maintenance_message: e.target.value
-                        })}
-                        rows={3}
-                      />
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleUpdateMaintenanceMessage(teamSettings.maintenance_message)}
-                      >
-                        Nachricht speichern
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="admin" className="space-y-4 mt-0">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Admin-Bereich</CardTitle>
-                    <CardDescription>
-                      Verwalte die Servereinstellungen und Benutzer
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg">Admin-Benutzer</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-sm text-gray-500 mb-2">
-                            {users.length} Administratoren und Moderatoren
-                          </p>
-                          {loadingAdminUsers ? (
-                            <div className="flex justify-center py-4">
-                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-700"></div>
-                            </div>
-                          ) : (
-                            <div className="max-h-96 overflow-y-auto">
+                            ) : editTeamSettings ? (
+                              <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="meeting_day">Meeting-Tag</Label>
+                                    <Input
+                                      id="meeting_day"
+                                      value={newTeamSettings.meeting_day}
+                                      onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_day: e.target.value})}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="meeting_time">Meeting-Zeit</Label>
+                                    <Input
+                                      id="meeting_time"
+                                      value={newTeamSettings.meeting_time}
+                                      onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_time: e.target.value})}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="meeting_frequency">Häufigkeit</Label>
+                                    <Input
+                                      id="meeting_frequency"
+                                      value={newTeamSettings.meeting_frequency}
+                                      onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_frequency: e.target.value})}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label htmlFor="meeting_location">Ort</Label>
+                                    <Input
+                                      id="meeting_location"
+                                      value={newTeamSettings.meeting_location}
+                                      onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_location: e.target.value})}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="meeting_notes">Notizen</Label>
+                                  <Textarea
+                                    id="meeting_notes"
+                                    value={newTeamSettings.meeting_notes}
+                                    onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_notes: e.target.value})}
+                                    rows={3}
+                                  />
+                                </div>
+                                <div className="flex justify-end">
+                                  <Button 
+                                    onClick={handleSaveTeamSettings}
+                                    disabled={isLoading}
+                                  >
+                                    {isLoading ? 'Speichern...' : 'Einstellungen speichern'}
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="bg-gray-50 p-4 rounded-lg">
+                                {teamSettings ? (
+                                  <div className="space-y-3">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <div>
+                                        <h4 className="text-sm font-medium text-gray-500">Meeting-Tag</h4>
+                                        <p>{teamSettings.meeting_day || 'Nicht festgelegt'}</p>
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-medium text-gray-500">Meeting-Zeit</h4>
+                                        <p>{teamSettings.meeting_time || 'Nicht festgelegt'}</p>
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-medium text-gray-500">Häufigkeit</h4>
+                                        <p>{teamSettings.meeting_frequency || 'Nicht festgelegt'}</p>
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-medium text-gray-500">Ort</h4>
+                                        <p>{teamSettings.meeting_location || 'Nicht festgelegt'}</p>
+                                      </div>
+                                    </div>
+                                    {teamSettings.meeting_notes && (
+                                      <div>
+                                        <h4 className="text-sm font-medium text-gray-500">Notizen</h4>
+                                        <p className="whitespace-pre-line">{teamSettings.meeting_notes}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <p className="text-gray-500">Keine Team-Einstellungen vorhanden.</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Admin Users */}
+                        {isAdmin && (
+                          <div className="space-y-4">
+                            <h3 className="text-lg font-medium">Admin-Benutzer</h3>
+                            
+                            {loadingAdminUsers ? (
+                              <div className="flex justify-center py-4">
+                                <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+                              </div>
+                            ) : users.length > 0 ? (
                               <Table>
                                 <TableHeader>
                                   <TableRow>
+                                    <TableHead>Benutzer</TableHead>
                                     <TableHead>Rolle</TableHead>
-                                    <TableHead>Aktionen</TableHead>
+                                    <TableHead>Hinzugefügt am</TableHead>
+                                    <TableHead className="text-right">Aktionen</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                   {users.map((user) => (
                                     <TableRow key={user.id}>
+                                      <TableCell>{usernames[user.user_id] || user.user_id}</TableCell>
                                       <TableCell>
-                                        <div className="flex flex-col">
-                                          <span className="font-medium">{getUsernameById(user.user_id)}</span>
-                                          <Badge variant="outline" className="w-fit mt-1">
-                                            {user.role === 'admin' ? 'Administrator' : 'Moderator'}
-                                          </Badge>
-                                        </div>
+                                        <Badge variant={user.role === 'admin' ? 'destructive' : 'secondary'}>
+                                          {user.role === 'admin' ? 'Administrator' : 'Moderator'}
+                                        </Badge>
                                       </TableCell>
-                                      <TableCell>
-                                        <div className="flex items-center gap-2">
-                                          <Button 
-                                            variant="ghost" 
-                                            size="icon"
-                                            onClick={() => handleEditUser(user)}
-                                          >
-                                            <Edit size={16} />
-                                          </Button>
-                                          <Button 
-                                            variant="ghost" 
-                                            size="icon"
-                                            onClick={() => handleDeleteUser(user.id)}
-                                          >
-                                            <Trash2 size={16} className="text-red-500" />
-                                          </Button>
-                                        </div>
+                                      <TableCell>{formatDate(user.created_at)}</TableCell>
+                                      <TableCell className="text-right">
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                              <span className="sr-only">Menü öffnen</span>
+                                              <Settings className="h-4 w-4" />
+                                            </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuLabel>Aktionen</DropdownMenuLabel>
+                                            <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                                              <Edit className="mr-2 h-4 w-4" />
+                                              <span>Bearbeiten</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem 
+                                              onClick={() => handleDeleteUser(user.id)}
+                                              className="text-red-600"
+                                            >
+                                              <Trash2 className="mr-2 h-4 w-4" />
+                                              <span>Löschen</span>
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
                                       </TableCell>
                                     </TableRow>
                                   ))}
                                 </TableBody>
                               </Table>
+                            ) : (
+                              <p className="text-gray-500">Keine Admin-Benutzer vorhanden.</p>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Applications */}
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-medium">Bewerbungen</h3>
+                          
+                          {loadingAllApplications ? (
+                            <div className="flex justify-center py-4">
+                              <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
                             </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                      
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg">Statistiken</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Users size={20} className="text-blue-600" />
-                                <span>Gesamt Benutzer</span>
-                              </div>
-                              <Badge variant="outline">{userCount}</Badge>
-                            </div>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="w-full"
-                              onClick={() => invalidateAdminCache().then(() => fetchUserCount())}
-                            >
-                              Statistiken aktualisieren
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                    
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg">Bewerbungs-Verwaltung</CardTitle>
-                        <CardDescription>
-                          Verwalte alle eingehenden Bewerbungen
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        {loadingAllApplications ? (
-                          <div className="flex justify-center py-4">
-                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-700"></div>
-                          </div>
-                        ) : allApplications.length === 0 ? (
-                          <div className="text-center py-4 text-gray-500">
-                            <AlertCircle className="mx-auto h-10 w-10 text-gray-400 mb-2" />
-                            <p>Keine Bewerbungen vorhanden</p>
-                          </div>
-                        ) : (
-                          <div className="overflow-x-auto">
+                          ) : allApplications.length > 0 ? (
                             <Table>
                               <TableHeader>
                                 <TableRow>
-                                  <TableHead>Roblox Name</TableHead>
+                                  <TableHead>Benutzer</TableHead>
+                                  <TableHead>Discord</TableHead>
+                                  <TableHead>Roblox</TableHead>
                                   <TableHead>Status</TableHead>
                                   <TableHead>Datum</TableHead>
-                                  <TableHead>Aktionen</TableHead>
+                                  <TableHead className="text-right">Aktionen</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                                {allApplications.map((application) => (
-                                  <TableRow key={application.id}>
-                                    <TableCell>{application.roblox_username}</TableCell>
-                                    <TableCell>{getStatusBadge(application.status)}</TableCell>
-                                    <TableCell>{formatDate(application.created_at)}</TableCell>
-                                    <TableCell>
-                                      <div className="flex items-center gap-2">
-                                        <Button 
-                                          variant="ghost" 
-                                          size="icon"
-                                          onClick={() => handleViewApplication(application)}
-                                        >
-                                          <Eye size={16} />
-                                        </Button>
-                                        <Button 
-                                          variant="ghost" 
-                                          size="icon"
-                                          onClick={() => handleDeleteApplication(application.id)}
-                                        >
-                                          <Trash2 size={16} className="text-red-500" />
-                                        </Button>
-                                      </div>
+                                {allApplications.map((app) => (
+                                  <TableRow key={app.id}>
+                                    <TableCell>{app.user_id}</TableCell>
+                                    <TableCell>{app.discord_id}</TableCell>
+                                    <TableCell>{app.roblox_username}</TableCell>
+                                    <TableCell>{getStatusBadge(app.status)}</TableCell>
+                                    <TableCell>{formatDate(app.created_at)}</TableCell>
+                                    <TableCell className="text-right">
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" className="h-8 w-8 p-0">
+                                            <span className="sr-only">Menü öffnen</span>
+                                            <Settings className="h-4 w-4" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                          <DropdownMenuLabel>Aktionen</DropdownMenuLabel>
+                                          <DropdownMenuItem onClick={() => handleViewApplication(app)}>
+                                            <Eye className="mr-2 h-4 w-4" />
+                                            <span>Ansehen</span>
+                                          </DropdownMenuItem>
+                                          {isAdmin && (
+                                            <>
+                                              <DropdownMenuSeparator />
+                                              <DropdownMenuItem 
+                                                onClick={() => handleConfirmDeleteApplication(app.id)}
+                                                className="text-red-600"
+                                              >
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                <span>Löschen</span>
+                                              </DropdownMenuItem>
+                                            </>
+                                          )}
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
                                     </TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>
                             </Table>
+                          ) : (
+                            <p className="text-gray-500">Keine Bewerbungen vorhanden.</p>
+                          )}
+                        </div>
+                        
+                        {/* Stats */}
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <h3 className="text-lg font-medium mb-3">Statistiken</h3>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="bg-white p-3 rounded shadow-sm">
+                              <div className="text-sm text-gray-500">Benutzer insgesamt</div>
+                              <div className="text-2xl font-bold">{userCount}</div>
+                            </div>
+                            <div className="bg-white p-3 rounded shadow-sm">
+                              <div className="text-sm text-gray-500">Admin-Benutzer</div>
+                              <div className="text-2xl font-bold">{users.length}</div>
+                            </div>
+                            <div className="bg-white p-3 rounded shadow-sm">
+                              <div className="text-sm text-gray-500">Bewerbungen</div>
+                              <div className="text-2xl font-bold">{allApplications.length}</div>
+                            </div>
                           </div>
-                        )}
+                        </div>
                       </CardContent>
                     </Card>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-              
-              <TabsContent value="security" className="space-y-4 mt-0">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Sicherheitseinstellungen</CardTitle>
-                    <CardDescription>
-                      Verwalte deine Sicherheitseinstellungen und Zugangsdaten
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-2">
-                      <h3 className="font-medium">E-Mail-Adresse</h3>
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm text-gray-500">{user.email}</p>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={handleInitiateEmailChange}
-                        >
-                          Ändern
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h3 className="font-medium">Passwort</h3>
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm text-gray-500">••••••••</p>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={handleInitiatePasswordChange}
-                        >
-                          Ändern
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="pt-4 border-t">
-                      <h3 className="font-medium text-red-600 mb-2">Gefahrenzone</h3>
-                      <p className="text-sm text-gray-500 mb-4">
-                        Wenn du dein Konto löschst, werden alle deine Daten unwiderruflich gelöscht.
-                      </p>
-                      <Button 
-                        variant="destructive" 
-                        size="sm"
-                        onClick={handleInitiateDeleteAccount}
-                      >
-                        Konto löschen
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                  </TabsContent>
+                )}
+              </Tabs>
             </div>
           </div>
         </div>
       </main>
+      
       <Footer />
       
-      {/* Username Change Dialog */}
-      <Dialog open={isUsernameDialogOpen} onOpenChange={setIsUsernameDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Benutzername ändern</DialogTitle>
-            <DialogDescription>
-              Gib deinen neuen Benutzernamen ein. Du kannst deinen Benutzernamen nur alle 30 Tage ändern.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="new-username">Neuer Benutzername</Label>
-              <Input 
-                id="new-username" 
-                value={newUsername} 
-                onChange={(e) => setNewUsername(e.target.value)}
-                placeholder="Neuer Benutzername"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsUsernameDialogOpen(false)}>Abbrechen</Button>
-            <Button onClick={handleUsernameChange} disabled={isLoading}>
-              {isLoading ? 'Wird geändert...' : 'Ändern'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Email Change Dialog */}
-      <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>E-Mail-Adresse ändern</DialogTitle>
-            <DialogDescription>
-              Gib deine neue E-Mail-Adresse und dein aktuelles Passwort ein.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="new-email">Neue E-Mail-Adresse</Label>
-              <Input 
-                id="new-email" 
-                type="email"
-                value={newEmail} 
-                onChange={(e) => setNewEmail(e.target.value)}
-                placeholder="neue@email.de"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="current-password-email">Aktuelles Passwort</Label>
-              <div className="relative">
-                <Input 
-                  id="current-password-email" 
-                  type={showPassword ? "text" : "password"}
-                  value={currentPassword} 
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Dein aktuelles Passwort"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full px-3"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </Button>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setIsEmailDialogOpen(false);
-              setCurrentPassword('');
-            }}>
-              Abbrechen
-            </Button>
-            <Button onClick={handleEmailChange} disabled={isLoading}>
-              {isLoading ? 'Wird geändert...' : 'Ändern'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
       {/* Password Change Dialog */}
-      <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
-        <DialogContent>
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Passwort ändern</DialogTitle>
             <DialogDescription>
-              Gib dein aktuelles Passwort und dein neues Passwort ein.
+              Gib dein aktuelles Passwort und ein neues Passwort ein.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="current-password">Aktuelles Passwort</Label>
               <div className="relative">
-                <Input 
-                  id="current-password" 
-                  type={showPassword ? "text" : "password"}
-                  value={currentPassword} 
+                <Input
+                  id="current-password"
+                  type={showCurrentPassword ? "text" : "password"}
+                  value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Dein aktuelles Passwort"
                 />
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon"
+                  size="sm"
                   className="absolute right-0 top-0 h-full px-3"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                 >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </Button>
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="new-password">Neues Passwort</Label>
               <div className="relative">
-                <Input 
-                  id="new-password" 
+                <Input
+                  id="new-password"
                   type={showNewPassword ? "text" : "password"}
-                  value={newPassword} 
+                  value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Dein neues Passwort"
                 />
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon"
+                  size="sm"
                   className="absolute right-0 top-0 h-full px-3"
                   onClick={() => setShowNewPassword(!showNewPassword)}
                 >
                   {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </Button>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">Passwort bestätigen</Label>
-              <Input 
-                id="confirm-password" 
-                type={showNewPassword ? "text" : "password"}
-                value={confirmPassword} 
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Passwort wiederholen"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setIsPasswordDialogOpen(false);
-              setCurrentPassword('');
-              setNewPassword('');
-              setConfirmPassword('');
-            }}>
-              Abbrechen
-            </Button>
-            <Button onClick={handlePasswordChange} disabled={isLoading}>
-              {isLoading ? 'Wird geändert...' : 'Ändern'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Application View Dialog */}
-      <Dialog open={isApplicationDialogOpen} onOpenChange={setIsApplicationDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Bewerbungsdetails</DialogTitle>
-            <DialogDescription>
-              Details zur Bewerbung von {selectedApplication?.roblox_username}
-            </DialogDescription>
-          </DialogHeader>
-          {selectedApplication && (
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Roblox Username</Label>
-                  <p className="text-sm font-medium">{selectedApplication.roblox_username}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Discord Username</Label>
-                  <p className="text-sm font-medium">{selectedApplication.discord_username}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Alter</Label>
-                  <p className="text-sm font-medium">{selectedApplication.age} Jahre</p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <div>{getStatusBadge(selectedApplication.status)}</div>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Erfahrung</Label>
-                <div className="text-sm p-3 bg-gray-50 rounded-md">
-                  {selectedApplication.experience}
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Motivation</Label>
-                <div className="text-sm p-3 bg-gray-50 rounded-md">
-                  {selectedApplication.motivation}
-                </div>
-              </div>
-              
-              {(isAdmin || isModerator) && (
-                <div className="space-y-2">
-                  <Label htmlFor="admin-notes">Admin-Notizen</Label>
-                  <Textarea 
-                    id="admin-notes" 
-                    value={adminNotes} 
-                    onChange={(e) => setAdminNotes(e.target.value)}
-                    placeholder="Interne Notizen zur Bewerbung"
-                    rows={3}
-                  />
+              {newPassword && (
+                <div className="mt-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full ${
+                          passwordStrength <= 2 ? 'bg-red-500' : 
+                          passwordStrength <= 3 ? 'bg-yellow-500' : 'bg-green-500'
+                        }`} 
+                        style={{ width: `${(passwordStrength / 5) * 100}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-xs">{passwordFeedback}</span>
+                  </div>
                 </div>
               )}
             </div>
-          )}
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            {(isAdmin || isModerator) && selectedApplication && (
-              <div className="flex gap-2 w-full sm:w-auto">
-                <Button 
-                  variant="outline" 
-                  className="flex-1 sm:flex-initial"
-                  onClick={() => handleUpdateApplicationStatus('rejected')}
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Passwort bestätigen</Label>
+              <div className="relative">
+                <Input
+                  id="confirm-password"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
-                  Ablehnen
-                </Button>
-                <Button 
-                  variant="default" 
-                  className="flex-1 sm:flex-initial"
-                  onClick={() => handleUpdateApplicationStatus('approved')}
-                >
-                  Annehmen
+                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </Button>
               </div>
+            </div>
+            {passwordError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Fehler</AlertTitle>
+                <AlertDescription>{passwordError}</AlertDescription>
+              </Alert>
             )}
-            <Button 
-              variant="ghost" 
-              onClick={() => setIsApplicationDialogOpen(false)}
-            >
-              Schließen
+            {passwordSuccess && (
+              <Alert variant="default" className="bg-green-50 text-green-800 border-green-200">
+                <CheckCircle2 className="h-4 w-4" />
+                <AlertTitle>Erfolg</AlertTitle>
+                <AlertDescription>{passwordSuccess}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPasswordDialog(false)}>
+              Abbrechen
+            </Button>
+            <Button onClick={handlePasswordChange} disabled={isLoading}>
+              {isLoading ? 'Speichern...' : 'Passwort ändern'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       
-      {/* Edit User Dialog */}
-      <Dialog open={isEditUserDialogOpen} onOpenChange={setIsEditUserDialogOpen}>
-        <DialogContent>
+      {/* Email Change Dialog */}
+      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>E-Mail-Adresse ändern</DialogTitle>
+            <DialogDescription>
+              Gib deine neue E-Mail-Adresse ein. Du erhältst eine Bestätigungs-E-Mail.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="current-email">Aktuelle E-Mail-Adresse</Label>
+              <Input
+                id="current-email"
+                value={user.email}
+                readOnly
+                className="bg-gray-50"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-email">Neue E-Mail-Adresse</Label>
+              <Input
+                id="new-email"
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+              />
+            </div>
+            {emailError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Fehler</AlertTitle>
+                <AlertDescription>{emailError}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEmailDialog(false)}>
+              Abbrechen
+            </Button>
+            <Button onClick={handleEmailChange} disabled={isLoading}>
+              {isLoading ? 'Speichern...' : 'E-Mail ändern'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Username Change Dialog */}
+      <Dialog open={showUsernameDialog} onOpenChange={setShowUsernameDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Benutzername ändern</DialogTitle>
+            <DialogDescription>
+              Gib deinen neuen Benutzernamen ein. Du kannst deinen Benutzernamen nur alle 30 Tage ändern.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="current-username">Aktueller Benutzername</Label>
+              <Input
+                id="current-username"
+                value={username}
+                readOnly
+                className="bg-gray-50"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-username">Neuer Benutzername</Label>
+              <Input
+                id="new-username"
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+              />
+            </div>
+            {usernameError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Fehler</AlertTitle>
+                <AlertDescription>{usernameError}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUsernameDialog(false)}>
+              Abbrechen
+            </Button>
+            <Button onClick={handleUsernameChange} disabled={isLoading || verifyingUsername}>
+              {verifyingUsername ? 'Überprüfen...' : isLoading ? 'Speichern...' : 'Benutzername ändern'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Edit Admin User Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Benutzerrolle bearbeiten</DialogTitle>
             <DialogDescription>
-              Ändere die Rolle des Benutzers
+              Ändere die Rolle des Benutzers.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="user-role">Rolle</Label>
-              <select 
-                id="user-role" 
-                value={newRole} 
-                onChange={(e) => setNewRole(e.target.value as 'admin' | 'moderator')}
+              <Label htmlFor="role">Rolle</Label>
+              <select
+                id="role"
+                value={editRole}
+                onChange={(e) => setEditRole(e.target.value)}
                 className="w-full p-2 border rounded-md"
               >
                 <option value="admin">Administrator</option>
@@ -1618,67 +1766,140 @@ const Profile = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditUserDialogOpen(false)}>Abbrechen</Button>
-            <Button onClick={handleUpdateUserRole} disabled={isLoading}>
-              {isLoading ? 'Wird gespeichert...' : 'Speichern'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Delete Account Dialog */}
-      <Dialog open={isDeleteAccountDialogOpen} onOpenChange={setIsDeleteAccountDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="text-red-600">Konto löschen</DialogTitle>
-            <DialogDescription>
-              Diese Aktion kann nicht rückgängig gemacht werden. Alle deine Daten werden unwiderruflich gelöscht.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <Alert variant="default" className="border-red-200 bg-red-50 text-red-700">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Achtung</AlertTitle>
-              <AlertDescription>
-                Durch das Löschen deines Kontos verlierst du den Zugriff auf alle deine Daten und Einstellungen.
-              </AlertDescription>
-            </Alert>
-            <div className="space-y-2">
-              <Label htmlFor="delete-password">Gib dein Passwort ein, um fortzufahren</Label>
-              <div className="relative">
-                <Input 
-                  id="delete-password" 
-                  type={showPassword ? "text" : "password"}
-                  value={currentPassword} 
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Dein Passwort"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full px-3"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </Button>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setIsDeleteAccountDialogOpen(false);
-              setCurrentPassword('');
-            }}>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
               Abbrechen
             </Button>
-            <Button variant="destructive" onClick={handleDeleteAccount} disabled={isLoading}>
-              {isLoading ? 'Wird gelöscht...' : 'Konto löschen'}
+            <Button onClick={handleUpdateUser} disabled={isLoading}>
+              {isLoading ? 'Speichern...' : 'Speichern'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
       
+      {/* Confirm Delete Application Dialog */}
+      <Dialog open={confirmDeleteDialog} onOpenChange={setConfirmDeleteDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Bewerbung löschen</DialogTitle>
+            <DialogDescription>
+              Bist du sicher, dass du diese Bewerbung löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDeleteDialog(false)}>
+              Abbrechen
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteApplication} 
+              disabled={isLoading}
+            >
+              {isLoading ? 'Löschen...' : 'Löschen'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* View Application Dialog */}
+      <Dialog open={viewApplicationDialog} onOpenChange={setViewApplicationDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Bewerbung ansehen</DialogTitle>
+            <DialogDescription>
+              Details der Bewerbung
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+            {currentViewApplication && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Discord-ID</h4>
+                    <p>{currentViewApplication.discord_id}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Roblox-Benutzername</h4>
+                    <p>{currentViewApplication.roblox_username}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Roblox-ID</h4>
+                    <p>{currentViewApplication.roblox_id}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Alter</h4>
+                    <p>{currentViewApplication.age}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Aktivitätslevel</h4>
+                    <p>{currentViewApplication.activity_level}/10</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Status</h4>
+                    <p>{getStatusBadge(currentViewApplication.status)}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">Admin-Erfahrung</h4>
+                  <p className="whitespace-pre-line">{currentViewApplication.admin_experience || 'Keine Angabe'}</p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">Andere Server</h4>
+                  <p className="whitespace-pre-line">{currentViewApplication.other_servers || 'Keine Angabe'}</p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">FRP-Verständnis</h4>
+                  <p className="whitespace-pre-line">{currentViewApplication.frp_understanding}</p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">VDM-Verständnis</h4>
+                  <p className="whitespace-pre-line">{currentViewApplication.vdm_understanding}</p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">Bodycam-Verständnis</h4>
+                  <p className="whitespace-pre-line">{currentViewApplication.bodycam_understanding}</p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">Taschen-RP-Verständnis</h4>
+                  <p className="whitespace-pre-line">{currentViewApplication.taschen_rp_understanding}</p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">Server-Alter-Verständnis</h4>
+                  <p className="whitespace-pre-line">{currentViewApplication.server_age_understanding}</p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">Freund-Regelverstoß</h4>
+                  <p className="whitespace-pre-line">{currentViewApplication.friend_rule_violation}</p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-gray-500">Situationshandhabung</h4>
+                  <p className="whitespace-pre-line">{currentViewApplication.situation_handling}</p>
+                </div>
+                
+                {currentViewApplication.notes && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Notizen</h4>
+                    <p className="whitespace-pre-line">{currentViewApplication.notes}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setViewApplicationDialog(false)}>
+              Schließen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
