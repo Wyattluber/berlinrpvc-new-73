@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Mail, Lock, Loader2, Github } from 'lucide-react';
+import { Mail, Lock, Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from '@/integrations/supabase/client';
@@ -53,34 +54,6 @@ const Login = () => {
       }
     } catch (error) {
       console.error("Email login error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleOAuthLogin = async (provider: 'github' | 'google') => {
-    try {
-      setLoading(true);
-      setErrorMessage(null);
-      
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: provider,
-        options: {
-          redirectTo: window.location.origin + '/profile',
-        },
-      });
-      
-      if (error) {
-        console.error(`OAuth login error with ${provider}:`, error);
-        setErrorMessage(`Anmeldung mit ${provider} fehlgeschlagen: ${error.message}`);
-        throw error;
-      }
-      
-      if (data?.url) {
-        window.location.href = data.url;
-      }
-    } catch (error) {
-      console.error(`OAuth login error with ${provider}:`, error);
     } finally {
       setLoading(false);
     }
@@ -135,30 +108,6 @@ const Login = () => {
               </>
             )}
           </Button>
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Oder
-              </span>
-            </div>
-          </div>
-          <Button variant="outline" onClick={() => handleOAuthLogin('github')} disabled={loading}>
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Bitte warten...
-              </>
-            ) : (
-              <>
-                <Github className="mr-2 h-4 w-4" />
-                Mit GitHub anmelden
-              </>
-            )}
-          </Button>
-          {/* Removed Google login button since the icon is not available */}
         </CardContent>
         <div className="px-6 py-4 text-sm text-muted-foreground">
           <Link to="/forgot-password" className="hover:text-blue-500">Passwort vergessen?</Link>
