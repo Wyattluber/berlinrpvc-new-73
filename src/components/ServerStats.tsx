@@ -9,20 +9,20 @@ const stats = {
   discordMembers: 179,
   partnerServers: 2,
   servers: 1,
-  lastUpdated: '2025-04-03 14:30'
+  lastUpdated: '2025-04-04 14:30'
 };
 
 const StatCard = ({ title, value, icon: Icon, className = "", lastUpdated, color }) => {
   return (
-    <Card className={`hover:shadow-lg transition-all duration-300 ${className} relative group overflow-hidden`}>
+    <Card className={`hover:shadow-lg transition-all duration-300 ${className} relative group overflow-visible`}>
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="absolute top-3 right-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-help">
+            <div className="absolute top-3 right-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-help z-10">
               <HelpCircle size={16} />
             </div>
           </TooltipTrigger>
-          <TooltipContent side="top">
+          <TooltipContent side="top" className="z-50 bg-white shadow-lg">
             <p className="text-xs">Zuletzt aktualisiert: {lastUpdated}</p>
           </TooltipContent>
         </Tooltip>
@@ -46,7 +46,7 @@ const ServerStats = () => {
           Server Statistiken
         </h2>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <StatCard 
             title="Discord Mitglieder" 
             value={stats.discordMembers} 

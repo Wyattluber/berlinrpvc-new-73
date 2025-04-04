@@ -21,6 +21,7 @@ interface UserProfile {
   email: string;
   role: string;
   discordId?: string;
+  robloxId?: string;
   avatar_url?: string;
 }
 
@@ -29,12 +30,15 @@ interface Application {
   status: string;
   created_at: string;
   updated_at: string;
+  notes?: string;
 }
 
 const Profile = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [discordId, setDiscordId] = useState('');
+  const [robloxId, setRobloxId] = useState('');
+  const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [applications, setApplications] = useState<Application[]>([]);
@@ -98,11 +102,14 @@ const Profile = () => {
         email: user.email || '',
         role: 'user',
         discordId: user.user_metadata?.discord_id || '',
+        robloxId: user.user_metadata?.roblox_id || '',
         avatar_url: user.user_metadata?.avatar_url || '',
       };
 
       setUser(userProfile);
       setDiscordId(userProfile.discordId || '');
+      setRobloxId(userProfile.robloxId || '');
+      setUsername(userProfile.name || '');
       
       fetchApplications(user.id);
     };
@@ -151,7 +158,9 @@ const Profile = () => {
       try {
         const { error } = await supabase.auth.updateUser({
           data: { 
-            discord_id: discordId 
+            discord_id: discordId,
+            roblox_id: robloxId,
+            name: username,
           }
         });
 
@@ -160,13 +169,15 @@ const Profile = () => {
         if (user) {
           setUser({
             ...user,
-            discordId
+            discordId,
+            robloxId,
+            name: username
           });
         }
         
         toast({
           title: "Profil gespeichert",
-          description: "Deine Discord ID wurde erfolgreich gespeichert.",
+          description: "Dein Profil wurde erfolgreich aktualisiert.",
         });
       } catch (error) {
         console.error('Error updating profile:', error);
@@ -246,15 +257,14 @@ const Profile = () => {
       const { error } = await supabase.auth.signOut();
       
       if (error) {
+        console.error('Error signing out:', error);
+        
         if (error.name === "AuthSessionMissingError") {
-          toast({
-            title: "Abgemeldet",
-            description: "Du wurdest erfolgreich abgemeldet."
-          });
-          
-          navigate('/');
+          localStorage.removeItem('supabase.auth.token');
+          window.location.href = '/';
           return;
         }
+        
         throw error;
       }
       
@@ -273,7 +283,8 @@ const Profile = () => {
         variant: "default"
       });
       
-      navigate('/');
+      localStorage.removeItem('supabase.auth.token');
+      window.location.href = '/';
     }
   };
 
@@ -305,6 +316,13 @@ const Profile = () => {
           <Badge variant="outline" className="flex items-center gap-1 bg-red-50 text-red-700 border-red-200">
             <AlertCircle size={14} />
             Abgelehnt
+          </Badge>
+        );
+      case 'waitlist':
+        return (
+          <Badge variant="outline" className="flex items-center gap-1 bg-blue-50 text-blue-700 border-blue-200">
+            <Clock size={14} />
+            Warteliste
           </Badge>
         );
       default:
@@ -441,8 +459,16 @@ const Profile = () => {
                                         'Deine Bewerbung wird derzeit geprüft.' :
                                         app.status === 'approved' ?
                                         'Deine Bewerbung wurde angenommen! Wir werden dich kontaktieren.' :
+                                        app.status === 'waitlist' ?
+                                        'Deine Bewerbung wurde in die Warteliste aufgenommen.' :
                                         'Deine Bewerbung wurde leider abgelehnt.'}
                                     </p>
+                                    {app.notes && (
+                                      <div className="mt-2 pt-2 border-t border-blue-200">
+                                        <p className="text-sm font-medium">Anmerkungen:</p>
+                                        <p className="text-sm">{app.notes}</p>
+                                      </div>
+                                    )}
                                   </div>
                                 ))}
                               </div>
@@ -486,14 +512,22 @@ const Profile = () => {
                         <CardContent>
                           <div className="space-y-3">
                             <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Benutzername:</span>
+                              <span className="text-sm">{username ? "✓ Eingegeben" : "✗ Fehlt"}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
                               <span className="text-sm font-medium">Discord ID:</span>
                               <span className="text-sm">{discordId ? "✓ Eingegeben" : "✗ Fehlt"}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Roblox ID:</span>
+                              <span className="text-sm">{robloxId ? "✓ Eingegeben" : "✗ Fehlt"}</span>
                             </div>
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium">Rolle:</span>
                               {getRoleName(user.role)}
                             </div>
-                            {!discordId && (
+                            {(!username || !discordId || !robloxId) && (
                               <Button 
                                 size="sm"
                                 onClick={() => setActiveTab('profile')}
@@ -517,8 +551,13 @@ const Profile = () => {
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Name</Label>
-                      <Input id="name" value={user.name} disabled />
+                      <Label htmlFor="username">Benutzername</Label>
+                      <Input 
+                        id="username" 
+                        value={username} 
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="Dein Benutzername"
+                      />
                     </div>
                     
                     <div className="space-y-2">
@@ -539,6 +578,22 @@ const Profile = () => {
                       />
                       <p className="text-xs text-gray-500">
                         Bitte gib deine vollständige Discord ID ein, damit wir dich kontaktieren können.
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="roblox" className="flex items-center gap-2">
+                        Roblox ID
+                        <span className="text-xs text-blue-500">(Erforderlich für Bewerbungen)</span>
+                      </Label>
+                      <Input 
+                        id="roblox" 
+                        placeholder="z.B.: 123456789" 
+                        value={robloxId}
+                        onChange={(e) => setRobloxId(e.target.value)}
+                      />
+                      <p className="text-xs text-gray-500">
+                        Bitte gib deine Roblox ID ein.
                       </p>
                     </div>
                     

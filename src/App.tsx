@@ -20,7 +20,14 @@ import AdminPanel from "./pages/AdminPanel";
 // Create context for session
 export const SessionContext = createContext<any>(null);
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Error boundary component
 class ErrorFallback extends React.Component<{ children: React.ReactNode }> {
@@ -65,10 +72,33 @@ const App = () => {
   useEffect(() => {
     let isMounted = true;
     
-    // Verbesserte Auth-Initialisierung
+    // Improved auth initialization
     const initializeAuth = async () => {
       try {
-        // Zuerst den aktuellen Session-Status prüfen
+        // Make sure to clear any stale auth state that might be causing issues
+        const currentSession = localStorage.getItem('supabase.auth.token');
+        if (currentSession && typeof currentSession === 'string') {
+          try {
+            const parsed = JSON.parse(currentSession);
+            if (!parsed.currentSession || new Date(parsed.expiresAt) < new Date()) {
+              localStorage.removeItem('supabase.auth.token');
+            }
+          } catch (e) {
+            // Invalid session data, remove it
+            localStorage.removeItem('supabase.auth.token');
+          }
+        }
+        
+        // Set up auth state change listener first
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+          console.log("Auth state changed:", _event);
+          if (!isMounted) return;
+          
+          setSession(session);
+          setLoading(false);
+        });
+        
+        // Then check current session status
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
@@ -78,21 +108,9 @@ const App = () => {
         if (isMounted) {
           console.log("Initial session check:", sessionData.session ? "Logged in" : "Not logged in");
           setSession(sessionData.session);
+          setLoading(false);
         }
         
-        // Auth-Zustandsänderungen überwachen
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-          console.log("Auth state changed:", _event);
-          if (!isMounted) return;
-          
-          setSession(session);
-          setLoading(false);
-        });
-
-        if (isMounted) {
-          setLoading(false);
-        }
-
         return () => {
           subscription.unsubscribe();
         };
@@ -112,16 +130,20 @@ const App = () => {
     };
   }, []);
 
-  // Hilfsfunktion zum Zurücksetzen der Authentifizierung bei Problemen
+  // Helper function to reset authentication on problems
   const resetAuth = async () => {
     try {
       await supabase.auth.signOut();
       setSession(null);
       setLoadingError(null);
+      
+      // Clear local storage auth data to ensure a clean slate
+      localStorage.removeItem('supabase.auth.token');
+      
       window.location.href = "/";
     } catch (error) {
       console.error("Error resetting auth:", error);
-      // Fallback: Bei gravierenden Fehlern versuchen, den localStorage zu löschen
+      // Fallback: On severe errors, try to clear localStorage
       localStorage.clear();
       window.location.href = "/";
     }
