@@ -6,12 +6,18 @@ import { Input } from '@/components/ui/input';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Lock } from 'lucide-react';
+import { Lock, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertTriangle } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 // Define the form schema with Zod - updated minimum age to 14
 const step1Schema = z.object({
@@ -87,7 +93,7 @@ const Step1BasicInfo: React.FC<Step1Props> = ({
   };
 
   return (
-    <>
+    <TooltipProvider>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-4">
@@ -127,7 +133,17 @@ const Step1BasicInfo: React.FC<Step1Props> = ({
                 name="roblox_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Roblox ID</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <FormLabel>Roblox ID</FormLabel>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs p-4">
+                          <p>Deine Roblox ID findest du in deinem Roblox-Profil. Gehe zu deinem Profil, und die ID ist die Nummer in der URL (z.B. https://www.roblox.com/users/<strong>12345678</strong>/profile).</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
                     <FormControl>
                       <div className="relative">
                         <Input 
@@ -159,7 +175,21 @@ const Step1BasicInfo: React.FC<Step1Props> = ({
                 name="discord_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Discord ID</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <FormLabel>Discord ID</FormLabel>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs p-4">
+                          <p>Deine Discord ID findest du in Discord, indem du:<br/>
+                          1. Einstellungen öffnest<br/>
+                          2. "Erweitert" unter "App-Einstellungen" auswählst<br/>
+                          3. "Entwicklermodus" aktivierst<br/>
+                          4. Dann kannst du mit Rechtsklick auf deinen Namen "ID kopieren" auswählen</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
                     <FormControl>
                       <div className="relative">
                         <Input 
@@ -273,7 +303,7 @@ const Step1BasicInfo: React.FC<Step1Props> = ({
           </div>
         </form>
       </Form>
-    </>
+    </TooltipProvider>
   );
 };
 

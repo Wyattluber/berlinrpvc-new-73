@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/tabs"
 import AdminPanel from './AdminPanel';
 import { getTeamSettings } from '@/lib/adminService';
+import { updateUserProfile } from '@/lib/auth';
 
 type Application = {
   id: string;
@@ -245,16 +246,14 @@ const Profile = () => {
     setIsUpdatingProfiles(true);
     
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          discord_id: discordId,
-          roblox_id: robloxId,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', session?.user?.id);
+      const result = await updateUserProfile(session?.user?.id || '', {
+        discord_id: discordId,
+        roblox_id: robloxId
+      });
       
-      if (error) throw error;
+      if (!result.success) {
+        throw new Error(result.message);
+      }
       
       toast({
         title: "Profil aktualisiert",
@@ -579,7 +578,21 @@ const Profile = () => {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="discord_id">Discord ID</Label>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="discord_id">Discord ID</Label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs p-4">
+                            <p>Deine Discord ID findest du in Discord, indem du:<br/>
+                            1. Einstellungen öffnest<br/>
+                            2. "Erweitert" unter "App-Einstellungen" auswählst<br/>
+                            3. "Entwicklermodus" aktivierst<br/>
+                            4. Dann kannst du mit Rechtsklick auf deinen Namen "ID kopieren" auswählen</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
                       <div className="flex items-center space-x-2">
                         <Input
                           id="discord_id"
@@ -588,13 +601,20 @@ const Profile = () => {
                           onChange={(e) => setDiscordId(e.target.value)}
                         />
                       </div>
-                      <p className="text-xs text-gray-500">
-                        Deine Discord ID findest du in Discord unter Einstellungen &gt; Mein Account &gt; Discord-Tag
-                      </p>
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="roblox_id">Roblox ID</Label>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="roblox_id">Roblox ID</Label>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs p-4">
+                            <p>Deine Roblox ID findest du in deinem Roblox-Profil. Gehe zu deinem Profil, und die ID ist die Nummer in der URL (z.B. https://www.roblox.com/users/<strong>12345678</strong>/profile).</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
                       <div className="flex items-center space-x-2">
                         <Input
                           id="roblox_id"
@@ -603,9 +623,6 @@ const Profile = () => {
                           onChange={(e) => setRobloxId(e.target.value)}
                         />
                       </div>
-                      <p className="text-xs text-gray-500">
-                        Deine Roblox ID findest du in deinem Roblox-Profil
-                      </p>
                     </div>
                     
                     <Button

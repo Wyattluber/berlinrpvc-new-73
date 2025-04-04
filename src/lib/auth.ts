@@ -10,8 +10,7 @@ export async function logAuthEvent(eventType: string, userId: string, metadata: 
     // or store it in a database table for audit purposes
     console.log('Auth event logged:', { eventType, userId, metadata, timestamp: new Date() });
     
-    // Example implementation (uncomment when you have an auth_logs table)
-    /*
+    // Implement auth logging with Supabase
     const { error } = await supabase
       .from('auth_logs')
       .insert([{
@@ -24,7 +23,6 @@ export async function logAuthEvent(eventType: string, userId: string, metadata: 
       }]);
       
     if (error) throw error;
-    */
     
     return { success: true };
   } catch (error: any) {
@@ -76,8 +74,6 @@ export function setupAuthEventListeners() {
  */
 export async function getRecentAuthLogs(userId: string, limit = 10) {
   try {
-    // Example implementation (uncomment when you have an auth_logs table)
-    /*
     const { data, error } = await supabase
       .from('auth_logs')
       .select('*')
@@ -87,14 +83,62 @@ export async function getRecentAuthLogs(userId: string, limit = 10) {
       
     if (error) throw error;
     
-    return data;
-    */
-    
-    // For now, return empty array
-    return [];
+    return data || [];
   } catch (error) {
     console.error('Error fetching auth logs:', error);
     return [];
+  }
+}
+
+/**
+ * Update user profile data in Supabase
+ */
+export async function updateUserProfile(userId: string, profileData: any) {
+  try {
+    // First check if the profile exists
+    const { data: existingProfile, error: checkError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .single();
+      
+    if (checkError && checkError.code !== 'PGRST116') {
+      throw checkError;
+    }
+    
+    // If profile doesn't exist, create it
+    if (!existingProfile) {
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .insert([{
+          id: userId,
+          ...profileData,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }]);
+        
+      if (insertError) throw insertError;
+    } 
+    // If profile exists, update it
+    else {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          ...profileData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+        
+      if (updateError) throw updateError;
+    }
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error updating user profile:', error);
+    return { 
+      success: false, 
+      message: error.message || 'Failed to update user profile' 
+    };
   }
 }
 
