@@ -30,7 +30,7 @@ const Footer: React.FC<FooterProps> = ({ hideApplyButton = false }) => {
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
-            <h3 className="text-lg font-semibold mb-4">Berlin RP</h3>
+            <h3 className="text-lg font-semibold mb-4">BerlinRP-VC</h3>
             <p className="text-gray-300 mb-4">
               Ein deutscher Roblox Roleplay Server mit dem Fokus auf realistische Simulationen und Erlebnisse.
             </p>
@@ -82,7 +82,7 @@ const Footer: React.FC<FooterProps> = ({ hideApplyButton = false }) => {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <a href="https://discord.gg/berlinrp" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-white">
+                <a href="https://discord.gg/berlinrpvc" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-white">
                   Discord
                 </a>
               </li>
@@ -92,7 +92,7 @@ const Footer: React.FC<FooterProps> = ({ hideApplyButton = false }) => {
         
         <div className="border-t border-gray-700 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center">
           <p className="text-gray-400 text-sm mb-4 md:mb-0">
-            &copy; {new Date().getFullYear()} Berlin RP. Alle Rechte vorbehalten.
+            &copy; {new Date().getFullYear()} BerlinRP-VC. Alle Rechte vorbehalten.
           </p>
           <div className="flex space-x-4">
             <Link to="/datenschutz" className="text-gray-400 hover:text-white text-sm">Datenschutz</Link>

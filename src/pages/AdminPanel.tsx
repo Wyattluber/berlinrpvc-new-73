@@ -37,6 +37,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import UserRoleManager from '@/components/UserRoleManager';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import ApplicationsList from '@/components/ApplicationsList';
+import PartnerServersManagement from '@/components/PartnerServersManagement';
 
 type Application = {
   id: string;
@@ -351,8 +352,10 @@ const ApplicationsManagement = () => (
           Verwalte und überprüfe eingehende Bewerbungen
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <ApplicationsList />
+      <CardContent className="overflow-hidden">
+        <div className="overflow-x-auto w-full">
+          <ApplicationsList />
+        </div>
       </CardContent>
     </Card>
   </div>
@@ -794,6 +797,7 @@ const AdminPanel = () => {
     { title: "Benutzer", id: "users", icon: Users },
     { title: "Bewerbungen", id: "applications", icon: FileText },
     { title: "Neuigkeiten", id: "news", icon: BellRing },
+    { title: "Partner", id: "partners", icon: Share },
     { title: "Teameinstellungen", id: "team-settings", icon: Settings },
     { title: "Sicherheit", id: "security", icon: ShieldCheck },
     { title: "Kontoverwaltung", id: "account", icon: UserCog }
@@ -809,6 +813,8 @@ const AdminPanel = () => {
         return <ApplicationsManagement />;
       case 'news':
         return <NewsManagement />;
+      case 'partners':
+        return <PartnerServersManagement />;
       case 'team-settings':
         return <TeamSettings />;
       case 'security':
