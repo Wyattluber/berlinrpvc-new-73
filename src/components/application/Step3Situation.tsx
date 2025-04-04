@@ -96,7 +96,8 @@ const Step3Situation: React.FC<Step3Props> = ({ onBack }) => {
           vdm_understanding: applicationData.vdmUnderstanding,
           taschen_rp_understanding: applicationData.taschenRpUnderstanding,
           server_age_understanding: applicationData.serverAgeUnderstanding,
-          why_moderator: data.situation_handling,
+          // Remove this line that was causing the error:
+          // why_moderator: data.situation_handling,
           situation_handling: data.situation_handling,
           bodycam_understanding: data.bodycam_understanding,
           friend_rule_violation: data.friend_rule_violation,
