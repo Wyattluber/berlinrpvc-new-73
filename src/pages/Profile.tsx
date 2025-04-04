@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import Navbar from '../components/Navbar';
@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { SessionContext } from '../App';
 import { LoaderIcon, CheckCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { getUserApplicationsHistory } from '@/lib/admin';
+import { getUserApplicationsHistory, checkIsAdmin } from '@/lib/admin';
 import ProfileImageUpload from '@/components/ProfileImageUpload';
 import { Separator } from "@/components/ui/separator"
 import {
@@ -40,6 +40,7 @@ type Application = {
 };
 
 const Profile = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [applications, setApplications] = useState<Application[]>([]);
@@ -51,8 +52,10 @@ const Profile = () => {
   const [newEmail, setNewEmail] = useState('');
   const [emailUpdateMessage, setEmailUpdateMessage] = useState('');
   const [emailUpdateSuccess, setEmailUpdateSuccess] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
   const session = useContext(SessionContext);
+  const activeTab = searchParams.get('tab') || 'account';
 
   // Fetch user applications history
   const { 
@@ -98,6 +101,10 @@ const Profile = () => {
         setUsername(userDetails?.user?.user_metadata?.name || '');
         setUserAvatar(userDetails?.user?.user_metadata?.avatar_url || '');
         
+        // Check if user is admin
+        const adminStatus = await checkIsAdmin();
+        setIsAdmin(adminStatus);
+        
         // Load applications history
         refetchApplications();
       } catch (error: any) {
@@ -114,6 +121,11 @@ const Profile = () => {
     
     fetchProfile();
   }, [session, refetchApplications]);
+
+  // Function to handle tab changes
+  const handleTabChange = (value: string) => {
+    setSearchParams({ tab: value });
+  };
 
   // Function to handle avatar changes
   const handleAvatarChange = (url: string) => {
@@ -277,12 +289,17 @@ const Profile = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="account" className="space-y-4">
+              <Tabs 
+                defaultValue={activeTab} 
+                value={activeTab}
+                onValueChange={handleTabChange}
+                className="space-y-4"
+              >
                 <TabsList>
                   <TabsTrigger value="account">Konto</TabsTrigger>
                   <TabsTrigger value="applications">Bewerbungen</TabsTrigger>
                   <TabsTrigger value="security">Sicherheit</TabsTrigger>
-                  {session?.user?.email === 'admin@berlinrpvc.de' && (
+                  {(isAdmin || session?.user?.email === 'admin@berlinrpvc.de') && (
                     <TabsTrigger value="admin">Admin</TabsTrigger>
                   )}
                 </TabsList>
@@ -410,7 +427,7 @@ const Profile = () => {
                     </Link>
                   </div>
                 </TabsContent>
-                {session?.user?.email === 'admin@berlinrpvc.de' && (
+                {(isAdmin || session?.user?.email === 'admin@berlinrpvc.de') && (
                   <TabsContent value="admin" className="space-y-4">
                     <AdminPanel />
                   </TabsContent>
