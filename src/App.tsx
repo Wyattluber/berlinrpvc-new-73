@@ -66,62 +66,96 @@ const App = () => {
   const [isModerator, setIsModerator] = useState<boolean>(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Safety timeout to prevent infinite loading
+    const safetyTimeout = setTimeout(() => {
+      if (loading) {
+        console.log("Loading timeout triggered - forcing app to render");
+        setLoading(false);
+        setLoadingError("Loading timed out. Some features may not be available.");
+      }
+    }, 5000);
+
     // Check current auth status
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("Initial session check:", session ? "Logged in" : "Not logged in");
-      setSession(session);
-      if (session) {
-        // Check user roles
-        checkIsAdmin().then(adminStatus => {
-          console.log("Admin status:", adminStatus);
-          setIsAdmin(adminStatus);
-        });
+    try {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        console.log("Initial session check:", session ? "Logged in" : "Not logged in");
+        setSession(session);
         
-        checkIsModerator().then(moderatorStatus => {
-          console.log("Moderator status:", moderatorStatus);
-          setIsModerator(moderatorStatus);
-        });
+        if (session) {
+          // Check user roles
+          Promise.all([
+            checkIsAdmin(),
+            checkIsModerator(),
+            getUserRole()
+          ]).then(([adminStatus, moderatorStatus, role]) => {
+            console.log("User roles loaded:", { adminStatus, moderatorStatus, role });
+            setIsAdmin(adminStatus);
+            setIsModerator(moderatorStatus);
+            setUserRole(role);
+            setLoading(false);
+          }).catch(error => {
+            console.error("Error checking user roles:", error);
+            setLoading(false);
+            setLoadingError("Could not verify user permissions.");
+          });
+        } else {
+          // Not logged in - no need to check roles
+          setLoading(false);
+        }
+      }).catch(error => {
+        console.error("Error checking session:", error);
+        setLoading(false);
+        setLoadingError("Could not verify login status.");
+      });
+
+      // Listen for auth changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        console.log("Auth state changed:", _event);
+        setSession(session);
         
-        getUserRole().then(role => {
-          console.log("User role:", role);
-          setUserRole(role);
-        });
-      }
+        if (session) {
+          try {
+            // Check user roles when session changes
+            const adminStatus = await checkIsAdmin();
+            setIsAdmin(adminStatus);
+            
+            const moderatorStatus = await checkIsModerator();
+            setIsModerator(moderatorStatus);
+            
+            const role = await getUserRole();
+            setUserRole(role);
+          } catch (error) {
+            console.error("Error during auth state change:", error);
+            setLoadingError("Error updating user permissions");
+          }
+        } else {
+          setIsAdmin(false);
+          setIsModerator(false);
+          setUserRole(null);
+        }
+      });
+
+      return () => {
+        clearTimeout(safetyTimeout);
+        subscription.unsubscribe();
+      };
+    } catch (error) {
+      console.error("Critical app initialization error:", error);
       setLoading(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log("Auth state changed:", _event);
-      setSession(session);
-      
-      if (session) {
-        // Check user roles when session changes
-        const adminStatus = await checkIsAdmin();
-        setIsAdmin(adminStatus);
-        
-        const moderatorStatus = await checkIsModerator();
-        setIsModerator(moderatorStatus);
-        
-        const role = await getUserRole();
-        setUserRole(role);
-      } else {
-        setIsAdmin(false);
-        setIsModerator(false);
-        setUserRole(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+      setLoadingError("App initialization failed");
+      clearTimeout(safetyTimeout);
+    }
   }, []);
 
   if (loading) {
     // Show a loading spinner for better UX
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+        <p className="text-gray-600">Lade Anwendung...</p>
       </div>
     );
   }
@@ -134,6 +168,17 @@ const App = () => {
             <TooltipProvider>
               <Toaster />
               <Sonner />
+              {loadingError && (
+                <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 fixed top-0 left-0 right-0 z-50">
+                  <p>{loadingError}</p>
+                  <button 
+                    className="underline ml-2"
+                    onClick={() => setLoadingError(null)}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
               <ErrorFallback>
                 <BrowserRouter>
                   <Routes>
