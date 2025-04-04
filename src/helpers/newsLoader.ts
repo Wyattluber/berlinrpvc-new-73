@@ -17,7 +17,7 @@ export async function loadNewsIntoProfile() {
     newsContainer.innerHTML = '';
     
     // If no news items, show a message
-    if (newsItems.length === 0) {
+    if (!newsItems || newsItems.length === 0) {
       newsContainer.innerHTML = `
         <div class="text-center py-4">
           <p class="text-sm text-gray-500">Keine Neuigkeiten vorhanden.</p>

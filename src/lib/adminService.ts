@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { checkIsAdmin, getTotalUserCount, TeamSettings } from './admin';
 
@@ -15,6 +16,9 @@ let teamSettingsCache: { settings: TeamSettings | null; timestamp: number } | nu
 
 // Cache news
 let newsCache: { news: any[]; timestamp: number } | null = null;
+
+// Cache application seasons
+let applicationSeasonsCache: { seasons: any[]; timestamp: number } | null = null;
 
 /**
  * Fetch admin users with caching
@@ -43,14 +47,14 @@ export async function fetchAdminUsers() {
     for (const user of adminUsersData || []) {
       try {
         // Get user details from auth users via a safe method
-        const { data: userData, error: userError } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('username')
           .eq('id', user.user_id)
           .single();
         
         // For email, we can try to use the username from profiles as a fallback
-        let email = userData?.username || null;
+        let email = profileData?.username || null;
         
         // If the username is likely an email, use it
         if (email && email.includes('@')) {
@@ -463,10 +467,204 @@ export async function sendApplicationStatusNotification(applicationId: string, u
   }
 }
 
+/**
+ * Get application seasons
+ */
+export async function getApplicationSeasons() {
+  const now = Date.now();
+  
+  // Return cached data if valid
+  if (applicationSeasonsCache && (now - applicationSeasonsCache.timestamp < CACHE_TTL)) {
+    return applicationSeasonsCache.seasons;
+  }
+  
+  try {
+    const { data, error } = await supabase
+      .from('application_seasons')
+      .select('*')
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      throw error;
+    }
+    
+    applicationSeasonsCache = { 
+      seasons: data || [], 
+      timestamp: now 
+    };
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching application seasons:', error);
+    return applicationSeasonsCache?.seasons || [];
+  }
+}
+
+/**
+ * Create a new application season
+ */
+export async function createApplicationSeason(name: string) {
+  const isAdmin = await checkIsAdmin();
+  if (!isAdmin) {
+    return { success: false, message: 'Nur Admins können neue Bewerbungssaisons erstellen' };
+  }
+  
+  try {
+    const { data, error } = await supabase
+      .from('application_seasons')
+      .insert([{
+        name,
+        is_active: true,
+        created_at: new Date().toISOString()
+      }])
+      .select();
+      
+    if (error) {
+      throw error;
+    }
+    
+    // Invalidate cache
+    applicationSeasonsCache = null;
+    
+    // Update existing applications to mark them as belonging to previous season
+    if (data && data.length > 0) {
+      const seasonId = data[0].id;
+      
+      // Get applications without a season_id
+      const { data: applicationsToUpdate, error: fetchError } = await supabase
+        .from('applications')
+        .select('id')
+        .is('season_id', null);
+        
+      if (fetchError) {
+        console.error('Error fetching applications to update:', fetchError);
+      } else if (applicationsToUpdate && applicationsToUpdate.length > 0) {
+        // Update applications to associate them with the new season
+        const { error: updateError } = await supabase
+          .from('applications')
+          .update({ season_id: seasonId })
+          .is('season_id', null);
+          
+        if (updateError) {
+          console.error('Error updating applications with season ID:', updateError);
+        }
+      }
+    }
+    
+    return { 
+      success: true, 
+      message: 'Neue Bewerbungssaison wurde erfolgreich erstellt',
+      data: data && data.length > 0 ? data[0] : null
+    };
+  } catch (error: any) {
+    console.error('Error creating application season:', error);
+    return { 
+      success: false, 
+      message: error.message || 'Fehler beim Erstellen der Bewerbungssaison' 
+    };
+  }
+}
+
+/**
+ * Add a user to admin users with a specific role
+ */
+export async function addAdminUserRole(userId: string, role: 'admin' | 'moderator') {
+  const isAdmin = await checkIsAdmin();
+  if (!isAdmin) {
+    return { success: false, message: 'Nur Admins können Benutzerrollen vergeben' };
+  }
+  
+  try {
+    // Check if user already has a role
+    const { data: existingRole, error: checkError } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+      
+    if (checkError) {
+      throw checkError;
+    }
+    
+    let result;
+    
+    if (existingRole) {
+      // Update existing role
+      result = await supabase
+        .from('admin_users')
+        .update({ role })
+        .eq('user_id', userId)
+        .select();
+    } else {
+      // Insert new role
+      result = await supabase
+        .from('admin_users')
+        .insert([{
+          user_id: userId,
+          role
+        }])
+        .select();
+    }
+    
+    if (result.error) {
+      throw result.error;
+    }
+    
+    // Invalidate cache
+    adminUsersCache = null;
+    
+    return { 
+      success: true, 
+      message: 'Benutzerrolle erfolgreich aktualisiert',
+      data: result.data
+    };
+  } catch (error: any) {
+    console.error('Error adding admin user role:', error);
+    return { 
+      success: false, 
+      message: error.message || 'Fehler beim Hinzufügen der Benutzerrolle' 
+    };
+  }
+}
+
+/**
+ * Find user by email or username
+ */
+export async function findUserByEmailOrUsername(query: string) {
+  const isAdmin = await checkIsAdmin();
+  if (!isAdmin) {
+    return { success: false, message: 'Nur Admins können Benutzer suchen' };
+  }
+  
+  try {
+    // This function uses a common approach for profile searches
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, username')
+      .or(`username.ilike.%${query}%`);
+      
+    if (error) {
+      throw error;
+    }
+    
+    return { 
+      success: true, 
+      data 
+    };
+  } catch (error: any) {
+    console.error('Error finding user:', error);
+    return { 
+      success: false, 
+      message: error.message || 'Fehler beim Suchen des Benutzers' 
+    };
+  }
+}
+
 // Manually invalidate caches when needed (export this for use in components)
 export function invalidateAdminCache() {
   adminUsersCache = null;
   userCountCache = null;
   teamSettingsCache = null;
   newsCache = null;
+  applicationSeasonsCache = null;
 }

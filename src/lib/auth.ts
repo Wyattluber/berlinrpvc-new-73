@@ -96,6 +96,29 @@ export async function getRecentAuthLogs(userId: string, limit = 10) {
 }
 
 /**
+ * Check if profile IDs are already set and cannot be changed
+ */
+export async function checkProfileIdsLocked(userId: string): Promise<{discord_locked: boolean, roblox_locked: boolean}> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('discord_id, roblox_id')
+      .eq('id', userId)
+      .single();
+      
+    if (error) throw error;
+    
+    return {
+      discord_locked: !!data?.discord_id,
+      roblox_locked: !!data?.roblox_id
+    };
+  } catch (error) {
+    console.error('Error checking profile IDs status:', error);
+    return { discord_locked: false, roblox_locked: false };
+  }
+}
+
+/**
  * Update user profile data in Supabase
  */
 export async function updateUserProfile(userId: string, profileData: any) {
@@ -103,7 +126,7 @@ export async function updateUserProfile(userId: string, profileData: any) {
     // First check if the profile exists
     const { data: existingProfile, error: checkError } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, discord_id, roblox_id')
       .eq('id', userId)
       .single();
       
@@ -111,8 +134,30 @@ export async function updateUserProfile(userId: string, profileData: any) {
       throw checkError;
     }
     
-    // If profile doesn't exist, create it
-    if (!existingProfile) {
+    // Don't allow updating discord_id or roblox_id if they're already set
+    if (existingProfile) {
+      const updatedData = { ...profileData };
+      
+      if (existingProfile.discord_id && profileData.discord_id) {
+        delete updatedData.discord_id;
+      }
+      
+      if (existingProfile.roblox_id && profileData.roblox_id) {
+        delete updatedData.roblox_id;
+      }
+      
+      // If profile doesn't exist, create it
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          ...updatedData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+        
+      if (updateError) throw updateError;
+    } else {
+      // If profile doesn't exist, create it
       const { error: insertError } = await supabase
         .from('profiles')
         .insert([{
@@ -123,18 +168,6 @@ export async function updateUserProfile(userId: string, profileData: any) {
         }]);
         
       if (insertError) throw insertError;
-    } 
-    // If profile exists, update it
-    else {
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          ...profileData,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
-        
-      if (updateError) throw updateError;
     }
     
     return { success: true };

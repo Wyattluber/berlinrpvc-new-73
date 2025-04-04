@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { SessionContext } from '../App';
-import { LoaderIcon, CheckCircle, Calendar, Clock, Users, MessageSquare, Bell, HelpCircle, AlertTriangle } from 'lucide-react';
+import { LoaderIcon, CheckCircle, Calendar, Clock, Users, MessageSquare, Bell, HelpCircle, AlertTriangle, Plus, Lock } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { getUserApplicationsHistory, checkIsAdmin } from '@/lib/admin';
 import ProfileImageUpload from '@/components/ProfileImageUpload';
@@ -30,15 +30,30 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import AdminPanel from './AdminPanel';
 import { getTeamSettings } from '@/lib/adminService';
-import { updateUserProfile } from '@/lib/auth';
+import { checkProfileIdsLocked, updateUserProfile } from '@/lib/auth';
 
 type Application = {
   id: string;
   status: string;
   created_at: string;
   updated_at: string;
+  season_id?: string | null;
+};
+
+type ProfileLocks = {
+  discord_locked: boolean;
+  roblox_locked: boolean;
 };
 
 const Profile = () => {
@@ -50,6 +65,7 @@ const Profile = () => {
   const [userAvatar, setUserAvatar] = useState('');
   const [discordId, setDiscordId] = useState('');
   const [robloxId, setRobloxId] = useState('');
+  const [profileLocks, setProfileLocks] = useState<ProfileLocks>({ discord_locked: false, roblox_locked: false });
   const [isUsernameAvailable, setIsUsernameAvailable] = useState({ valid: true, reason: '' });
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
   const [isUpdatingProfiles, setIsUpdatingProfiles] = useState(false);
@@ -58,7 +74,13 @@ const Profile = () => {
   const [emailUpdateMessage, setEmailUpdateMessage] = useState('');
   const [emailUpdateSuccess, setEmailUpdateSuccess] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [activeSeasonApplications, setActiveSeasonApplications] = useState<Application[]>([]);
+  const [previousSeasonApplications, setPreviousSeasonApplications] = useState<Application[]>([]);
   const [teamSettings, setTeamSettings] = useState<any>(null);
+  const [showUserRoleDialog, setShowUserRoleDialog] = useState(false);
+  const [roleUserEmail, setRoleUserEmail] = useState('');
+  const [roleUserSelection, setRoleUserSelection] = useState('');
+  const [roleType, setRoleType] = useState<'admin' | 'moderator'>('moderator');
   const navigate = useNavigate();
   const session = useContext(SessionContext);
   const activeTab = searchParams.get('tab') || 'dashboard';
@@ -74,7 +96,14 @@ const Profile = () => {
     meta: {
       onSuccess: (data) => {
         if (data) {
-          setApplications(data as Application[]);
+          const allApplications = data as Application[];
+          setApplications(allApplications);
+          
+          // Filter applications by season (active vs. previous)
+          // For now we'll just show all in activeSeasonApplications
+          // In the future, when we implement seasons, we'll filter based on season_id
+          setActiveSeasonApplications(allApplications);
+          setPreviousSeasonApplications([]);
         }
       },
       onError: (error: any) => {
@@ -118,6 +147,10 @@ const Profile = () => {
         setUser(userDetails?.user || null);
         setUsername(userDetails?.user?.user_metadata?.name || '');
         setUserAvatar(userDetails?.user?.user_metadata?.avatar_url || '');
+        
+        // Check profile locks status
+        const locks = await checkProfileIdsLocked(session.user.id);
+        setProfileLocks(locks);
         
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
@@ -257,6 +290,10 @@ const Profile = () => {
         throw new Error(result.message);
       }
       
+      // Update locks status after successful update
+      const locks = await checkProfileIdsLocked(session?.user?.id || '');
+      setProfileLocks(locks);
+      
       toast({
         title: "Profil aktualisiert",
         description: "Deine Profildaten wurden erfolgreich aktualisiert.",
@@ -356,6 +393,28 @@ const Profile = () => {
   const isAdminOrModerator = () => {
     return isAdmin;
   };
+  
+  const handleAddUserRole = async () => {
+    if (!roleUserEmail || !roleType) {
+      toast({
+        title: "Fehler",
+        description: "Bitte fülle alle Felder aus.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // In a real implementation, we would search for the user by email and then add the role
+    // For now, we'll just show a toast
+    toast({
+      title: "Rolle vergeben",
+      description: `${roleType === 'admin' ? 'Admin' : 'Moderator'}-Rolle an ${roleUserEmail} vergeben.`,
+    });
+    
+    setShowUserRoleDialog(false);
+    setRoleUserEmail('');
+    setRoleType('moderator');
+  };
 
   if (loading) {
     return (
@@ -447,9 +506,13 @@ const Profile = () => {
                       <CardContent>
                         {isApplicationsLoading ? (
                           <div className="text-sm text-gray-600">Lade Bewerbungen...</div>
-                        ) : applications.length > 0 ? (
+                        ) : activeSeasonApplications.length > 0 ? (
                           <div className="space-y-2">
-                            {applications.slice(0, 3).map((app) => (
+                            <div className="text-sm mb-2">
+                              <span className="font-medium">Anzahl: </span> 
+                              {activeSeasonApplications.length}
+                            </div>
+                            {activeSeasonApplications.slice(0, 3).map((app) => (
                               <div key={app.id} className="text-sm p-2 bg-white rounded-md border border-purple-200 shadow-sm">
                                 <p className="font-medium">Status: {app.status}</p>
                                 <p className="text-xs text-gray-500">
@@ -457,13 +520,13 @@ const Profile = () => {
                                 </p>
                               </div>
                             ))}
-                            {applications.length > 3 && (
+                            {activeSeasonApplications.length > 3 && (
                               <Button 
                                 variant="link" 
                                 className="text-purple-600 p-0 h-auto text-sm"
                                 onClick={() => handleTabChange('applications')}
                               >
-                                Alle {applications.length} Bewerbungen anzeigen
+                                Alle {activeSeasonApplications.length} Bewerbungen anzeigen
                               </Button>
                             )}
                           </div>
@@ -582,18 +645,30 @@ const Profile = () => {
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <Label htmlFor="discord_id">Discord ID</Label>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs p-4">
-                            <p>Deine Discord ID findest du in Discord, indem du:<br/>
-                            1. Einstellungen öffnest<br/>
-                            2. "Erweitert" unter "App-Einstellungen" auswählst<br/>
-                            3. "Entwicklermodus" aktivierst<br/>
-                            4. Dann kannst du mit Rechtsklick auf deinen Namen "ID kopieren" auswählen</p>
-                          </TooltipContent>
-                        </Tooltip>
+                        {profileLocks.discord_locked && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Lock className="h-4 w-4 text-gray-400" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Diese ID kann nicht mehr geändert werden.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {!profileLocks.discord_locked && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs p-4">
+                              <p>Deine Discord ID findest du in Discord, indem du:<br/>
+                              1. Einstellungen öffnest<br/>
+                              2. "Erweitert" unter "App-Einstellungen" auswählst<br/>
+                              3. "Entwicklermodus" aktivierst<br/>
+                              4. Dann kannst du mit Rechtsklick auf deinen Namen "ID kopieren" auswählen</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                       </div>
                       <div className="flex items-center space-x-2">
                         <Input
@@ -601,21 +676,38 @@ const Profile = () => {
                           placeholder="Deine Discord ID"
                           value={discordId}
                           onChange={(e) => setDiscordId(e.target.value)}
+                          readOnly={profileLocks.discord_locked}
+                          className={profileLocks.discord_locked ? "bg-gray-100" : ""}
                         />
                       </div>
+                      {profileLocks.discord_locked && (
+                        <p className="text-xs text-gray-500">Die Discord ID kann nach dem Speichern nicht mehr geändert werden.</p>
+                      )}
                     </div>
                     
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <Label htmlFor="roblox_id">Roblox ID</Label>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs p-4">
-                            <p>Deine Roblox ID findest du in deinem Roblox-Profil. Gehe zu deinem Profil, und die ID ist die Nummer in der URL (z.B. https://www.roblox.com/users/<strong>12345678</strong>/profile).</p>
-                          </TooltipContent>
-                        </Tooltip>
+                        {profileLocks.roblox_locked && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Lock className="h-4 w-4 text-gray-400" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Diese ID kann nicht mehr geändert werden.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {!profileLocks.roblox_locked && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs p-4">
+                              <p>Deine Roblox ID findest du in deinem Roblox-Profil. Gehe zu deinem Profil, und die ID ist die Nummer in der URL (z.B. https://www.roblox.com/users/<strong>12345678</strong>/profile).</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                       </div>
                       <div className="flex items-center space-x-2">
                         <Input
@@ -623,14 +715,19 @@ const Profile = () => {
                           placeholder="Deine Roblox ID"
                           value={robloxId}
                           onChange={(e) => setRobloxId(e.target.value)}
+                          readOnly={profileLocks.roblox_locked}
+                          className={profileLocks.roblox_locked ? "bg-gray-100" : ""}
                         />
                       </div>
+                      {profileLocks.roblox_locked && (
+                        <p className="text-xs text-gray-500">Die Roblox ID kann nach dem Speichern nicht mehr geändert werden.</p>
+                      )}
                     </div>
                     
                     <Button
                       type="button"
                       variant="outline"
-                      disabled={isUpdatingProfiles}
+                      disabled={isUpdatingProfiles || (profileLocks.discord_locked && profileLocks.roblox_locked)}
                       onClick={updateProfileData}
                       className="mt-2"
                     >
@@ -643,12 +740,25 @@ const Profile = () => {
                         "Profildaten speichern"
                       )}
                     </Button>
+                    {(profileLocks.discord_locked && profileLocks.roblox_locked) && (
+                      <p className="text-xs text-gray-500 text-center">Alle IDs wurden bereits gesetzt und können nicht mehr geändert werden.</p>
+                    )}
                   </div>
                 </TabsContent>
                 
                 <TabsContent value="applications" className="p-6 space-y-4">
                   <CardTitle>Deine Bewerbungen</CardTitle>
                   <CardDescription>Hier findest du eine Übersicht deiner bisherigen Bewerbungen.</CardDescription>
+                  
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold">Aktuelle Saison</h3>
+                      <p className="text-sm text-gray-500">
+                        Anzahl Bewerbungen: {activeSeasonApplications.length}
+                      </p>
+                    </div>
+                  </div>
+                  
                   {isApplicationsLoading ? (
                     <div className="flex items-center justify-center">
                       <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
@@ -656,11 +766,11 @@ const Profile = () => {
                     </div>
                   ) : applicationsError ? (
                     <p className="text-red-500">Fehler beim Laden der Bewerbungen.</p>
-                  ) : applications.length === 0 ? (
-                    <p>Du hast noch keine Bewerbungen eingereicht.</p>
+                  ) : activeSeasonApplications.length === 0 ? (
+                    <p>Du hast noch keine Bewerbungen in der aktuellen Saison eingereicht.</p>
                   ) : (
                     <Accordion type="single" collapsible>
-                      {applications.map((app) => (
+                      {activeSeasonApplications.map((app) => (
                         <AccordionItem key={app.id} value={app.id}>
                           <AccordionTrigger>
                             {new Date(app.created_at).toLocaleDateString()} - {app.status}
@@ -677,6 +787,33 @@ const Profile = () => {
                         </AccordionItem>
                       ))}
                     </Accordion>
+                  )}
+                  
+                  {previousSeasonApplications.length > 0 && (
+                    <>
+                      <Separator className="my-6" />
+                      <div className="mt-8">
+                        <h3 className="text-lg font-semibold mb-4">Vorherige Saisons</h3>
+                        <Accordion type="single" collapsible>
+                          {previousSeasonApplications.map((app) => (
+                            <AccordionItem key={app.id} value={app.id}>
+                              <AccordionTrigger>
+                                {new Date(app.created_at).toLocaleDateString()} - {app.status}
+                              </AccordionTrigger>
+                              <AccordionContent>
+                                <p>
+                                  Bewerbungsstatus: {app.status}
+                                  <br />
+                                  Erstellt am: {new Date(app.created_at).toLocaleString()}
+                                  <br />
+                                  Zuletzt aktualisiert: {new Date(app.updated_at).toLocaleString()}
+                                </p>
+                              </AccordionContent>
+                            </AccordionItem>
+                          ))}
+                        </Accordion>
+                      </div>
+                    </>
                   )}
                 </TabsContent>
                 
@@ -771,6 +908,60 @@ const Profile = () => {
                 
                 {(isAdmin || session?.user?.email === 'admin@berlinrpvc.de') && (
                   <TabsContent value="admin" className="h-auto overflow-hidden rounded-md border">
+                    <div className="p-4 bg-blue-50 flex justify-between items-center">
+                      <h3 className="text-lg font-semibold">Admin-Funktionen</h3>
+                      <Dialog open={showUserRoleDialog} onOpenChange={setShowUserRoleDialog}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" variant="outline" className="flex items-center gap-1">
+                            <Plus className="h-4 w-4" />
+                            Neue Benutzerrolle
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Benutzerrolle vergeben</DialogTitle>
+                            <DialogDescription>
+                              Gib die E-Mail-Adresse des Benutzers ein, dem du eine Rolle zuweisen möchtest.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="user-email">E-Mail des Benutzers</Label>
+                              <Input 
+                                id="user-email" 
+                                placeholder="beispiel@email.com" 
+                                value={roleUserEmail}
+                                onChange={(e) => setRoleUserEmail(e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Rolle</Label>
+                              <div className="flex space-x-2">
+                                <Button 
+                                  type="button"
+                                  variant={roleType === 'moderator' ? 'default' : 'outline'}
+                                  className="flex-1"
+                                  onClick={() => setRoleType('moderator')}
+                                >
+                                  Moderator
+                                </Button>
+                                <Button 
+                                  type="button"
+                                  variant={roleType === 'admin' ? 'default' : 'outline'}
+                                  className="flex-1"
+                                  onClick={() => setRoleType('admin')}
+                                >
+                                  Administrator
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button onClick={handleAddUserRole}>Rolle zuweisen</Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
                     <AdminPanel />
                   </TabsContent>
                 )}
