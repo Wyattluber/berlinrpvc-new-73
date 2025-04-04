@@ -95,6 +95,41 @@ type CustomDatabase = Database & {
           updated_at?: string;
         };
       };
+      sub_servers: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          icon: string;
+          color: string;
+          status: string;
+          link: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          icon?: string;
+          color?: string;
+          status?: string;
+          link?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          icon?: string;
+          color?: string;
+          status?: string;
+          link?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     } & Database['public']['Tables'];
   } & Database['public'];
 };
