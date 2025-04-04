@@ -30,7 +30,7 @@ const UserRoleManager = () => {
     if (!userQuery) {
       toast({
         title: 'Fehler',
-        description: 'Bitte gib eine E-Mail-Adresse oder einen Benutzernamen ein.',
+        description: 'Bitte gib eine Benutzer-ID, E-Mail-Adresse oder einen Benutzernamen ein.',
         variant: 'destructive',
       });
       return;
@@ -114,9 +114,12 @@ const UserRoleManager = () => {
   };
 
   return (
-    <Card>
+    <Card className="w-full">
       <CardHeader>
-        <CardTitle>Benutzerrollen verwalten</CardTitle>
+        <CardTitle className="flex items-center">
+          <UserPlus className="mr-2 h-5 w-5" />
+          Benutzerrollen verwalten
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
@@ -126,19 +129,20 @@ const UserRoleManager = () => {
               Neue Benutzerrolle zuweisen
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Benutzerrolle zuweisen</DialogTitle>
               <DialogDescription>
-                Suche nach einem Benutzer und weise ihm eine Rolle zu.
+                Suche nach einer Benutzer-ID, E-Mail oder einem Benutzernamen und weise eine Rolle zu.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="flex items-center space-x-2">
                 <Input
-                  placeholder="E-Mail oder Benutzername"
+                  placeholder="Benutzer-ID, E-Mail oder Benutzername"
                   value={userQuery}
                   onChange={(e) => setUserQuery(e.target.value)}
+                  className="flex-1"
                 />
                 <Button 
                   size="icon" 
@@ -154,21 +158,21 @@ const UserRoleManager = () => {
               </div>
               
               {searchResults.length > 0 && (
-                <div className="border rounded-md max-h-40 overflow-y-auto">
+                <div className="border rounded-md max-h-60 overflow-y-auto">
                   {searchResults.map((user) => (
                     <div 
                       key={user.id} 
-                      className={`p-2 hover:bg-gray-100 cursor-pointer ${selectedUserId === user.id ? 'bg-blue-50' : ''}`}
+                      className={`p-3 hover:bg-gray-100 cursor-pointer ${selectedUserId === user.id ? 'bg-blue-50' : ''}`}
                       onClick={() => handleSelectUser(user.id)}
                     >
-                      <p className="font-medium">{user.username || 'Unbekannter Benutzer'}</p>
-                      <p className="text-xs text-gray-500">{user.id}</p>
+                      <p className="font-medium text-sm">{user.username || 'Unbekannter Benutzer'}</p>
+                      <p className="text-xs text-gray-500 mt-1">ID: {user.id}</p>
                     </div>
                   ))}
                 </div>
               )}
               
-              <div className="space-y-2">
+              <div className="space-y-2 mt-4">
                 <Label>Rolle</Label>
                 <div className="flex space-x-2">
                   <Button 
@@ -194,6 +198,7 @@ const UserRoleManager = () => {
               <Button 
                 onClick={handleAddRole}
                 disabled={isAdding || !selectedUserId}
+                className="ml-auto"
               >
                 {isAdding ? (
                   <>

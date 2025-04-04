@@ -627,7 +627,7 @@ export async function addAdminUserRole(userId: string, role: 'admin' | 'moderato
 }
 
 /**
- * Find user by email or username
+ * Find user by ID, email or username
  */
 export async function findUserByEmailOrUsername(query: string) {
   const isAdmin = await checkIsAdmin();
@@ -636,11 +636,21 @@ export async function findUserByEmailOrUsername(query: string) {
   }
   
   try {
+    // Check if the query might be a UUID (user ID)
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    
     // This function uses a common approach for profile searches
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, username')
-      .or(`username.ilike.%${query}%`);
+    let queryBuilder = supabase.from('profiles').select('id, username');
+    
+    if (uuidPattern.test(query)) {
+      // If it looks like a UUID, search by ID
+      queryBuilder = queryBuilder.eq('id', query);
+    } else {
+      // Otherwise search by username
+      queryBuilder = queryBuilder.or(`username.ilike.%${query}%`);
+    }
+    
+    const { data, error } = await queryBuilder;
       
     if (error) {
       throw error;
