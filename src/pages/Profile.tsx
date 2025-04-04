@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -66,7 +65,6 @@ const Profile = () => {
     hasNumber: false
   });
 
-  // New state for ID verification dialog
   const [showVerifyDialog, setShowVerifyDialog] = useState(false);
   const [verifiedDiscordId, setVerifiedDiscordId] = useState('');
   const [verifiedRobloxId, setVerifiedRobloxId] = useState('');
@@ -142,7 +140,6 @@ const Profile = () => {
           setIsAdmin(adminStatus);
           setIsModerator(modStatus);
           
-          // Update user role if available
           if (user && role) {
             setUser(prev => prev ? {...prev, role} : null);
           }
@@ -157,7 +154,6 @@ const Profile = () => {
     checkUserRole();
   }, [session, user]);
 
-  // Monitor for ID changes
   useEffect(() => {
     if (
       (verifiedDiscordId && discordId !== verifiedDiscordId) || 
@@ -233,7 +229,6 @@ const Profile = () => {
         });
       }
       
-      // Update verified IDs
       setVerifiedDiscordId(discordId);
       setVerifiedRobloxId(robloxId);
       setHasModifiedIds(false);
@@ -261,7 +256,6 @@ const Profile = () => {
 
   const cancelIdChange = () => {
     setShowVerifyDialog(false);
-    // Reset to verified values
     setDiscordId(verifiedDiscordId);
     setRobloxId(verifiedRobloxId);
   };
@@ -891,7 +885,7 @@ const Profile = () => {
               </div>
             )}
             
-            <Alert variant="warning" className="bg-amber-50 border-amber-200">
+            <Alert variant="destructive" className="bg-amber-50 border-amber-200">
               <AlertCircle className="h-4 w-4 text-amber-600" />
               <AlertTitle className="text-amber-800">Achtung</AlertTitle>
               <AlertDescription className="text-amber-700">
