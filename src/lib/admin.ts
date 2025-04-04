@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 type UserRole = 'admin' | 'moderator';
@@ -189,5 +190,50 @@ export async function removeUserRole(userId: string) {
       success: false,
       message: error.message || 'An unknown error occurred'
     };
+  }
+}
+
+/**
+ * Get team settings
+ */
+export async function getTeamSettings() {
+  try {
+    const { data, error } = await supabase
+      .from('team_settings')
+      .select('*')
+      .single();
+      
+    if (error) {
+      console.error('Error getting team settings:', error);
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error getting team settings:', error);
+    return null;
+  }
+}
+
+/**
+ * Has user submitted an application
+ */
+export async function hasSubmittedApplication(userId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('applications')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+      
+    if (error) {
+      console.error('Error checking application status:', error);
+      return false;
+    }
+    
+    return !!data;
+  } catch (error) {
+    console.error('Error checking application status:', error);
+    return false;
   }
 }

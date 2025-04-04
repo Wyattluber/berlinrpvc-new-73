@@ -15,11 +15,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { AlertTriangle, CheckCircle2, Info } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, Lock } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useApplication } from '@/contexts/ApplicationContext';
 
 // Define the form schema with Zod
 const applicationFormSchema = z.object({
@@ -53,7 +54,12 @@ const ApplicationForm = () => {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [userDiscordId, setUserDiscordId] = useState('');
+  const [userRobloxId, setUserRobloxId] = useState('');
+  const [userRobloxUsername, setUserRobloxUsername] = useState('');
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+  const [hasSubmittedApplication, setHasSubmittedApplication] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const { updateApplicationData, goToStep } = useApplication();
 
   const form = useForm<ApplicationFormData>({
     resolver: zodResolver(applicationFormSchema),
@@ -92,12 +98,20 @@ const ApplicationForm = () => {
 
       setAuthenticated(true);
 
-      // Get the user's Discord ID from metadata
+      // Get the user's Discord ID and other info from metadata
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const discordId = user.user_metadata?.discord_id || '';
+        const robloxId = user.user_metadata?.roblox_id || '';
+        const robloxUsername = user.user_metadata?.roblox_username || '';
+        
         setUserDiscordId(discordId);
+        setUserRobloxId(robloxId);
+        setUserRobloxUsername(robloxUsername);
+        
         form.setValue('discord_id', discordId);
+        form.setValue('roblox_id', robloxId);
+        form.setValue('roblox_username', robloxUsername);
       }
 
       // Check if the user has already submitted an application
@@ -108,9 +122,26 @@ const ApplicationForm = () => {
         .maybeSingle();
 
       if (applications) {
+        setHasSubmittedApplication(true);
         toast({
           title: "Bewerbung bereits eingereicht",
           description: "Du hast bereits eine Bewerbung eingereicht. Überprüfe den Status im Profil-Dashboard.",
+        });
+        navigate('/profile');
+      }
+
+      // Check if user is admin or moderator
+      const { data: adminData } = await supabase
+        .from('admin_users')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (adminData) {
+        setUserRole(adminData.role);
+        toast({
+          title: "Admin/Moderator-Zugriff",
+          description: "Als Teammitglied kannst du keine Bewerbung einreichen.",
         });
         navigate('/profile');
       }
@@ -129,6 +160,24 @@ const ApplicationForm = () => {
       if (!user) {
         throw new Error("Du musst angemeldet sein, um eine Bewerbung einzureichen.");
       }
+      
+      // Update context data for application steps
+      updateApplicationData({
+        robloxUsername: data.roblox_username,
+        robloxId: data.roblox_id,
+        discordId: data.discord_id,
+        age: data.age,
+        frpUnderstanding: data.frp_understanding,
+        vdmUnderstanding: data.vdm_understanding,
+        taschenRpUnderstanding: data.taschen_rp_understanding,
+        serverAgeUnderstanding: data.server_age_understanding,
+        situationHandling: data.situation_handling,
+        bodycamUnderstanding: data.bodycam_understanding,
+        friendRuleViolation: data.friend_rule_violation,
+        otherServers: data.other_servers || '',
+        adminExperience: data.admin_experience || '',
+        activityLevel: data.activity_level,
+      });
       
       // Submit the application to Supabase
       const { error } = await supabase
@@ -194,8 +243,8 @@ const ApplicationForm = () => {
     );
   }
 
-  if (authenticated === false) {
-    // This should redirect to login, but just in case show an error
+  if (authenticated === false || hasSubmittedApplication || userRole) {
+    // This should redirect to login or profile, but just in case show an error
     return null;
   }
 
@@ -252,8 +301,24 @@ const ApplicationForm = () => {
                           <FormItem>
                             <FormLabel>Roblox Benutzername</FormLabel>
                             <FormControl>
-                              <Input placeholder="Dein Roblox Benutzername" {...field} />
+                              <div className="relative">
+                                <Input 
+                                  placeholder="Dein Roblox Benutzername" 
+                                  {...field} 
+                                  value={field.value || userRobloxUsername}
+                                  className="pr-10"
+                                  readOnly={!!userRobloxUsername}
+                                />
+                                {userRobloxUsername && (
+                                  <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                )}
+                              </div>
                             </FormControl>
+                            {userRobloxUsername && (
+                              <FormDescription>
+                                Automatisch aus deinem Profil übernommen
+                              </FormDescription>
+                            )}
                             <FormMessage />
                           </FormItem>
                         )}
@@ -266,8 +331,24 @@ const ApplicationForm = () => {
                           <FormItem>
                             <FormLabel>Roblox ID</FormLabel>
                             <FormControl>
-                              <Input placeholder="Deine Roblox ID" {...field} />
+                              <div className="relative">
+                                <Input 
+                                  placeholder="Deine Roblox ID" 
+                                  {...field} 
+                                  value={field.value || userRobloxId}
+                                  className="pr-10"
+                                  readOnly={!!userRobloxId}
+                                />
+                                {userRobloxId && (
+                                  <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                )}
+                              </div>
                             </FormControl>
+                            {userRobloxId && (
+                              <FormDescription>
+                                Automatisch aus deinem Profil übernommen
+                              </FormDescription>
+                            )}
                             <FormMessage />
                           </FormItem>
                         )}
@@ -282,16 +363,24 @@ const ApplicationForm = () => {
                           <FormItem>
                             <FormLabel>Discord ID</FormLabel>
                             <FormControl>
-                              <Input 
-                                placeholder="Deine Discord ID" 
-                                {...field} 
-                                value={field.value || userDiscordId}
-                                onChange={(e) => field.onChange(e.target.value)}
-                              />
+                              <div className="relative">
+                                <Input 
+                                  placeholder="Deine Discord ID" 
+                                  {...field} 
+                                  value={field.value || userDiscordId}
+                                  className="pr-10"
+                                  readOnly={!!userDiscordId}
+                                />
+                                {userDiscordId && (
+                                  <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                )}
+                              </div>
                             </FormControl>
-                            <FormDescription>
-                              {userDiscordId ? "Automatisch aus deinem Profil übernommen" : "Bitte füge deine Discord ID hinzu"}
-                            </FormDescription>
+                            {userDiscordId && (
+                              <FormDescription>
+                                Automatisch aus deinem Profil übernommen
+                              </FormDescription>
+                            )}
                             <FormMessage />
                           </FormItem>
                         )}
