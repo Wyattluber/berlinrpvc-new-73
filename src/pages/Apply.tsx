@@ -62,7 +62,7 @@ const jobDescription = {
     {
       title: "📌 Tickets & Voicechat-Support",
       items: [
-        "🎫 Tickets & Voicechat-Support können nur von Teammitgliedern mit der „Ticket Support"-Rolle bearbeitet werden.",
+        "🎫 Tickets & Voicechat-Support können nur von Teammitgliedern mit der \"Ticket Support\"-Rolle bearbeitet werden.",
         "👥 Diese Rolle erhältst du, wenn du Interesse zeigst und deine Aktivität von den zuständigen Leitern als geeignet bewertet wird."
       ]
     },
