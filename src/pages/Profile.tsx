@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -7,14 +8,21 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Settings, User, Calendar, BarChart, AlertCircle, CheckCircle, Clock, KeyRound, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Settings, User, Calendar, BarChart, AlertCircle, CheckCircle, Clock, KeyRound, Eye, EyeOff, ShieldCheck, Users, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { SessionContext } from '@/App';
-import { checkIsAdmin, checkIsModerator, getTeamSettings, getUserRole } from '@/lib/admin';
+import { checkIsAdmin, checkIsModerator, getTeamSettings, getUserRole, updateTeamSettings, getTotalUserCount, deleteApplication, getUserApplicationsHistory } from '@/lib/admin';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { 
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption 
+} from "@/components/ui/table";
+import { 
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Textarea } from "@/components/ui/textarea";
 
 interface UserProfile {
   id: string;
@@ -34,6 +42,13 @@ interface Application {
   notes?: string;
 }
 
+interface AdminUser {
+  id: string;
+  user_id: string;
+  role: string;
+  created_at: string;
+}
+
 const Profile = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -49,6 +64,14 @@ const Profile = () => {
   const [isModerator, setIsModerator] = useState(false);
   const [teamSettings, setTeamSettings] = useState<any>(null);
   const [isLoadingTeamSettings, setIsLoadingTeamSettings] = useState(false);
+  const [editTeamSettings, setEditTeamSettings] = useState(false);
+  const [newTeamSettings, setNewTeamSettings] = useState({
+    meeting_day: '',
+    meeting_time: '',
+    meeting_frequency: '',
+    meeting_location: '',
+    meeting_notes: ''
+  });
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -69,6 +92,21 @@ const Profile = () => {
   const [verifiedDiscordId, setVerifiedDiscordId] = useState('');
   const [verifiedRobloxId, setVerifiedRobloxId] = useState('');
   const [hasModifiedIds, setHasModifiedIds] = useState(false);
+
+  // Admin functionality
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [loadingAdminUsers, setLoadingAdminUsers] = useState(false);
+  const [userCount, setUserCount] = useState(0);
+  const [usernames, setUsernames] = useState<Record<string, string>>({});
+  const [editUserId, setEditUserId] = useState<string | null>(null);
+  const [editRole, setEditRole] = useState('');
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [confirmDeleteDialog, setConfirmDeleteDialog] = useState(false);
+  const [applicationToDelete, setApplicationToDelete] = useState<string | null>(null);
+  const [allApplications, setAllApplications] = useState<any[]>([]);
+  const [loadingAllApplications, setLoadingAllApplications] = useState(false);
+  const [viewApplicationDialog, setViewApplicationDialog] = useState(false);
+  const [currentViewApplication, setCurrentViewApplication] = useState<any>(null);
 
   useEffect(() => {
     setPasswordValidation({
@@ -122,7 +160,7 @@ const Profile = () => {
       setVerifiedRobloxId(userProfile.robloxId || '');
       setUsername(userProfile.name || '');
       
-      fetchApplications(user.id);
+      fetchApplicationsHistory(user.id);
       fetchTeamSettings();
     };
 
@@ -140,6 +178,12 @@ const Profile = () => {
           setIsAdmin(adminStatus);
           setIsModerator(modStatus);
           
+          if (adminStatus) {
+            fetchUserCount();
+            fetchAdminUsers();
+            fetchAllApplications();
+          }
+          
           if (user && role) {
             setUser(prev => prev ? {...prev, role} : null);
           }
@@ -155,6 +199,18 @@ const Profile = () => {
   }, [session, user]);
 
   useEffect(() => {
+    if (teamSettings && editTeamSettings) {
+      setNewTeamSettings({
+        meeting_day: teamSettings.meeting_day || '',
+        meeting_time: teamSettings.meeting_time || '',
+        meeting_frequency: teamSettings.meeting_frequency || '',
+        meeting_location: teamSettings.meeting_location || '',
+        meeting_notes: teamSettings.meeting_notes || ''
+      });
+    }
+  }, [teamSettings, editTeamSettings]);
+
+  useEffect(() => {
     if (
       (verifiedDiscordId && discordId !== verifiedDiscordId) || 
       (verifiedRobloxId && robloxId !== verifiedRobloxId)
@@ -165,19 +221,17 @@ const Profile = () => {
     }
   }, [discordId, robloxId, verifiedDiscordId, verifiedRobloxId]);
 
-  const fetchApplications = async (userId: string) => {
+  const fetchApplicationsHistory = async (userId: string) => {
     setIsLoadingApplications(true);
     try {
-      const { data, error } = await supabase
-        .from('applications')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setApplications(data || []);
+      const applicationHistory = await getUserApplicationsHistory(userId);
+      if (applicationHistory) {
+        setApplications(applicationHistory);
+      } else {
+        setApplications([]);
+      }
     } catch (error) {
-      console.error('Error fetching applications:', error);
+      console.error('Error fetching applications history:', error);
     } finally {
       setIsLoadingApplications(false);
     }
@@ -194,6 +248,85 @@ const Profile = () => {
       console.error('Error fetching team settings:', error);
     } finally {
       setIsLoadingTeamSettings(false);
+    }
+  };
+
+  const fetchUserCount = async () => {
+    try {
+      const count = await getTotalUserCount();
+      setUserCount(count);
+    } catch (error) {
+      console.error('Error fetching user count:', error);
+    }
+  };
+
+  const fetchAdminUsers = async () => {
+    setLoadingAdminUsers(true);
+    try {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('*');
+
+      if (error) {
+        throw error;
+      }
+
+      setUsers(data || []);
+      
+      // Fetch usernames for all user IDs
+      if (data && data.length > 0) {
+        const userIds = data.map(user => user.user_id);
+        fetchUsernames(userIds);
+      }
+    } catch (error) {
+      console.error('Error fetching admin users:', error);
+      toast({
+        title: "Fehler",
+        description: "Fehler beim Laden der Admin-Benutzer.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingAdminUsers(false);
+    }
+  };
+
+  const fetchAllApplications = async () => {
+    setLoadingAllApplications(true);
+    try {
+      const { data, error } = await supabase
+        .from('applications')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      setAllApplications(data || []);
+    } catch (error) {
+      console.error("Error fetching applications:", error);
+      toast({
+        title: "Fehler",
+        description: "Bewerbungen konnten nicht geladen werden.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingAllApplications(false);
+    }
+  };
+
+  const fetchUsernames = async (userIds: string[]) => {
+    if (!userIds.length) return;
+    
+    try {
+      const usernameMap: Record<string, string> = {};
+      
+      // Default fallback naming pattern
+      userIds.forEach(userId => {
+        usernameMap[userId] = `User ${userId.substring(0, 6)}`;
+      });
+      
+      setUsernames(usernameMap);
+    } catch (error) {
+      console.error('Error in fetchUsernames:', error);
     }
   };
 
@@ -306,6 +439,153 @@ const Profile = () => {
     }
   };
 
+  const handleSaveTeamSettings = async () => {
+    setIsLoading(true);
+    
+    try {
+      const result = await updateTeamSettings({
+        meeting_day: newTeamSettings.meeting_day,
+        meeting_time: newTeamSettings.meeting_time,
+        meeting_frequency: newTeamSettings.meeting_frequency,
+        meeting_location: newTeamSettings.meeting_location,
+        meeting_notes: newTeamSettings.meeting_notes
+      });
+      
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+      
+      await fetchTeamSettings();
+      setEditTeamSettings(false);
+      
+      toast({
+        title: "Einstellungen gespeichert",
+        description: "Die Team-Einstellungen wurden erfolgreich aktualisiert.",
+      });
+    } catch (error: any) {
+      console.error('Error updating team settings:', error);
+      
+      toast({
+        title: "Fehler",
+        description: error.message || "Es gab ein Problem beim Aktualisieren der Team-Einstellungen.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditUser = (user: AdminUser) => {
+    setEditUserId(user.id);
+    setEditRole(user.role);
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveUser = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('admin_users')
+        .update({ role: editRole })
+        .eq('id', editUserId);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Erfolgreich",
+        description: "Benutzer erfolgreich aktualisiert.",
+      });
+      fetchAdminUsers();
+      setEditDialogOpen(false);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast({
+        title: "Fehler",
+        description: "Fehler beim Aktualisieren des Benutzers.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('admin_users')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Erfolgreich",
+        description: "Benutzer erfolgreich gelöscht.",
+      });
+      fetchAdminUsers();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Fehler",
+        description: "Fehler beim Löschen des Benutzers.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleViewApplication = (application: any) => {
+    setCurrentViewApplication(application);
+    setViewApplicationDialog(true);
+  };
+
+  const handleDeleteApplication = (id: string) => {
+    setApplicationToDelete(id);
+    setConfirmDeleteDialog(true);
+  };
+
+  const confirmDeleteApplication = async () => {
+    if (!applicationToDelete) return;
+    
+    setIsLoading(true);
+    try {
+      const result = await deleteApplication(applicationToDelete);
+      
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+      
+      toast({
+        title: "Erfolgreich",
+        description: "Bewerbung erfolgreich gelöscht.",
+      });
+      
+      // Refresh applications list
+      fetchAllApplications();
+      if (session?.user) {
+        fetchApplicationsHistory(session.user.id);
+      }
+      
+    } catch (error: any) {
+      console.error('Error deleting application:', error);
+      toast({
+        title: "Fehler",
+        description: error.message || "Fehler beim Löschen der Bewerbung.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+      setConfirmDeleteDialog(false);
+      setApplicationToDelete(null);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -413,6 +693,10 @@ const Profile = () => {
     }).format(date);
   };
 
+  const getUsernameById = (userId: string) => {
+    return usernames[userId] || 'Unbekannter Benutzer';
+  };
+
   if (!user) return null;
 
   return (
@@ -474,9 +758,9 @@ const Profile = () => {
                     
                     {isAdmin && (
                       <Button 
-                        variant="secondary" 
-                        className="w-full justify-start mt-2 border border-blue-200 bg-blue-50 text-blue-700"
-                        onClick={() => navigate('/admin')}
+                        variant={activeTab === 'admin' ? 'default' : 'ghost'} 
+                        className="w-full justify-start mt-2"
+                        onClick={() => setActiveTab('admin')}
                       >
                         <ShieldCheck size={16} className="mr-2" />
                         Admin Panel
@@ -856,13 +1140,296 @@ const Profile = () => {
                   </CardContent>
                 </Card>
               )}
+
+              {activeTab === 'admin' && isAdmin && (
+                <div className="space-y-8">
+                  {/* Team Settings Management */}
+                  <Card>
+                    <CardHeader>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <CardTitle>Team-Meeting Einstellungen</CardTitle>
+                          <CardDescription>Verwalte die Einstellungen für Team-Meetings</CardDescription>
+                        </div>
+                        {!editTeamSettings && (
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setEditTeamSettings(true)}
+                          >
+                            <Edit size={16} className="mr-2" />
+                            Bearbeiten
+                          </Button>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {isLoadingTeamSettings ? (
+                        <div className="flex justify-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+                        </div>
+                      ) : editTeamSettings ? (
+                        <div className="space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="meeting_day">Meeting Tag</Label>
+                              <Input 
+                                id="meeting_day" 
+                                value={newTeamSettings.meeting_day} 
+                                onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_day: e.target.value})}
+                                placeholder="z.B. Samstag"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="meeting_time">Meeting Uhrzeit</Label>
+                              <Input 
+                                id="meeting_time" 
+                                value={newTeamSettings.meeting_time} 
+                                onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_time: e.target.value})}
+                                placeholder="z.B. 19:00"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="meeting_frequency">Frequenz</Label>
+                              <Input 
+                                id="meeting_frequency" 
+                                value={newTeamSettings.meeting_frequency} 
+                                onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_frequency: e.target.value})}
+                                placeholder="z.B. Wöchentlich"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="meeting_location">Ort</Label>
+                              <Input 
+                                id="meeting_location" 
+                                value={newTeamSettings.meeting_location} 
+                                onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_location: e.target.value})}
+                                placeholder="z.B. Teamstage"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="meeting_notes">Hinweise</Label>
+                            <Textarea 
+                              id="meeting_notes" 
+                              value={newTeamSettings.meeting_notes} 
+                              onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_notes: e.target.value})}
+                              placeholder="Zusätzliche Hinweise für Team-Meetings"
+                              rows={3}
+                            />
+                          </div>
+                          <div className="flex justify-end space-x-2">
+                            <Button 
+                              variant="outline" 
+                              onClick={() => setEditTeamSettings(false)}
+                            >
+                              Abbrechen
+                            </Button>
+                            <Button 
+                              onClick={handleSaveTeamSettings}
+                              disabled={isLoading}
+                            >
+                              {isLoading ? "Speichern..." : "Änderungen speichern"}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : teamSettings ? (
+                        <div className="bg-blue-50 p-4 rounded-md border border-blue-100">
+                          <h3 className="font-medium mb-3 flex items-center">
+                            <Calendar size={18} className="mr-2 text-blue-600" />
+                            Aktuelle Einstellungen
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-sm font-medium text-gray-600">Meeting Tag:</p>
+                              <p>{teamSettings.meeting_day || "Nicht festgelegt"}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-600">Meeting Uhrzeit:</p>
+                              <p>{teamSettings.meeting_time || "Nicht festgelegt"} Uhr</p>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-600">Frequenz:</p>
+                              <p>{teamSettings.meeting_frequency || "Nicht festgelegt"}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-600">Ort:</p>
+                              <p>{teamSettings.meeting_location || "Nicht festgelegt"}</p>
+                            </div>
+                          </div>
+                          {teamSettings.meeting_notes && (
+                            <div className="mt-4">
+                              <p className="text-sm font-medium text-gray-600">Hinweise:</p>
+                              <p className="text-sm">{teamSettings.meeting_notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          <Calendar className="h-12 w-12 mx-auto text-gray-300 mb-2" />
+                          <p>Keine Team-Meeting Einstellungen gefunden</p>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setEditTeamSettings(true)}
+                            className="mt-2"
+                          >
+                            Einstellungen hinzufügen
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Team Members Management */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Teammitglieder</CardTitle>
+                      <CardDescription>Verwalte Admin- und Moderatorenrechte</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {loadingAdminUsers ? (
+                        <div className="flex justify-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+                        </div>
+                      ) : (
+                        <Table>
+                          <TableCaption>Admin-Benutzer mit speziellen Rechten.</TableCaption>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[50px]">ID</TableHead>
+                              <TableHead>Benutzer</TableHead>
+                              <TableHead>Benutzer ID</TableHead>
+                              <TableHead>Rolle</TableHead>
+                              <TableHead>Erstellt am</TableHead>
+                              <TableHead className="text-right">Aktionen</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {users.map((user) => (
+                              <TableRow key={user.id}>
+                                <TableCell className="font-medium">{user.id.substring(0, 6)}...</TableCell>
+                                <TableCell className="flex items-center gap-2">
+                                  <User className="h-4 w-4 text-blue-500" />
+                                  {getUsernameById(user.user_id)}
+                                </TableCell>
+                                <TableCell>{user.user_id.substring(0, 8)}...</TableCell>
+                                <TableCell>
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    user.role === 'admin' 
+                                      ? 'bg-red-100 text-red-800' 
+                                      : user.role === 'moderator' 
+                                        ? 'bg-blue-100 text-blue-800' 
+                                        : 'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {user.role || 'admin'}
+                                  </span>
+                                </TableCell>
+                                <TableCell>{formatDate(user.created_at)}</TableCell>
+                                <TableCell className="text-right">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" className="h-8 w-8 p-0">
+                                        <span className="sr-only">Open menu</span>
+                                        <Edit className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuLabel>Aktionen</DropdownMenuLabel>
+                                      <DropdownMenuItem onClick={() => handleEditUser(user)}>
+                                        <Edit className="h-4 w-4 mr-2" />
+                                        Bearbeiten
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem onClick={() => handleDeleteUser(user.id)}>
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Löschen
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Applications Management */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Bewerbungen verwalten</CardTitle>
+                      <CardDescription>Alle Bewerbungen einsehen und verwalten</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {loadingAllApplications ? (
+                        <div className="flex justify-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+                        </div>
+                      ) : allApplications.length > 0 ? (
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Discord ID</TableHead>
+                                <TableHead>Roblox Benutzername</TableHead>
+                                <TableHead>Alter</TableHead>
+                                <TableHead>Datum</TableHead>
+                                <TableHead>Aktionen</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {allApplications.map((app) => (
+                                <TableRow key={app.id}>
+                                  <TableCell>{getStatusBadge(app.status)}</TableCell>
+                                  <TableCell>{app.discord_id}</TableCell>
+                                  <TableCell>{app.roblox_username}</TableCell>
+                                  <TableCell>{app.age}</TableCell>
+                                  <TableCell>{formatDate(app.created_at)}</TableCell>
+                                  <TableCell>
+                                    <div className="flex gap-2">
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={() => handleViewApplication(app)}
+                                        className="flex items-center gap-1"
+                                      >
+                                        <Eye size={14} />
+                                        Ansehen
+                                      </Button>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={() => handleDeleteApplication(app.id)}
+                                        className="flex items-center gap-1 text-red-500"
+                                      >
+                                        <Trash2 size={14} />
+                                        Löschen
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          <Users className="h-12 w-12 mx-auto text-gray-300 mb-2" />
+                          <p>Keine Bewerbungen gefunden</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </main>
       
       <Dialog open={showVerifyDialog} onOpenChange={setShowVerifyDialog}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Eingegebene IDs bestätigen</DialogTitle>
             <DialogDescription>
@@ -897,6 +1464,136 @@ const Profile = () => {
           <DialogFooter>
             <Button variant="outline" onClick={cancelIdChange}>Abbrechen</Button>
             <Button onClick={confirmIdChange}>Bestätigen und speichern</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Benutzer bearbeiten</DialogTitle>
+            <DialogDescription>
+              Änderungen am Benutzer vornehmen. Klicke auf Speichern, wenn du fertig bist.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="role" className="text-right">
+                Rolle
+              </Label>
+              <Input 
+                id="role" 
+                value={editRole} 
+                onChange={(e) => setEditRole(e.target.value)} 
+                className="col-span-3" 
+                placeholder="admin oder moderator"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={handleSaveUser} className="w-full">Änderungen speichern</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Confirm Delete Application Dialog */}
+      <Dialog open={confirmDeleteDialog} onOpenChange={setConfirmDeleteDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Bewerbung löschen</DialogTitle>
+            <DialogDescription>
+              Bist du sicher, dass du diese Bewerbung löschen möchtest? Dadurch kann der Benutzer eine neue Bewerbung einreichen.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end space-x-2 mt-4">
+            <Button variant="outline" onClick={() => setConfirmDeleteDialog(false)}>Abbrechen</Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeleteApplication}
+              disabled={isLoading}
+            >
+              {isLoading ? "Löschen..." : "Bewerbung löschen"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* View Application Dialog */}
+      <Dialog open={viewApplicationDialog} onOpenChange={setViewApplicationDialog}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Bewerbung von {currentViewApplication?.roblox_username}</DialogTitle>
+            <DialogDescription>
+              Eingereicht am {currentViewApplication ? formatDate(currentViewApplication.created_at) : ''}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {currentViewApplication && (
+            <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Persönliche Informationen</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Roblox Benutzername</h4>
+                    <p className="text-base">{currentViewApplication.roblox_username}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Roblox ID</h4>
+                    <p className="text-base">{currentViewApplication.roblox_id}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Discord ID</h4>
+                    <p className="text-base">{currentViewApplication.discord_id}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Alter</h4>
+                    <p className="text-base">{currentViewApplication.age} Jahre</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Aktivitätslevel (1-10)</h4>
+                    <p className="text-base">{currentViewApplication.activity_level}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">Status</h3>
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(currentViewApplication.status)}
+                  </div>
+                </div>
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => {
+                    setViewApplicationDialog(false);
+                    handleDeleteApplication(currentViewApplication.id);
+                  }}
+                  className="flex items-center gap-1"
+                >
+                  <Trash2 size={14} />
+                  Löschen
+                </Button>
+              </div>
+              
+              {currentViewApplication.notes && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-gray-500">Notizen</h4>
+                  <p className="text-base bg-gray-50 p-3 rounded">{currentViewApplication.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter className="flex space-x-2 sm:justify-end">
+            <Button 
+              onClick={() => setViewApplicationDialog(false)}
+              variant="outline"
+            >
+              Schließen
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

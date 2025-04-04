@@ -369,3 +369,65 @@ export async function getTotalUserCount(): Promise<number> {
     return 0;
   }
 }
+
+/**
+ * Delete an application
+ */
+export async function deleteApplication(applicationId: string) {
+  try {
+    const isAdmin = await checkIsAdmin();
+    if (!isAdmin) {
+      return {
+        success: false,
+        message: 'Only admins can delete applications'
+      };
+    }
+    
+    const { error } = await supabase
+      .from('applications')
+      .delete()
+      .eq('id', applicationId);
+    
+    if (error) {
+      console.error('Error deleting application:', error);
+      return {
+        success: false,
+        message: error.message
+      };
+    }
+    
+    return {
+      success: true,
+      message: 'Application deleted successfully'
+    };
+  } catch (error: any) {
+    console.error('Error deleting application:', error);
+    return {
+      success: false,
+      message: error.message || 'An unknown error occurred'
+    };
+  }
+}
+
+/**
+ * Get user applications history (minimal info only)
+ */
+export async function getUserApplicationsHistory(userId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('applications')
+      .select('id, status, created_at, updated_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      console.error('Error getting user applications history:', error);
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error getting user applications history:', error);
+    return null;
+  }
+}
