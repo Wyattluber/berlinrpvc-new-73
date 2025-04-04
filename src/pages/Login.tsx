@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Mail, KeyRound, AlertTriangle, ExternalLink, User, UserPlus, Eye, EyeOff } from 'lucide-react';
+import { Mail, KeyRound, AlertTriangle, ExternalLink, User, UserPlus, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,6 +32,23 @@ const Login = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [username, setUsername] = useState('');
   const [registerError, setRegisterError] = useState<string | null>(null);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  
+  // Password validation states
+  const [passwordValidation, setPasswordValidation] = useState({
+    length: false,
+    hasLetter: false,
+    hasNumber: false
+  });
+  
+  // Update password validation in real-time
+  useEffect(() => {
+    setPasswordValidation({
+      length: registerPassword.length >= 8,
+      hasLetter: /[a-zA-Z]/.test(registerPassword),
+      hasNumber: /[0-9]/.test(registerPassword)
+    });
+  }, [registerPassword]);
   
   useEffect(() => {
     // Check if user is already logged in
@@ -95,7 +112,7 @@ const Login = () => {
         .from('admin_users')
         .select('*')
         .eq('email', email)
-        .maybeSingle();
+        .maybeSingle(); // Changed from .single() to .maybeSingle()
 
       toast({
         title: "Erfolgreich angemeldet",
@@ -122,8 +139,18 @@ const Login = () => {
     }
   };
 
+  const validatePassword = () => {
+    const isValid = 
+      registerPassword.length >= 8 && 
+      /[a-zA-Z]/.test(registerPassword) && 
+      /[0-9]/.test(registerPassword);
+      
+    return isValid;
+  };
+
   const handleRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
+    setRegistrationSuccess(false);
     
     try {
       // Validation
@@ -132,8 +159,8 @@ const Login = () => {
         return;
       }
       
-      if (registerPassword.length < 6) {
-        setRegisterError("Das Passwort muss mindestens 6 Zeichen lang sein");
+      if (!validatePassword()) {
+        setRegisterError("Das Passwort muss mindestens 8 Zeichen lang sein und mindestens einen Buchstaben und eine Ziffer enthalten");
         return;
       }
       
@@ -154,17 +181,28 @@ const Login = () => {
       
       if (error) throw error;
 
+      // Show success message with checkmark
+      setRegistrationSuccess(true);
+      
+      // Clear form 
+      setRegisterEmail('');
+      setRegisterPassword('');
+      setConfirmPassword('');
+      setUsername('');
+      
       toast({
         title: "Registrierung erfolgreich",
         description: "Dein Account wurde erstellt. Bitte bestätige deine E-Mail Adresse.",
+        variant: "default"
       });
-      
-      // Switch to login tab after successful registration
-      document.getElementById('login-tab')?.click();
-      
     } catch (error: any) {
       console.error("Registration error:", error);
-      setRegisterError(error.message || "Es gab ein Problem bei der Registrierung.");
+      
+      if (error.message.includes('weak_password')) {
+        setRegisterError("Das Passwort muss mindestens 8 Zeichen lang sein und mindestens einen Buchstaben und eine Ziffer enthalten");
+      } else {
+        setRegisterError(error.message || "Es gab ein Problem bei der Registrierung.");
+      }
       
       toast({
         title: "Registrierungsfehler",
@@ -329,6 +367,16 @@ const Login = () => {
                   </Alert>
                 )}
                 
+                {registrationSuccess && (
+                  <Alert className="mb-4 bg-green-50 border-green-200">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <AlertTitle className="text-green-800">Registrierung erfolgreich!</AlertTitle>
+                    <AlertDescription className="text-green-700">
+                      Dein Account wurde erfolgreich erstellt. Bitte überprüfe deine E-Mails und bestätige deine E-Mail-Adresse, um deine Registrierung abzuschließen.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
                 <form onSubmit={handleRegistration} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="username">Benutzername</Label>
@@ -381,6 +429,23 @@ const Login = () => {
                         {showRegisterPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </Button>
                     </div>
+                    
+                    {/* Password requirements indicator */}
+                    <div className="text-xs space-y-1 mt-2">
+                      <p className="font-semibold text-gray-600">Passwort muss:</p>
+                      <div className="flex items-center gap-1">
+                        <div className={`w-3 h-3 rounded-full ${passwordValidation.length ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                        <span className={passwordValidation.length ? 'text-green-600' : 'text-gray-500'}>Mindestens 8 Zeichen lang sein</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className={`w-3 h-3 rounded-full ${passwordValidation.hasLetter ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                        <span className={passwordValidation.hasLetter ? 'text-green-600' : 'text-gray-500'}>Mindestens einen Buchstaben enthalten</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className={`w-3 h-3 rounded-full ${passwordValidation.hasNumber ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                        <span className={passwordValidation.hasNumber ? 'text-green-600' : 'text-gray-500'}>Mindestens eine Ziffer enthalten</span>
+                      </div>
+                    </div>
                   </div>
                   
                   <div className="space-y-2">
@@ -406,6 +471,16 @@ const Login = () => {
                         {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </Button>
                     </div>
+                    
+                    {/* Password match indicator */}
+                    {confirmPassword && (
+                      <div className="flex items-center gap-1 mt-1 text-xs">
+                        <div className={`w-2 h-2 rounded-full ${confirmPassword === registerPassword ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                        <span className={confirmPassword === registerPassword ? 'text-green-600' : 'text-red-500'}>
+                          {confirmPassword === registerPassword ? 'Passwörter stimmen überein' : 'Passwörter stimmen nicht überein'}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   
                   <Button 

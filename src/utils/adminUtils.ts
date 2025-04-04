@@ -1,93 +1,66 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
 
-export const createAdminAccount = async (email: string, password: string) => {
+export async function isUserAdmin() {
   try {
-    // Step 1: Check if a user with this email already exists
-    const { data: existingUsers, error: userCheckError } = await supabase
-      .from('admin_users')
-      .select('email')
-      .eq('email', email);
-
-    if (userCheckError) throw userCheckError;
-
-    if (existingUsers && existingUsers.length > 0) {
-      throw new Error("Ein Admin-Konto mit dieser E-Mail existiert bereits");
-    }
+    const { data: { user } } = await supabase.auth.getUser();
     
-    // Step 2: Register the user with email/password
+    if (!user) return false;
+    
+    const { data } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle(); // Changed from .single() to .maybeSingle()
+    
+    return !!data;
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return false;
+  }
+}
+
+export async function createAdminAccount(email: string, password: string) {
+  try {
+    // First, create the user with the provided credentials
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/admin`
-      }
     });
-
+    
     if (authError) throw authError;
     
-    if (!authData.user) {
-      throw new Error("Benutzerregistrierung fehlgeschlagen");
-    }
+    if (!authData.user) throw new Error('User creation failed');
     
-    // Step 3: Add the user to the admin_users table
-    const { error: adminError } = await supabase
+    // Then add the user to the admin_users table
+    const { data, error } = await supabase
       .from('admin_users')
-      .insert({ 
-        user_id: authData.user.id,
-        email: email 
-      });
-
-    if (adminError) throw adminError;
-
+      .insert([{ user_id: authData.user.id, email }])
+      .select();
+    
+    if (error) throw error;
+    
     return { success: true, user: authData.user };
-  } catch (error: any) {
-    console.error("Error creating admin account:", error);
+  } catch (error) {
+    console.error('Error creating admin account:', error);
     throw error;
   }
-};
+}
 
-export const checkAdminAccount = async (email: string) => {
+export async function checkAdminAccount(email: string) {
   try {
-    // Get current user's ID
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return { exists: false, error: "Nicht eingeloggt" };
-    }
-    
-    // Check if the user exists in admin_users table
+    // Check if the email exists in the admin_users table
     const { data, error } = await supabase
       .from('admin_users')
       .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle();
-      
-    return { exists: !!data && !error, data };
-  } catch (error) {
-    console.error("Error checking admin account:", error);
-    return { exists: false, error };
-  }
-};
-
-export const isUserAdmin = async () => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
+      .eq('email', email)
+      .maybeSingle(); // Changed from .single() to .maybeSingle()
     
-    if (!user) {
-      return false;
-    }
+    if (error && error.code !== 'PGRST116') throw error;
     
-    const { data, error } = await supabase
-      .from('admin_users')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle();
-      
-    return !!data && !error;
+    return !!data;
   } catch (error) {
-    console.error("Error checking admin status:", error);
-    return false;
+    console.error('Error checking admin account:', error);
+    throw error;
   }
-};
+}

@@ -28,7 +28,7 @@ const AdminSetup = () => {
           .from('admin_users')
           .select('*')
           .eq('email', adminEmail)
-          .maybeSingle();
+          .maybeSingle(); // Changed from .single() to .maybeSingle()
         
         if (error) throw error;
         
