@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -303,6 +302,7 @@ const Profile = () => {
                     <TabsTrigger value="admin">Admin</TabsTrigger>
                   )}
                 </TabsList>
+                
                 <TabsContent value="account" className="space-y-4">
                   <div className="flex flex-col items-center gap-4">
                     <ProfileImageUpload
@@ -353,6 +353,7 @@ const Profile = () => {
                     </div>
                   </div>
                 </TabsContent>
+                
                 <TabsContent value="applications" className="space-y-4">
                   <CardTitle>Deine Bewerbungen</CardTitle>
                   <CardDescription>Hier findest du eine Übersicht deiner bisherigen Bewerbungen.</CardDescription>
@@ -386,6 +387,7 @@ const Profile = () => {
                     </Accordion>
                   )}
                 </TabsContent>
+                
                 <TabsContent value="security" className="space-y-4">
                   <CardTitle>Sicherheitseinstellungen</CardTitle>
                   <CardDescription>Ändere dein Passwort oder deine E-Mail-Adresse.</CardDescription>
@@ -427,9 +429,12 @@ const Profile = () => {
                     </Link>
                   </div>
                 </TabsContent>
+                
                 {(isAdmin || session?.user?.email === 'admin@berlinrpvc.de') && (
-                  <TabsContent value="admin" className="space-y-4">
-                    <AdminPanel />
+                  <TabsContent value="admin" className="pt-4">
+                    <div className="h-full overflow-hidden rounded-md border">
+                      <AdminPanel />
+                    </div>
                   </TabsContent>
                 )}
               </Tabs>
