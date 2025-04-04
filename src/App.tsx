@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -214,3 +213,6 @@ const App = () => {
 };
 
 export default App;
+
+// Import auth helpers for logging
+import './lib/auth';

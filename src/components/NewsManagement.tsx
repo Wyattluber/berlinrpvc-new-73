@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { fetchNews, addNewsItem, updateNewsItem, deleteNewsItem, NewsItem } from '@/lib/adminService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -8,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from '@/hooks/use-toast';
-import { PlusCircle, Edit, Trash2, AlertTriangle, LoaderIcon } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, AlertTriangle, LoaderIcon, Info } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const formatRelativeTime = (dateString: string) => {
@@ -208,13 +209,14 @@ const NewsManagement: React.FC = () => {
             Verwalte Neuigkeiten und Ankündigungen, die den Benutzern angezeigt werden
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="max-h-[800px]">
           {loading ? (
             <div className="flex justify-center p-6">
               <LoaderIcon className="h-8 w-8 animate-spin text-gray-400" />
             </div>
           ) : news.length === 0 ? (
             <div className="text-center p-6">
+              <Info className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
               <p className="text-gray-500">Keine Neuigkeiten vorhanden</p>
               <Button variant="outline" className="mt-4" onClick={handleNewDialog}>
                 Erste Neuigkeit erstellen

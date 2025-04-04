@@ -1,68 +1,101 @@
 
-import React from 'react';
+import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
-import { Facebook, Instagram, MessageSquare, Mail, Youtube, Music } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { SessionContext } from '../App';
+import { checkIsAdmin } from '@/lib/admin';
+import { useState, useEffect } from 'react';
 
-const Footer = () => {
+interface FooterProps {
+  hideApplyButton?: boolean;
+}
+
+const Footer: React.FC<FooterProps> = ({ hideApplyButton = false }) => {
+  const session = useContext(SessionContext);
+  const [isAdmin, setIsAdmin] = useState(false);
+  
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (session?.user) {
+        const adminStatus = await checkIsAdmin();
+        setIsAdmin(adminStatus);
+      }
+    };
+    
+    checkAdminStatus();
+  }, [session]);
+
   return (
-    <footer className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white py-8">
-      <div className="container mx-auto px-4">
+    <footer className="bg-gray-800 text-white">
+      <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
-            <h3 className="text-xl font-bold mb-4 bg-gradient-to-r from-blue-300 to-indigo-300 bg-clip-text text-transparent">BerlinRP-VC</h3>
-            <p className="text-blue-100">
-              Dein privater BerlinRP-VC Server und Discord Community.
+            <h3 className="text-lg font-semibold mb-4">Berlin RP</h3>
+            <p className="text-gray-300 mb-4">
+              Ein deutscher Roblox Roleplay Server mit dem Fokus auf realistische Simulationen und Erlebnisse.
             </p>
+            {!hideApplyButton && !isAdmin && (
+              <Link to="/apply">
+                <Button className="bg-blue-600 hover:bg-blue-700">
+                  Jetzt bewerben
+                </Button>
+              </Link>
+            )}
           </div>
           
           <div>
-            <h3 className="text-xl font-bold mb-4 bg-gradient-to-r from-blue-300 to-indigo-300 bg-clip-text text-transparent">Links</h3>
+            <h3 className="text-lg font-semibold mb-4">Links</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/" className="text-blue-100 hover:text-white transition duration-300">
-                  Home
-                </Link>
+                <Link to="/" className="text-gray-300 hover:text-white">Startseite</Link>
               </li>
               <li>
-                <Link to="/apply" className="text-blue-100 hover:text-white transition duration-300">
-                  Bewerben
-                </Link>
+                <Link to="/partners" className="text-gray-300 hover:text-white">Partner</Link>
               </li>
               <li>
-                <Link to="/partners" className="text-blue-100 hover:text-white transition duration-300">
-                  Partner
-                </Link>
+                <Link to="/subservers" className="text-gray-300 hover:text-white">Subserver</Link>
               </li>
+              {session ? (
+                <li>
+                  <Link to="/profile" className="text-gray-300 hover:text-white">Mein Profil</Link>
+                </li>
+              ) : (
+                <li>
+                  <Link to="/login" className="text-gray-300 hover:text-white">Login</Link>
+                </li>
+              )}
             </ul>
           </div>
           
           <div>
-            <h3 className="text-xl font-bold mb-4 bg-gradient-to-r from-blue-300 to-indigo-300 bg-clip-text text-transparent">Folge Uns</h3>
-            <div className="flex space-x-4 mb-3">
-              <a href="https://discord.gg/berlinrpvc" target="_blank" rel="noopener noreferrer" aria-label="Discord" className="text-blue-100 hover:text-white transition duration-300 transform hover:scale-110">
-                <MessageSquare size={24} />
-              </a>
-              <a href="https://www.instagram.com/berlin.rp.vc" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="text-blue-100 hover:text-white transition duration-300 transform hover:scale-110">
-                <Instagram size={24} />
-              </a>
-              <a href="https://www.tiktok.com/@berlin_rp_vc" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="text-blue-100 hover:text-white transition duration-300 transform hover:scale-110">
-                <Music size={24} />
-              </a>
-              <a href="https://www.youtube.com/@BerlinRP-VC" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="text-blue-100 hover:text-white transition duration-300 transform hover:scale-110">
-                <Youtube size={24} />
-              </a>
-            </div>
-            <div className="mt-2">
-              <a href="mailto:info@berlinrpvc.de" aria-label="Email" className="text-blue-100 hover:text-white transition duration-300 flex items-center gap-2">
-                <Mail size={20} />
-                <span>info@berlinrpvc.de</span>
-              </a>
-            </div>
+            <h3 className="text-lg font-semibold mb-4">Kontakt</h3>
+            <ul className="space-y-2">
+              <li className="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <span className="text-gray-300">kontakt@berlinrp.de</span>
+              </li>
+              <li className="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <a href="https://discord.gg/berlinrp" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-white">
+                  Discord
+                </a>
+              </li>
+            </ul>
           </div>
         </div>
         
-        <div className="border-t border-blue-600 mt-8 pt-6 text-center text-blue-100">
-          <p>&copy; {new Date().getFullYear()} BerlinRP-VC. Alle Rechte vorbehalten.</p>
+        <div className="border-t border-gray-700 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center">
+          <p className="text-gray-400 text-sm mb-4 md:mb-0">
+            &copy; {new Date().getFullYear()} Berlin RP. Alle Rechte vorbehalten.
+          </p>
+          <div className="flex space-x-4">
+            <Link to="/datenschutz" className="text-gray-400 hover:text-white text-sm">Datenschutz</Link>
+            <Link to="/impressum" className="text-gray-400 hover:text-white text-sm">Impressum</Link>
+          </div>
         </div>
       </div>
     </footer>

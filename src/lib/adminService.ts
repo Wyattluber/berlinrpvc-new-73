@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { checkIsAdmin, getTotalUserCount, TeamSettings } from './admin';
 
@@ -43,10 +42,23 @@ export async function fetchAdminUsers() {
     
     for (const user of adminUsersData || []) {
       try {
-        // Get user details from auth.users via RPC or profiles table
-        // Since we can't directly query auth.users, we'll use a workaround
-        // This could be improved with a proper database view or function
-        const email = `user-${user.user_id.substring(0, 8)}@example.com`; // Placeholder
+        // Get user details from auth users via a safe method
+        const { data: userData, error: userError } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', user.user_id)
+          .single();
+        
+        // For email, we can try to use the username from profiles as a fallback
+        let email = userData?.username || null;
+        
+        // If the username is likely an email, use it
+        if (email && email.includes('@')) {
+          // Keep it as is
+        } else {
+          // Generate a placeholder
+          email = `user-${user.user_id.substring(0, 8)}@example.com`;
+        }
         
         enhancedUsers.push({
           ...user,

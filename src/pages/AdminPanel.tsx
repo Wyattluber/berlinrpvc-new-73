@@ -124,7 +124,7 @@ const DashboardOverview = ({ userCount, adminUsers }: { userCount: number, admin
     </div>
     
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-      <Card>
+      <Card className="h-auto">
         <CardHeader>
           <CardTitle className="text-base">Benutzeraktivität</CardTitle>
           <CardDescription>Tägliche aktive Benutzer (letzte Woche)</CardDescription>
@@ -145,7 +145,7 @@ const DashboardOverview = ({ userCount, adminUsers }: { userCount: number, admin
         </CardContent>
       </Card>
       
-      <Card>
+      <Card className="h-auto">
         <CardHeader>
           <CardTitle className="text-base">Bewerbungsstatus</CardTitle>
           <CardDescription>Verteilung der Bewerbungen nach Status</CardDescription>
@@ -184,28 +184,13 @@ const DashboardOverview = ({ userCount, adminUsers }: { userCount: number, admin
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {[
-            { icon: UserPlus, text: "Neuer Benutzer registriert: Max Mustermann", time: "Vor 2 Stunden" },
-            { icon: FileText, text: "Neue Bewerbung eingegangen: Lisa Schmidt", time: "Vor 5 Stunden" },
-            { icon: BarChart3, text: "Täglicher Statistikbericht generiert", time: "Vor 12 Stunden" },
-            { icon: ShieldCheck, text: "Sicherheitsaudit abgeschlossen", time: "Vor 1 Tag" },
-            { icon: Settings, text: "Systemeinstellungen aktualisiert", time: "Vor 2 Tagen" }
-          ].map((activity, i) => (
-            <div key={i} className="flex items-start space-x-4 p-2 hover:bg-gray-50 rounded-md">
-              <div className="bg-blue-100 p-2 rounded-full">
-                <activity.icon className="h-4 w-4 text-blue-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">{activity.text}</p>
-                <p className="text-xs text-gray-500">{activity.time}</p>
-              </div>
-            </div>
-          ))}
+          <div className="p-4 text-center border rounded-md bg-muted/50">
+            <Info className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">Keine Aktivitäten gefunden.</p>
+            <p className="text-xs mt-1 text-muted-foreground">Aktivitäten werden automatisch protokolliert, wenn Benutzer Aktionen durchführen.</p>
+          </div>
         </div>
       </CardContent>
-      <CardFooter>
-        <Button variant="outline" size="sm" className="w-full">Alle Aktivitäten anzeigen</Button>
-      </CardFooter>
     </Card>
   </div>
 );
@@ -538,41 +523,86 @@ const TeamSettings = () => {
   );
 };
 
-const SecuritySettings = () => (
-  <div className="space-y-6">
-    <h2 className="text-2xl font-bold">Sicherheitseinstellungen</h2>
-    <Card>
-      <CardHeader>
-        <CardTitle>Administratorzugriff</CardTitle>
-        <CardDescription>
-          Verwalte Zugriffsrechte und Sicherheitseinstellungen
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="two-factor">Zwei-Faktor-Authentifizierung</Label>
-          <div className="flex justify-between items-center border p-3 rounded">
-            <div>
-              <p className="font-medium">2FA für Admin-Zugänge</p>
-              <p className="text-sm text-muted-foreground">Erhöhte Sicherheit für Administratoren</p>
+const SecuritySettings = () => {
+  const [authLogs, setAuthLogs] = useState<any[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+
+  useEffect(() => {
+    const fetchAuthLogs = async () => {
+      setLoadingLogs(true);
+      try {
+        // In a real implementation, this would fetch auth logs from your database
+        // For now, we'll just display a placeholder
+        setAuthLogs([]);
+      } catch (error) {
+        console.error('Error fetching auth logs:', error);
+      } finally {
+        setLoadingLogs(false);
+      }
+    };
+    
+    fetchAuthLogs();
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">Sicherheitseinstellungen</h2>
+      <Card>
+        <CardHeader>
+          <CardTitle>Administratorzugriff</CardTitle>
+          <CardDescription>
+            Verwalte Zugriffsrechte und Sicherheitseinstellungen
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="two-factor">Zwei-Faktor-Authentifizierung</Label>
+            <div className="flex justify-between items-center border p-3 rounded">
+              <div>
+                <p className="font-medium">2FA für Admin-Zugänge</p>
+                <p className="text-sm text-muted-foreground">2FA wird derzeit über die Supabase-Konsole konfiguriert</p>
+              </div>
+              <Button variant="outline" onClick={() => window.open('https://supabase.com/dashboard', '_blank')}>
+                Zur Supabase-Konsole
+              </Button>
             </div>
-            <Button variant="outline">Konfigurieren</Button>
           </div>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="access-logs">Zugriffsprotokoll</Label>
-          <div className="border p-3 rounded">
-            <p className="font-medium">Letzte Zugriffsversuche</p>
-            <div className="mt-2 text-sm text-muted-foreground">
-              <p>Keine Zugriffsversuche protokolliert.</p>
+          
+          <div className="space-y-2">
+            <Label htmlFor="access-logs">Zugriffsprotokoll</Label>
+            <div className="border p-3 rounded">
+              <p className="font-medium">Letzte Zugriffsversuche</p>
+              {loadingLogs ? (
+                <div className="flex justify-center py-4">
+                  <LoaderIcon className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              ) : authLogs.length > 0 ? (
+                <div className="mt-2 text-sm">
+                  {authLogs.map((log, i) => (
+                    <div key={i} className="py-1 border-b last:border-0">
+                      <div className="flex justify-between">
+                        <span>{log.email}</span>
+                        <span className="text-gray-500">{new Date(log.timestamp).toLocaleString()}</span>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        IP: {log.ip} • Gerät: {log.device}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-2 text-sm text-muted-foreground text-center py-2">
+                  <p>Login-Aktivitäten werden in der Datenbank protokolliert.</p>
+                  <p className="text-xs mt-1">Aktuelle Protokolle können in der Supabase-Konsole eingesehen werden.</p>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
-  </div>
-);
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
 
 const AccountDetails = () => (
   <div className="space-y-6">
@@ -786,7 +816,7 @@ const AdminPanel = () => {
   
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex w-full h-[70vh] overflow-auto">
+      <div className="flex w-full h-full overflow-hidden">
         <Sidebar>
           <SidebarHeader className="flex items-center justify-center py-4">
             <h2 className="text-xl font-bold">Admin Panel</h2>
@@ -815,7 +845,7 @@ const AdminPanel = () => {
           </SidebarContent>
         </Sidebar>
         
-        <SidebarInset className="bg-gray-50 overflow-auto">
+        <SidebarInset className="bg-gray-50 overflow-y-auto">
           <div className="p-6">
             {renderContent()}
           </div>

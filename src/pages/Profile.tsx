@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, lazy } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -32,7 +31,6 @@ import {
 import AdminPanel from './AdminPanel';
 import { getTeamSettings } from '@/lib/adminService';
 
-// Define a type for the application history items
 type Application = {
   id: string;
   status: string;
@@ -62,7 +60,6 @@ const Profile = () => {
   const session = useContext(SessionContext);
   const activeTab = searchParams.get('tab') || 'dashboard';
 
-  // Fetch user applications history
   const { 
     isLoading: isApplicationsLoading, 
     error: applicationsError, 
@@ -70,7 +67,7 @@ const Profile = () => {
   } = useQuery({
     queryKey: ['userApplications', session?.user?.id], 
     queryFn: () => getUserApplicationsHistory(session?.user?.id || ''),
-    enabled: !!session?.user?.id, // Only run when the user is logged in
+    enabled: !!session?.user?.id, 
     meta: {
       onSuccess: (data) => {
         if (data) {
@@ -88,7 +85,6 @@ const Profile = () => {
     }
   });
 
-  // Fetch team settings
   useEffect(() => {
     const fetchTeamSettings = async () => {
       try {
@@ -120,7 +116,6 @@ const Profile = () => {
         setUsername(userDetails?.user?.user_metadata?.name || '');
         setUserAvatar(userDetails?.user?.user_metadata?.avatar_url || '');
         
-        // Fetch user profile data
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('discord_id, roblox_id')
@@ -134,11 +129,9 @@ const Profile = () => {
           setRobloxId(profileData.roblox_id || '');
         }
         
-        // Check if user is admin
         const adminStatus = await checkIsAdmin();
         setIsAdmin(adminStatus);
         
-        // Load applications history
         refetchApplications();
       } catch (error: any) {
         console.error("Error fetching profile:", error);
@@ -155,12 +148,10 @@ const Profile = () => {
     fetchProfile();
   }, [session, refetchApplications]);
 
-  // Function to handle tab changes
   const handleTabChange = (value: string) => {
     setSearchParams({ tab: value });
   };
 
-  // Function to handle avatar changes
   const handleAvatarChange = (url: string) => {
     setUserAvatar(url);
     setUser(prevUser => ({
@@ -172,14 +163,12 @@ const Profile = () => {
     }));
   };
 
-  // Function to check username availability
   const checkUsernameAvailability = async (name: string) => {
     if (!name || name.length < 3) {
       setIsUsernameAvailable({ valid: false, reason: 'Benutzername muss mindestens 3 Zeichen lang sein.' });
       return;
     }
     
-    // Optimistically set to valid if the username hasn't changed
     if (name === user?.user_metadata?.name) {
       setIsUsernameAvailable({ valid: true, reason: '' });
       return;
@@ -195,7 +184,6 @@ const Profile = () => {
     }
   };
 
-  // Function to update username
   const updateUsername = async () => {
     setIsUpdatingUsername(true);
     
@@ -228,7 +216,6 @@ const Profile = () => {
       
       if (error) throw error;
       
-      // Optimistically update the user state
       setUser(prevUser => ({
         ...prevUser,
         user_metadata: {
@@ -254,7 +241,6 @@ const Profile = () => {
     }
   };
 
-  // Function to update Discord and Roblox IDs
   const updateProfileData = async () => {
     setIsUpdatingProfiles(true);
     
@@ -286,7 +272,6 @@ const Profile = () => {
     }
   };
 
-  // Function to update email
   const updateEmail = async () => {
     setIsUpdatingEmail(true);
     setEmailUpdateMessage('');
@@ -328,8 +313,7 @@ const Profile = () => {
       setIsUpdatingEmail(false);
     }
   };
-  
-  // Function to request password reset
+
   const requestPasswordReset = async () => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(
@@ -355,7 +339,6 @@ const Profile = () => {
     }
   };
 
-  // Format meeting day in German
   const formatMeetingDay = (day: string) => {
     const days: Record<string, string> = {
       'monday': 'Montag',
@@ -367,6 +350,10 @@ const Profile = () => {
       'sunday': 'Sonntag'
     };
     return days[day] || day;
+  };
+
+  const isAdminOrModerator = () => {
+    return isAdmin;
   };
 
   if (loading) {
@@ -389,6 +376,8 @@ const Profile = () => {
   const lastChanged = user?.user_metadata?.username_changed_at
   ? new Date(user.user_metadata.username_changed_at)
   : null;
+
+  const MeetingCountdown = React.lazy(() => import('@/components/MeetingCountdown'));
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -441,35 +430,9 @@ const Profile = () => {
                         </div>
                       </CardHeader>
                       <CardContent>
-                        {teamSettings ? (
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium flex items-center">
-                              <Calendar className="h-4 w-4 mr-2 text-blue-500" />
-                              <span>{formatMeetingDay(teamSettings.meeting_day) || 'Samstag'}</span>
-                            </p>
-                            <p className="text-sm font-medium flex items-center">
-                              <Clock className="h-4 w-4 mr-2 text-blue-500" />
-                              <span>{teamSettings.meeting_time || '19:00'} Uhr</span>
-                            </p>
-                            <p className="text-sm font-medium flex items-center">
-                              <Users className="h-4 w-4 mr-2 text-blue-500" />
-                              <span>{teamSettings.meeting_frequency || 'Wöchentlich'}</span>
-                            </p>
-                            <p className="text-sm font-medium flex items-center">
-                              <MessageSquare className="h-4 w-4 mr-2 text-blue-500" />
-                              <span>{teamSettings.meeting_location || 'Discord'}</span>
-                            </p>
-                            {teamSettings.meeting_notes && (
-                              <p className="text-sm text-gray-600 mt-2">
-                                {teamSettings.meeting_notes}
-                              </p>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-gray-600">
-                            Teammeetings werden geladen...
-                          </div>
-                        )}
+                        <React.Suspense fallback={<div>Lade...</div>}>
+                          <MeetingCountdown />
+                        </React.Suspense>
                       </CardContent>
                     </Card>
 
@@ -556,20 +519,11 @@ const Profile = () => {
                       <CardTitle className="text-lg">Neuigkeiten & Ankündigungen</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-4">
-                        {[
-                          { title: "Neues Feature: Discord Integration", date: "Vor 2 Tagen", content: "Ab sofort kannst du deinen Discord-Account mit deinem Profil verknüpfen." },
-                          { title: "Serverupdate", date: "Vor 5 Tagen", content: "Wir haben unseren Server aktualisiert. Falls du Probleme bemerkst, melde dich bitte bei einem Admin." },
-                          { title: "Neue Teammitglieder", date: "Vor 1 Woche", content: "Wir begrüßen 3 neue Teammitglieder in unserem Server-Team!" }
-                        ].map((news, i) => (
-                          <div key={i} className="p-3 bg-gray-50 rounded-md">
-                            <div className="flex justify-between items-center mb-1">
-                              <h3 className="font-medium">{news.title}</h3>
-                              <span className="text-xs text-gray-500">{news.date}</span>
-                            </div>
-                            <p className="text-sm text-gray-600">{news.content}</p>
-                          </div>
-                        ))}
+                      <div id="profile-news-feed" className="space-y-4">
+                        <div className="text-center py-4">
+                          <LoaderIcon className="h-8 w-8 mx-auto animate-spin text-gray-300 mb-2" />
+                          <p className="text-sm text-gray-500">Neuigkeiten werden geladen...</p>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -797,7 +751,7 @@ const Profile = () => {
                 </TabsContent>
                 
                 {(isAdmin || session?.user?.email === 'admin@berlinrpvc.de') && (
-                  <TabsContent value="admin" className="h-[70vh] overflow-hidden rounded-md border">
+                  <TabsContent value="admin" className="h-auto overflow-hidden rounded-md border">
                     <AdminPanel />
                   </TabsContent>
                 )}
@@ -807,7 +761,7 @@ const Profile = () => {
         </div>
       </main>
       
-      <Footer />
+      <Footer hideApplyButton={isAdminOrModerator()} />
     </div>
   );
 };
