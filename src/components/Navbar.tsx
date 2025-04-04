@@ -51,12 +51,12 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="bg-gradient-to-r from-gray-900 to-gray-800 text-white shadow-md">
+    <nav className="bg-gradient-to-r from-blue-900 to-indigo-800 text-white shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <Link to="/" className="flex-shrink-0 flex items-center">
-              <span className="text-xl font-bold">Bayern RP</span>
+            <Link to="/" className="flex-shrink-0 flex items-center space-x-2">
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-300 to-indigo-200 bg-clip-text text-transparent">BerlinRP-VC</span>
             </Link>
           </div>
           
@@ -65,8 +65,8 @@ const Navbar = () => {
               to="/" 
               className={`px-3 py-2 rounded-md text-sm font-medium ${
                 location.pathname === '/' 
-                ? 'bg-gray-700 text-white' 
-                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                ? 'bg-blue-700 text-white' 
+                : 'text-blue-100 hover:bg-blue-700 hover:text-white'
               }`}
             >
               Startseite
@@ -76,8 +76,8 @@ const Navbar = () => {
               to="/subservers" 
               className={`px-3 py-2 rounded-md text-sm font-medium ${
                 location.pathname === '/subservers' 
-                ? 'bg-gray-700 text-white' 
-                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                ? 'bg-blue-700 text-white' 
+                : 'text-blue-100 hover:bg-blue-700 hover:text-white'
               }`}
             >
               Subserver
@@ -87,8 +87,8 @@ const Navbar = () => {
               to="/partners" 
               className={`px-3 py-2 rounded-md text-sm font-medium ${
                 location.pathname === '/partners' 
-                ? 'bg-gray-700 text-white' 
-                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                ? 'bg-blue-700 text-white' 
+                : 'text-blue-100 hover:bg-blue-700 hover:text-white'
               }`}
             >
               Partner
@@ -98,8 +98,8 @@ const Navbar = () => {
               to="/apply" 
               className={`px-3 py-2 rounded-md text-sm font-medium ${
                 location.pathname.startsWith('/apply') 
-                ? 'bg-gray-700 text-white' 
-                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                ? 'bg-blue-700 text-white' 
+                : 'text-blue-100 hover:bg-blue-700 hover:text-white'
               }`}
             >
               Bewerben
@@ -108,7 +108,7 @@ const Navbar = () => {
             {(isAdmin || isModerator) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white flex items-center">
+                  <button className="px-3 py-2 rounded-md text-sm font-medium text-blue-100 hover:bg-blue-700 hover:text-white flex items-center">
                     <ShieldCheck className="h-4 w-4 mr-1" />
                     Admin
                     <ChevronDown className="ml-1 h-4 w-4" />
@@ -132,7 +132,7 @@ const Navbar = () => {
             {session ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="px-3 py-2 rounded-md text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white flex items-center">
+                  <button className="px-3 py-2 rounded-md text-sm font-medium text-blue-100 hover:bg-blue-700 hover:text-white flex items-center">
                     <User className="h-4 w-4 mr-1" />
                     Profil
                     <ChevronDown className="ml-1 h-4 w-4" />
@@ -152,7 +152,7 @@ const Navbar = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Button onClick={() => navigate('/login')} variant="secondary" size="sm">
+              <Button onClick={() => navigate('/login')} variant="outline" size="sm" className="bg-white/10 hover:bg-white/20 text-white border-white/20">
                 Anmelden
               </Button>
             )}
@@ -161,7 +161,7 @@ const Navbar = () => {
           <div className="md:hidden flex items-center">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+              className="inline-flex items-center justify-center p-2 rounded-md text-blue-200 hover:text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
               aria-expanded="false"
             >
               <span className="sr-only">Menü öffnen</span>
@@ -182,8 +182,8 @@ const Navbar = () => {
             to="/"
             className={`block px-3 py-2 rounded-md text-base font-medium ${
               location.pathname === '/' 
-              ? 'bg-gray-900 text-white' 
-              : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              ? 'bg-blue-800 text-white' 
+              : 'text-blue-100 hover:bg-blue-700 hover:text-white'
             }`}
             onClick={() => setMobileMenuOpen(false)}
           >
@@ -194,8 +194,8 @@ const Navbar = () => {
             to="/subservers"
             className={`block px-3 py-2 rounded-md text-base font-medium ${
               location.pathname === '/subservers' 
-              ? 'bg-gray-900 text-white' 
-              : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              ? 'bg-blue-800 text-white' 
+              : 'text-blue-100 hover:bg-blue-700 hover:text-white'
             }`}
             onClick={() => setMobileMenuOpen(false)}
           >
@@ -206,8 +206,8 @@ const Navbar = () => {
             to="/partners"
             className={`block px-3 py-2 rounded-md text-base font-medium ${
               location.pathname === '/partners' 
-              ? 'bg-gray-900 text-white' 
-              : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              ? 'bg-blue-800 text-white' 
+              : 'text-blue-100 hover:bg-blue-700 hover:text-white'
             }`}
             onClick={() => setMobileMenuOpen(false)}
           >
@@ -218,8 +218,8 @@ const Navbar = () => {
             to="/apply"
             className={`block px-3 py-2 rounded-md text-base font-medium ${
               location.pathname.startsWith('/apply') 
-              ? 'bg-gray-900 text-white' 
-              : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+              ? 'bg-blue-800 text-white' 
+              : 'text-blue-100 hover:bg-blue-700 hover:text-white'
             }`}
             onClick={() => setMobileMenuOpen(false)}
           >
@@ -232,8 +232,8 @@ const Navbar = () => {
                 to="/admin"
                 className={`block px-3 py-2 rounded-md text-base font-medium ${
                   location.pathname === '/admin' 
-                  ? 'bg-gray-900 text-white' 
-                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  ? 'bg-blue-800 text-white' 
+                  : 'text-blue-100 hover:bg-blue-700 hover:text-white'
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -244,8 +244,8 @@ const Navbar = () => {
                 to="/admin/dashboard"
                 className={`block px-3 py-2 rounded-md text-base font-medium ${
                   location.pathname === '/admin/dashboard' 
-                  ? 'bg-gray-900 text-white' 
-                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  ? 'bg-blue-800 text-white' 
+                  : 'text-blue-100 hover:bg-blue-700 hover:text-white'
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -260,8 +260,8 @@ const Navbar = () => {
                 to="/profile"
                 className={`block px-3 py-2 rounded-md text-base font-medium ${
                   location.pathname === '/profile' 
-                  ? 'bg-gray-900 text-white' 
-                  : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  ? 'bg-blue-800 text-white' 
+                  : 'text-blue-100 hover:bg-blue-700 hover:text-white'
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -273,7 +273,7 @@ const Navbar = () => {
                   handleSignOut();
                   setMobileMenuOpen(false);
                 }}
-                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
+                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-blue-100 hover:bg-blue-700 hover:text-white"
               >
                 Abmelden
               </button>
@@ -281,7 +281,7 @@ const Navbar = () => {
           ) : (
             <Link
               to="/login"
-              className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
+              className="block px-3 py-2 rounded-md text-base font-medium text-blue-100 hover:bg-blue-700 hover:text-white"
               onClick={() => setMobileMenuOpen(false)}
             >
               Anmelden
