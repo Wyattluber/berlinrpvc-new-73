@@ -1,37 +1,67 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Menu, X, User, LogOut, Settings } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { isUserAdmin } from '@/utils/adminUtils';
+import { toast } from '@/hooks/use-toast';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is logged in
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setIsLoggedIn(true);
-      const user = JSON.parse(storedUser);
-      setIsAdmin(user.role === 'admin');
-    } else {
-      setIsLoggedIn(false);
-      setIsAdmin(false);
-    }
-  }, [location]); // Re-check when location changes
+    // Check auth status and admin status when component mounts or location changes
+    const checkAuthStatus = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        setIsLoggedIn(true);
+        
+        // Check if user is admin
+        const adminStatus = await isUserAdmin();
+        setIsAdmin(adminStatus);
+      } else {
+        setIsLoggedIn(false);
+        setIsAdmin(false);
+      }
+    };
+    
+    checkAuthStatus();
+  }, [location]);
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    setIsLoggedIn(false);
-    setIsAdmin(false);
-    window.location.href = '/';
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Erfolgreich abgemeldet",
+        description: "Du wurdest erfolgreich abgemeldet."
+      });
+      
+      setIsLoggedIn(false);
+      setIsAdmin(false);
+      navigate('/');
+    } catch (error: any) {
+      console.error("Logout error:", error);
+      toast({
+        title: "Abmeldefehler",
+        description: error.message || "Es gab einen Fehler bei der Abmeldung.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (

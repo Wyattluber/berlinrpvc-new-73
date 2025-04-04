@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -7,12 +8,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Mail, KeyRound, AlertTriangle, ExternalLink, User, UserPlus, Shield, Eye, EyeOff } from 'lucide-react';
+import { Mail, KeyRound, AlertTriangle, ExternalLink, User, UserPlus, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { checkAdminAccount } from '@/utils/adminUtils';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -33,14 +32,6 @@ const Login = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [username, setUsername] = useState('');
   const [registerError, setRegisterError] = useState<string | null>(null);
-  
-  // Admin login state
-  const [adminEmail, setAdminEmail] = useState('');
-  const [adminPassword, setAdminPassword] = useState('');
-  const [showAdminPassword, setShowAdminPassword] = useState(false);
-  const [otpCode, setOtpCode] = useState('');
-  const [showOtpInput, setShowOtpInput] = useState(false);
-  const [adminError, setAdminError] = useState<string | null>(null);
   
   useEffect(() => {
     // Check if user is already logged in
@@ -99,12 +90,24 @@ const Login = () => {
       
       if (error) throw error;
 
+      // Check if user is admin
+      const { data: adminData } = await supabase
+        .from('admin_users')
+        .select('*')
+        .eq('email', email)
+        .maybeSingle();
+
       toast({
         title: "Erfolgreich angemeldet",
-        description: "Willkommen zurück!",
+        description: adminData ? "Du wurdest als Administrator angemeldet." : "Willkommen zurück!",
       });
       
-      navigate('/profile');
+      // Redirect admin users directly to admin panel
+      if (adminData) {
+        navigate('/admin');
+      } else {
+        navigate('/profile');
+      }
     } catch (error: any) {
       console.error("Email login error:", error);
       setLoginError(error.message || "E-Mail oder Passwort ist ungültig.");
@@ -173,96 +176,6 @@ const Login = () => {
     }
   };
 
-  const handleAdminLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      setIsLoading(true);
-      setAdminError(null);
-      
-      // For debugging
-      console.log("Admin login attempt with:", adminEmail);
-      
-      if (!showOtpInput) {
-        // First step: Standard authentication with email/password
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: adminEmail,
-          password: adminPassword
-        });
-        
-        if (error) {
-          console.error("Admin auth error:", error);
-          throw error;
-        }
-        
-        if (!data.user) {
-          throw new Error("Authentifizierung fehlgeschlagen");
-        }
-        
-        console.log("User authenticated, checking if admin:", data.user.id);
-        
-        // Check if user is an admin
-        const { data: adminData, error: adminError } = await supabase
-          .from('admin_users')
-          .select('*')
-          .eq('user_id', data.user.id);
-        
-        if (adminError) {
-          console.error("Admin check error:", adminError);
-          throw adminError;
-        }
-        
-        if (!adminData || adminData.length === 0) {
-          console.error("Not an admin:", data.user.id);
-          throw new Error("Du hast keine Administrator-Berechtigungen");
-        }
-        
-        console.log("Admin verified, showing 2FA input");
-        
-        // If authentication successful, show OTP input
-        setShowOtpInput(true);
-        toast({
-          title: "Bitte 2FA Code eingeben",
-          description: "Ein zweiter Faktor ist für Admin-Logins erforderlich.",
-        });
-      } else {
-        // Second step: Verify OTP
-        console.log("Verifying 2FA code:", otpCode);
-        
-        // For testing, accept any 6-digit code
-        // In production, implement real 2FA
-        if (otpCode.length === 6) {
-          console.log("2FA verified, redirecting to admin");
-          
-          toast({
-            title: "Admin Login erfolgreich",
-            description: "Du wurdest als Administrator authentifiziert.",
-          });
-          
-          navigate('/admin');
-        } else {
-          throw new Error("Ungültiger 2FA Code");
-        }
-      }
-    } catch (error: any) {
-      console.error("Admin login error:", error);
-      setAdminError(error.message || "Admin-Anmeldung fehlgeschlagen.");
-      
-      // Reset OTP view if there was an error during the second step
-      if (showOtpInput) {
-        setShowOtpInput(false);
-      }
-      
-      toast({
-        title: "Admin-Anmeldefehler",
-        description: error.message || "Admin-Anmeldung fehlgeschlagen.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -285,7 +198,7 @@ const Login = () => {
             )}
             
             <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid grid-cols-3 mb-4">
+              <TabsList className="grid grid-cols-2 mb-4">
                 <TabsTrigger id="login-tab" value="login" className="flex items-center gap-1">
                   <User size={16} />
                   <span>Login</span>
@@ -293,10 +206,6 @@ const Login = () => {
                 <TabsTrigger value="register" className="flex items-center gap-1">
                   <UserPlus size={16} />
                   <span>Registrieren</span>
-                </TabsTrigger>
-                <TabsTrigger value="admin" className="flex items-center gap-1">
-                  <Shield size={16} />
-                  <span>Admin</span>
                 </TabsTrigger>
               </TabsList>
               
@@ -507,103 +416,6 @@ const Login = () => {
                     {isLoading ? 
                       <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div> : 
                       'Registrieren'
-                    }
-                  </Button>
-                </form>
-              </TabsContent>
-              
-              {/* Admin Tab */}
-              <TabsContent value="admin" className="space-y-4">
-                {adminError && (
-                  <Alert variant="destructive" className="mb-4">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>Admin-Anmeldeproblem</AlertTitle>
-                    <AlertDescription>{adminError}</AlertDescription>
-                  </Alert>
-                )}
-                
-                <form onSubmit={handleAdminLogin} className="space-y-4">
-                  {!showOtpInput ? (
-                    <>
-                      <div className="space-y-2">
-                        <Label htmlFor="admin-email">Admin E-Mail</Label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                          <Input 
-                            id="admin-email"
-                            type="email" 
-                            placeholder="admin@email.de"
-                            className="pl-10"
-                            value={adminEmail}
-                            onChange={(e) => setAdminEmail(e.target.value)}
-                            required
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="admin-password">Admin Passwort</Label>
-                        <div className="relative">
-                          <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                          <Input 
-                            id="admin-password"
-                            type={showAdminPassword ? "text" : "password"}
-                            placeholder="••••••••"
-                            className="pl-10 pr-10"
-                            value={adminPassword}
-                            onChange={(e) => setAdminPassword(e.target.value)}
-                            required
-                          />
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="icon" 
-                            className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-500"
-                            onClick={() => setShowAdminPassword(!showAdminPassword)}
-                          >
-                            {showAdminPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </Button>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="text-center">
-                        <h3 className="text-lg font-medium">Zwei-Faktor-Authentifizierung</h3>
-                        <p className="text-sm text-gray-500">
-                          Bitte gib deinen 2FA Code ein, um fortzufahren
-                        </p>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="otp">Einmalcode</Label>
-                        <div className="flex justify-center">
-                          <InputOTP maxLength={6} onComplete={(value) => setOtpCode(value)}>
-                            <InputOTPGroup>
-                              <InputOTPSlot index={0} />
-                              <InputOTPSlot index={1} />
-                              <InputOTPSlot index={2} />
-                              <InputOTPSlot index={3} />
-                              <InputOTPSlot index={4} />
-                              <InputOTPSlot index={5} />
-                            </InputOTPGroup>
-                          </InputOTP>
-                        </div>
-                        <div className="text-center text-xs text-gray-500 mt-2">
-                          <p>Für Test-Zwecke: Beliebiger 6-stelliger Code</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-gradient-to-r from-indigo-800 to-purple-800 hover:from-indigo-900 hover:to-purple-900"
-                    disabled={isLoading || (showOtpInput && otpCode.length !== 6)}
-                  >
-                    {isLoading ? 
-                      <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div> : 
-                      showOtpInput ? 'Verifizieren' : 'Als Admin anmelden'
                     }
                   </Button>
                 </form>

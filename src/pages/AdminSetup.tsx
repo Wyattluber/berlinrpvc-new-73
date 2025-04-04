@@ -27,11 +27,12 @@ const AdminSetup = () => {
         const { data, error } = await supabase
           .from('admin_users')
           .select('*')
-          .eq('email', adminEmail);
+          .eq('email', adminEmail)
+          .maybeSingle();
         
         if (error) throw error;
         
-        if (data && data.length > 0) {
+        if (data) {
           console.log("Admin account exists:", data);
           setIsSuccess(true);
           toast({
@@ -55,16 +56,42 @@ const AdminSetup = () => {
     
     try {
       console.log("Creating admin account with email:", adminEmail);
-      const result = await createAdminAccount(adminEmail, adminPassword);
-      console.log("Admin account creation result:", result);
       
-      setIsSuccess(true);
-      toast({
-        title: "Admin-Konto erstellt",
-        description: "Das Admin-Konto wurde erfolgreich eingerichtet!",
-      });
+      // Check if a user with this email already exists
+      const { data: existingUsers } = await supabase
+        .from('admin_users')
+        .select('email')
+        .eq('email', adminEmail);
+      
+      if (existingUsers && existingUsers.length > 0) {
+        console.log("Admin user already exists, signing in instead");
+        
+        // Try to sign in with the credentials
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: adminEmail,
+          password: adminPassword
+        });
+        
+        if (signInError) throw signInError;
+        
+        setIsSuccess(true);
+        toast({
+          title: "Admin-Konto existiert bereits",
+          description: "Erfolgreich als Administrator angemeldet!",
+        });
+      } else {
+        // Create a new admin account
+        const result = await createAdminAccount(adminEmail, adminPassword);
+        console.log("Admin account creation result:", result);
+        
+        setIsSuccess(true);
+        toast({
+          title: "Admin-Konto erstellt",
+          description: "Das Admin-Konto wurde erfolgreich eingerichtet!",
+        });
+      }
     } catch (err: any) {
-      console.error("Error creating admin account:", err);
+      console.error("Error handling admin account:", err);
       setError(err.message || "Fehler bei der Erstellung des Admin-Kontos");
       toast({
         title: "Fehler",
@@ -78,7 +105,7 @@ const AdminSetup = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-indigo-50 to-purple-50 p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md shadow-lg">
         <CardHeader>
           <CardTitle className="text-2xl">Admin-Konto Einrichtung</CardTitle>
           <CardDescription>
@@ -99,8 +126,8 @@ const AdminSetup = () => {
               <CheckCircle className="h-4 w-4 text-green-600" />
               <AlertTitle className="text-green-800">Admin-Konto eingerichtet</AlertTitle>
               <AlertDescription className="text-green-700">
-                Das Admin-Konto mit der E-Mail {adminEmail} wurde erfolgreich erstellt.
-                Du kannst dich jetzt mit diesen Zugangsdaten im Admin-Bereich einloggen.
+                Das Admin-Konto mit der E-Mail {adminEmail} wurde erfolgreich eingerichtet.
+                Du kannst dich jetzt mit diesen Zugangsdaten im Login-Bereich einloggen.
               </AlertDescription>
             </Alert>
           ) : (
