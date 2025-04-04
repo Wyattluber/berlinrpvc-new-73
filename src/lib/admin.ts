@@ -336,18 +336,25 @@ export async function hasSubmittedApplication(userId: string) {
  */
 export async function getTotalUserCount(): Promise<number> {
   try {
-    // We can approximate the total user count by checking the auth.users table
-    // through a function or use a different table like admin_users as a proxy
-    const { count, error } = await supabase
+    // First try to get the count from the RPC function
+    const { data: { count }, error: rpcError } = await supabase.rpc('get_auth_user_count');
+    
+    if (!rpcError && count !== undefined) {
+      return count;
+    }
+    
+    // Fallback: Use the admin_users table as a proxy
+    console.warn('Falling back to admin_users count, RPC failed:', rpcError);
+    const { count: fallbackCount, error: fallbackError } = await supabase
       .from('admin_users')
       .select('*', { count: 'exact', head: true });
     
-    if (error) {
-      console.error('Error getting user count:', error);
+    if (fallbackError) {
+      console.error('Error getting admin_users count:', fallbackError);
       return 0;
     }
     
-    return count || 0;
+    return fallbackCount || 0;
   } catch (error) {
     console.error('Error getting user count:', error);
     return 0;
