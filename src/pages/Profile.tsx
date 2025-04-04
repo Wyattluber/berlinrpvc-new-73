@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -1032,3 +1033,1035 @@ const Profile = () => {
                       </div>
                     )}
                     <div>
+                      <h3 className="text-lg font-medium">{username}</h3>
+                      <p className="text-sm text-gray-500">{user.email}</p>
+                      <Badge className="mt-1">{getUserRoleName()}</Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pb-2">
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={handleFileChange}
+                  />
+                  <Button 
+                    variant="outline" 
+                    className="w-full mb-2 flex items-center justify-center"
+                    onClick={handleFileUpload}
+                    disabled={uploadingImage}
+                  >
+                    {uploadingImage ? (
+                      <>Wird hochgeladen...</>
+                    ) : (
+                      <>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Profilbild ändern
+                      </>
+                    )}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full flex items-center justify-center text-red-600 hover:text-red-800 hover:bg-red-50"
+                    onClick={handleLogout}
+                  >
+                    Abmelden
+                  </Button>
+                </CardContent>
+              </Card>
+              
+              <div className="mt-6">
+                <TabsList className="grid w-full grid-cols-1">
+                  <TabsTrigger 
+                    value="dashboard" 
+                    className="flex items-center justify-start"
+                    onClick={() => setActiveTab('dashboard')}
+                    data-state={activeTab === 'dashboard' ? 'active' : ''}
+                  >
+                    <BarChart className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </TabsTrigger>
+                  
+                  <TabsTrigger 
+                    value="profile" 
+                    className="flex items-center justify-start"
+                    onClick={() => setActiveTab('profile')}
+                    data-state={activeTab === 'profile' ? 'active' : ''}
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    Profil
+                  </TabsTrigger>
+                  
+                  <TabsTrigger 
+                    value="security" 
+                    className="flex items-center justify-start"
+                    onClick={() => setActiveTab('security')}
+                    data-state={activeTab === 'security' ? 'active' : ''}
+                  >
+                    <KeyRound className="mr-2 h-4 w-4" />
+                    Sicherheit
+                  </TabsTrigger>
+                  
+                  <TabsTrigger 
+                    value="applications" 
+                    className="flex items-center justify-start"
+                    onClick={() => setActiveTab('applications')}
+                    data-state={activeTab === 'applications' ? 'active' : ''}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Bewerbungen
+                  </TabsTrigger>
+                  
+                  {isAdmin && (
+                    <TabsTrigger 
+                      value="admin" 
+                      className="flex items-center justify-start"
+                      onClick={() => setActiveTab('admin')}
+                      data-state={activeTab === 'admin' ? 'active' : ''}
+                    >
+                      <ShieldCheck className="mr-2 h-4 w-4" />
+                      Admin
+                    </TabsTrigger>
+                  )}
+                </TabsList>
+              </div>
+            </div>
+            
+            <div className="flex-grow">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsContent value="dashboard" className="mt-0">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>
+                        {greeting}, {username}!
+                      </CardTitle>
+                      <CardDescription>
+                        Hier siehst du eine Übersicht deines Kontos.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {applications.length > 0 ? (
+                          <div>
+                            <h3 className="text-lg font-medium mb-2">Deine Bewerbung</h3>
+                            <div className="rounded-lg border p-4">
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <div className="font-medium">Status: {getStatusBadge(applications[0].status)}</div>
+                                  <div className="text-sm text-gray-500">Eingereicht am: {formatDate(applications[0].created_at)}</div>
+                                </div>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => setActiveTab('applications')}
+                                >
+                                  Details
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="rounded-lg border border-dashed p-4 text-center">
+                            <div className="text-gray-500">
+                              <Calendar className="h-10 w-10 mx-auto mb-2" />
+                              <p>Du hast noch keine Bewerbung eingereicht.</p>
+                              <Button 
+                                variant="outline" 
+                                className="mt-3"
+                                onClick={() => navigate('/apply')}
+                              >
+                                Jetzt bewerben
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {user.last_username_change && (
+                          <div className="rounded-lg border p-4">
+                            <h3 className="text-lg font-medium mb-2">Benutzername</h3>
+                            {!usernameCooldown.canChange ? (
+                              <Alert variant="default" className="bg-blue-50 border-blue-200">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertTitle>Hinweis</AlertTitle>
+                                <AlertDescription>
+                                  Du kannst deinen Benutzernamen erst wieder in {usernameCooldown.daysRemaining} Tagen ändern.
+                                  {usernameCooldown.nextChangeDate && (
+                                    <span className="block mt-1">
+                                      Nächste mögliche Änderung: {formatNextChangeDate(usernameCooldown.nextChangeDate)}
+                                    </span>
+                                  )}
+                                </AlertDescription>
+                              </Alert>
+                            ) : (
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <div className="font-medium">{username}</div>
+                                  <div className="text-sm text-gray-500">Du kannst deinen Benutzernamen ändern</div>
+                                </div>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={handleInitiateUsernameChange}
+                                >
+                                  Ändern
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                {/* Profile Tab */}
+                <TabsContent value="profile" className="mt-0">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Profil</CardTitle>
+                      <CardDescription>
+                        Verwalte deine persönlichen Informationen.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="username">Benutzername</Label>
+                        <div className="flex space-x-4">
+                          <Input
+                            id="username"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            readOnly={!usernameCooldown.canChange}
+                            className={!usernameCooldown.canChange ? "bg-gray-100" : ""}
+                          />
+                          {usernameCooldown.canChange ? (
+                            <Button 
+                              variant="outline" 
+                              onClick={handleInitiateUsernameChange}
+                            >
+                              Ändern
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              disabled
+                              title={`Nächste Änderung in ${usernameCooldown.daysRemaining} Tagen möglich`}
+                            >
+                              <Clock className="mr-2 h-4 w-4" />
+                              {usernameCooldown.daysRemaining}T
+                            </Button>
+                          )}
+                        </div>
+                        {!usernameCooldown.canChange && (
+                          <p className="text-xs text-gray-500">
+                            Benutzernamen können nur alle 30 Tage geändert werden.
+                            Nächste mögliche Änderung: {formatNextChangeDate(usernameCooldown.nextChangeDate)}
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="discordId">Discord ID</Label>
+                        <Input
+                          id="discordId"
+                          value={discordId}
+                          onChange={(e) => setDiscordId(e.target.value)}
+                          placeholder="Deine Discord ID (optional)"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="robloxId">Roblox ID</Label>
+                        <Input
+                          id="robloxId"
+                          value={robloxId}
+                          onChange={(e) => setRobloxId(e.target.value)}
+                          placeholder="Deine Roblox ID (optional)"
+                        />
+                      </div>
+                    </CardContent>
+                    <CardFooter className="border-t pt-6 flex justify-between">
+                      <Button variant="outline" onClick={() => {
+                        setDiscordId(verifiedDiscordId);
+                        setRobloxId(verifiedRobloxId);
+                      }}>
+                        Zurücksetzen
+                      </Button>
+                      <Button onClick={handleSaveProfile} disabled={isLoading}>
+                        {isLoading ? 'Wird gespeichert...' : 'Speichern'}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </TabsContent>
+                
+                {/* Security Tab */}
+                <TabsContent value="security" className="mt-0">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Sicherheit</CardTitle>
+                      <CardDescription>
+                        Verwalte deine Sicherheitseinstellungen.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-medium mb-4">Email-Adresse</h3>
+                        <div className="flex space-x-4 items-center">
+                          <div className="flex-grow">
+                            <Input
+                              id="email"
+                              value={user.email}
+                              readOnly
+                              className="bg-gray-100"
+                            />
+                          </div>
+                          <Button
+                            variant="outline"
+                            onClick={handleShowEmailChangeDialog}
+                            disabled={user.email_changed}
+                          >
+                            <Mail className="mr-2 h-4 w-4" />
+                            Ändern
+                          </Button>
+                        </div>
+                        {user.email_changed && (
+                          <p className="text-xs text-gray-500 mt-2">
+                            Du hast deine Email bereits geändert. Weitere Änderungen sind nicht möglich.
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div className="border-t pt-6">
+                        <h3 className="text-lg font-medium mb-4">Passwort ändern</h3>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="newPassword">Neues Passwort</Label>
+                            <div className="relative">
+                              <Input
+                                id="newPassword"
+                                type={showNewPassword ? "text" : "password"}
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                autoComplete="new-password"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowNewPassword(!showNewPassword)}
+                                className="absolute inset-y-0 right-0 flex items-center px-3"
+                              >
+                                {showNewPassword ? (
+                                  <EyeOff className="h-4 w-4 text-gray-500" />
+                                ) : (
+                                  <Eye className="h-4 w-4 text-gray-500" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="confirmPassword">Passwort bestätigen</Label>
+                            <div className="relative">
+                              <Input
+                                id="confirmPassword"
+                                type={showConfirmPassword ? "text" : "password"}
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                autoComplete="new-password"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                className="absolute inset-y-0 right-0 flex items-center px-3"
+                              >
+                                {showConfirmPassword ? (
+                                  <EyeOff className="h-4 w-4 text-gray-500" />
+                                ) : (
+                                  <Eye className="h-4 w-4 text-gray-500" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium mb-2">Anforderungen an das Passwort:</p>
+                            <div className="flex items-center space-x-2">
+                              <div className={`w-4 h-4 rounded-full ${passwordValidation.length ? 'bg-green-500' : 'bg-gray-300'}`} />
+                              <span className="text-sm">Mindestens 8 Zeichen</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <div className={`w-4 h-4 rounded-full ${passwordValidation.hasLetter ? 'bg-green-500' : 'bg-gray-300'}`} />
+                              <span className="text-sm">Mindestens ein Buchstabe</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <div className={`w-4 h-4 rounded-full ${passwordValidation.hasNumber ? 'bg-green-500' : 'bg-gray-300'}`} />
+                              <span className="text-sm">Mindestens eine Ziffer</span>
+                            </div>
+                          </div>
+                          
+                          {passwordError && (
+                            <Alert variant="destructive">
+                              <AlertCircle className="h-4 w-4" />
+                              <AlertTitle>Fehler</AlertTitle>
+                              <AlertDescription>
+                                {passwordError}
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                          
+                          {passwordChangeSuccess && (
+                            <Alert className="bg-green-50 border-green-200">
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                              <AlertTitle>Erfolg</AlertTitle>
+                              <AlertDescription>
+                                Dein Passwort wurde erfolgreich aktualisiert.
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="border-t pt-6">
+                      <Button 
+                        disabled={isLoading || !newPassword || !confirmPassword || !passwordValidation.length || !passwordValidation.hasLetter || !passwordValidation.hasNumber} 
+                        onClick={handleChangePassword}
+                      >
+                        {isLoading ? 'Wird geändert...' : 'Passwort ändern'}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </TabsContent>
+                
+                {/* Applications Tab */}
+                <TabsContent value="applications" className="mt-0">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Bewerbungen</CardTitle>
+                      <CardDescription>
+                        Deine Bewerbungshistorie und Status.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {isLoadingApplications ? (
+                        <div className="py-8 text-center">
+                          <p>Daten werden geladen...</p>
+                        </div>
+                      ) : applications.length > 0 ? (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Eingereicht</TableHead>
+                              <TableHead>Aktualisiert</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {applications.map((application) => (
+                              <TableRow key={application.id}>
+                                <TableCell>{getStatusBadge(application.status)}</TableCell>
+                                <TableCell>{formatDate(application.created_at)}</TableCell>
+                                <TableCell>{formatDate(application.updated_at)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      ) : (
+                        <div className="py-8 text-center border rounded-lg">
+                          <Calendar className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                          <h3 className="text-lg font-medium mb-2">Keine Bewerbungen</h3>
+                          <p className="text-gray-500 mb-4">Du hast noch keine Bewerbung eingereicht.</p>
+                          <Button onClick={() => navigate('/apply')}>
+                            Jetzt bewerben
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                {/* Admin Tab */}
+                {isAdmin && (
+                  <TabsContent value="admin" className="mt-0">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Admin-Bereich</CardTitle>
+                        <CardDescription>
+                          Verwalte Nutzer, Bewerbungen und Einstellungen.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div>
+                          <h3 className="text-lg font-medium mb-3 flex items-center">
+                            <Users className="mr-2 h-5 w-5" />
+                            Nutzer-Statistik
+                          </h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="border rounded-lg p-4 bg-gray-50">
+                              <h4 className="text-sm font-medium text-gray-500">Gesamt-Nutzer</h4>
+                              <p className="text-2xl font-bold">{userCount}</p>
+                            </div>
+                            <div className="border rounded-lg p-4 bg-gray-50">
+                              <h4 className="text-sm font-medium text-gray-500">Admins</h4>
+                              <p className="text-2xl font-bold">{users.filter(u => u.role === 'admin').length}</p>
+                            </div>
+                            <div className="border rounded-lg p-4 bg-gray-50">
+                              <h4 className="text-sm font-medium text-gray-500">Moderatoren</h4>
+                              <p className="text-2xl font-bold">{users.filter(u => u.role === 'moderator').length}</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="pt-4 border-t">
+                          <h3 className="text-lg font-medium mb-3 flex items-center">
+                            <Users className="mr-2 h-5 w-5" />
+                            Admin-Nutzer verwalten
+                          </h3>
+                          
+                          {loadingAdminUsers ? (
+                            <div className="py-8 text-center">
+                              <p>Daten werden geladen...</p>
+                            </div>
+                          ) : users.length > 0 ? (
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Benutzer-ID</TableHead>
+                                  <TableHead>Rolle</TableHead>
+                                  <TableHead>Erstellt</TableHead>
+                                  <TableHead className="text-right">Aktionen</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {users.map((adminUser) => (
+                                  <TableRow key={adminUser.id}>
+                                    <TableCell>{getUsernameById(adminUser.user_id)}</TableCell>
+                                    <TableCell>
+                                      <Badge variant={adminUser.role === 'admin' ? 'default' : 'outline'}>
+                                        {adminUser.role === 'admin' ? 'Administrator' : 'Moderator'}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell>{formatDate(adminUser.created_at)}</TableCell>
+                                    <TableCell className="text-right">
+                                      <div className="flex justify-end gap-2">
+                                        <Button 
+                                          variant="outline" 
+                                          size="sm"
+                                          onClick={() => handleEditUser(adminUser)}
+                                        >
+                                          <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <Button 
+                                          variant="outline" 
+                                          size="sm" 
+                                          className="text-red-500 hover:text-red-700"
+                                          onClick={() => handleDeleteUser(adminUser.id)}
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          ) : (
+                            <div className="py-8 text-center border rounded-lg">
+                              <Users className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                              <h3 className="text-lg font-medium mb-2">Keine Admin-Nutzer</h3>
+                              <p className="text-gray-500">Es wurden keine Admin-Nutzer gefunden.</p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="pt-4 border-t">
+                          <h3 className="text-lg font-medium mb-3 flex items-center">
+                            <Calendar className="mr-2 h-5 w-5" />
+                            Bewerbungen
+                          </h3>
+                          
+                          {loadingAllApplications ? (
+                            <div className="py-8 text-center">
+                              <p>Daten werden geladen...</p>
+                            </div>
+                          ) : allApplications.length > 0 ? (
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Status</TableHead>
+                                  <TableHead>Eingereicht</TableHead>
+                                  <TableHead>Aktualisiert</TableHead>
+                                  <TableHead className="text-right">Aktionen</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {allApplications.map((application) => (
+                                  <TableRow key={application.id}>
+                                    <TableCell>{getStatusBadge(application.status)}</TableCell>
+                                    <TableCell>{formatDate(application.created_at)}</TableCell>
+                                    <TableCell>{formatDate(application.updated_at)}</TableCell>
+                                    <TableCell className="text-right">
+                                      <div className="flex justify-end gap-2">
+                                        <Button 
+                                          variant="outline" 
+                                          size="sm"
+                                          onClick={() => handleViewApplication(application)}
+                                        >
+                                          <Eye className="h-4 w-4" />
+                                        </Button>
+                                        <Button 
+                                          variant="outline" 
+                                          size="sm" 
+                                          className="text-red-500 hover:text-red-700"
+                                          onClick={() => handleDeleteApplication(application.id)}
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          ) : (
+                            <div className="py-8 text-center border rounded-lg">
+                              <Calendar className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                              <h3 className="text-lg font-medium mb-2">Keine Bewerbungen</h3>
+                              <p className="text-gray-500">Es wurden keine Bewerbungen gefunden.</p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="pt-4 border-t">
+                          <h3 className="text-lg font-medium mb-3 flex items-center">
+                            <Settings className="mr-2 h-5 w-5" />
+                            Team-Einstellungen
+                          </h3>
+                          
+                          {isLoadingTeamSettings ? (
+                            <div className="py-8 text-center">
+                              <p>Daten werden geladen...</p>
+                            </div>
+                          ) : (
+                            <>
+                              {editTeamSettings ? (
+                                <div className="space-y-4 p-4 border rounded-lg">
+                                  <div className="space-y-2">
+                                    <Label htmlFor="meeting_day">Meeting-Tag</Label>
+                                    <Input
+                                      id="meeting_day"
+                                      value={newTeamSettings.meeting_day}
+                                      onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_day: e.target.value})}
+                                      placeholder="z.B. Montag"
+                                    />
+                                  </div>
+                                  
+                                  <div className="space-y-2">
+                                    <Label htmlFor="meeting_time">Meeting-Zeit</Label>
+                                    <Input
+                                      id="meeting_time"
+                                      value={newTeamSettings.meeting_time}
+                                      onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_time: e.target.value})}
+                                      placeholder="z.B. 18:00 Uhr"
+                                    />
+                                  </div>
+                                  
+                                  <div className="space-y-2">
+                                    <Label htmlFor="meeting_frequency">Meeting-Häufigkeit</Label>
+                                    <Input
+                                      id="meeting_frequency"
+                                      value={newTeamSettings.meeting_frequency}
+                                      onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_frequency: e.target.value})}
+                                      placeholder="z.B. Wöchentlich"
+                                    />
+                                  </div>
+                                  
+                                  <div className="space-y-2">
+                                    <Label htmlFor="meeting_location">Meeting-Ort</Label>
+                                    <Input
+                                      id="meeting_location"
+                                      value={newTeamSettings.meeting_location}
+                                      onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_location: e.target.value})}
+                                      placeholder="z.B. Discord-Server"
+                                    />
+                                  </div>
+                                  
+                                  <div className="space-y-2">
+                                    <Label htmlFor="meeting_notes">Notizen</Label>
+                                    <Textarea
+                                      id="meeting_notes"
+                                      value={newTeamSettings.meeting_notes}
+                                      onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_notes: e.target.value})}
+                                      placeholder="Zusätzliche Informationen"
+                                      rows={3}
+                                    />
+                                  </div>
+                                  
+                                  <div className="flex justify-end space-x-2 pt-4">
+                                    <Button
+                                      variant="outline"
+                                      onClick={() => setEditTeamSettings(false)}
+                                    >
+                                      Abbrechen
+                                    </Button>
+                                    <Button
+                                      onClick={handleSaveTeamSettings}
+                                      disabled={isLoading}
+                                    >
+                                      {isLoading ? 'Wird gespeichert...' : 'Speichern'}
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="p-4 border rounded-lg">
+                                  {teamSettings ? (
+                                    <div className="space-y-4">
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                          <h4 className="text-sm font-medium text-gray-500">Meeting-Tag</h4>
+                                          <p>{teamSettings.meeting_day || 'Nicht festgelegt'}</p>
+                                        </div>
+                                        <div>
+                                          <h4 className="text-sm font-medium text-gray-500">Meeting-Zeit</h4>
+                                          <p>{teamSettings.meeting_time || 'Nicht festgelegt'}</p>
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                          <h4 className="text-sm font-medium text-gray-500">Häufigkeit</h4>
+                                          <p>{teamSettings.meeting_frequency || 'Nicht festgelegt'}</p>
+                                        </div>
+                                        <div>
+                                          <h4 className="text-sm font-medium text-gray-500">Ort</h4>
+                                          <p>{teamSettings.meeting_location || 'Nicht festgelegt'}</p>
+                                        </div>
+                                      </div>
+                                      
+                                      {teamSettings.meeting_notes && (
+                                        <div>
+                                          <h4 className="text-sm font-medium text-gray-500">Notizen</h4>
+                                          <p className="whitespace-pre-line">{teamSettings.meeting_notes}</p>
+                                        </div>
+                                      )}
+                                      
+                                      <div className="pt-2">
+                                        <Button
+                                          variant="outline"
+                                          onClick={() => setEditTeamSettings(true)}
+                                        >
+                                          <Edit className="mr-2 h-4 w-4" />
+                                          Bearbeiten
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="text-center py-6">
+                                      <Settings className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                                      <h3 className="text-lg font-medium mb-2">Keine Einstellungen</h3>
+                                      <p className="text-gray-500 mb-4">Es wurden noch keine Team-Einstellungen konfiguriert.</p>
+                                      <Button onClick={() => setEditTeamSettings(true)}>
+                                        Einstellungen festlegen
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                )}
+              </Tabs>
+            </div>
+          </div>
+        </div>
+      </main>
+      
+      <Footer />
+      
+      {/* Dialogs */}
+      <Dialog open={showVerifyDialog} onOpenChange={setShowVerifyDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Änderungen bestätigen</DialogTitle>
+            <DialogDescription>
+              Bitte bestätige, dass du diese IDs ändern möchtest.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {verifiedDiscordId !== discordId && (
+              <div>
+                <p className="font-medium">Discord ID</p>
+                <div className="flex items-center space-x-2 mt-1">
+                  <div className="bg-gray-100 px-3 py-1 rounded text-gray-600 line-through">
+                    {verifiedDiscordId || 'Nicht gesetzt'}
+                  </div>
+                  <span>→</span>
+                  <div className="bg-blue-50 px-3 py-1 rounded text-blue-600 font-medium">
+                    {discordId || 'Nicht gesetzt'}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {verifiedRobloxId !== robloxId && (
+              <div>
+                <p className="font-medium">Roblox ID</p>
+                <div className="flex items-center space-x-2 mt-1">
+                  <div className="bg-gray-100 px-3 py-1 rounded text-gray-600 line-through">
+                    {verifiedRobloxId || 'Nicht gesetzt'}
+                  </div>
+                  <span>→</span>
+                  <div className="bg-blue-50 px-3 py-1 rounded text-blue-600 font-medium">
+                    {robloxId || 'Nicht gesetzt'}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={cancelIdChange}>
+              Abbrechen
+            </Button>
+            <Button onClick={confirmIdChange}>
+              Bestätigen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={showUsernameChangeDialog} onOpenChange={setShowUsernameChangeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Benutzernamen ändern</DialogTitle>
+            <DialogDescription>
+              Du kannst deinen Benutzernamen nur alle 30 Tage ändern. 
+              Bitte wähle sorgfältig einen neuen Namen aus.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="newUsername">Neuer Benutzername</Label>
+              <Input
+                id="newUsername"
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                placeholder="Neuer Benutzername"
+              />
+            </div>
+            
+            {!usernameValidationResult.valid && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Ungültiger Benutzername</AlertTitle>
+                <AlertDescription>
+                  {usernameValidationResult.reason}
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {isUsernameTakenCheck === true && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Benutzername bereits vergeben</AlertTitle>
+                <AlertDescription>
+                  Dieser Benutzername wird bereits von einem anderen Nutzer verwendet.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            <Alert className="bg-blue-50 border-blue-200">
+              <AlertTriangle className="h-4 w-4 text-blue-600" />
+              <AlertTitle>Wichtiger Hinweis</AlertTitle>
+              <AlertDescription>
+                Nach der Änderung kannst du deinen Benutzernamen erst in 30 Tagen wieder ändern.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUsernameChangeDialog(false)}>
+              Abbrechen
+            </Button>
+            <Button 
+              onClick={confirmUsernameChange} 
+              disabled={!usernameValidationResult.valid || isUsernameTakenCheck === true || isLoading}
+            >
+              {isLoading ? 'Wird geändert...' : 'Bestätigen'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={showEmailChangeDialog} onOpenChange={setShowEmailChangeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>E-Mail-Adresse ändern</DialogTitle>
+            <DialogDescription>
+              Du kannst deine E-Mail-Adresse nur einmal ändern.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="newEmail">Neue E-Mail-Adresse</Label>
+              <Input
+                id="newEmail"
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="neue@email.de"
+              />
+            </div>
+            
+            {emailChangeError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Fehler</AlertTitle>
+                <AlertDescription>
+                  {emailChangeError}
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            <Alert className="bg-blue-50 border-blue-200">
+              <AlertTriangle className="h-4 w-4 text-blue-600" />
+              <AlertTitle>Wichtiger Hinweis</AlertTitle>
+              <AlertDescription>
+                Du erhältst eine Bestätigungs-E-Mail an deine neue Adresse. 
+                Die Änderung wird erst wirksam, nachdem du den Link in dieser E-Mail bestätigt hast.
+                <br /><br />
+                <span className="font-semibold">Du kannst deine E-Mail-Adresse nur einmal ändern.</span>
+              </AlertDescription>
+            </Alert>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEmailChangeDialog(false)}>
+              Abbrechen
+            </Button>
+            <Button 
+              onClick={handleChangeEmail} 
+              disabled={!newEmail || newEmail === user.email || isLoading}
+            >
+              {isLoading ? 'Wird geändert...' : 'Bestätigen'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Benutzer bearbeiten</DialogTitle>
+            <DialogDescription>
+              Bearbeite die Rolle des Benutzers.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="role">Rolle</Label>
+              <select
+                id="role"
+                value={editRole}
+                onChange={(e) => setEditRole(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="moderator">Moderator</option>
+                <option value="admin">Administrator</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Abbrechen
+            </Button>
+            <Button 
+              onClick={handleSaveUser} 
+              disabled={isLoading}
+            >
+              {isLoading ? 'Wird gespeichert...' : 'Speichern'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={confirmDeleteDialog} onOpenChange={setConfirmDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bewerbung löschen</DialogTitle>
+            <DialogDescription>
+              Möchtest du diese Bewerbung wirklich löschen?
+              Diese Aktion kann nicht rückgängig gemacht werden.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDeleteDialog(false)}>
+              Abbrechen
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={confirmDeleteApplication} 
+              disabled={isLoading}
+            >
+              {isLoading ? 'Wird gelöscht...' : 'Löschen'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={viewApplicationDialog} onOpenChange={setViewApplicationDialog}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Bewerbungsdetails</DialogTitle>
+            <DialogDescription>
+              Details der ausgewählten Bewerbung.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto">
+            {currentViewApplication && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Status</h3>
+                    <div className="mt-1">{getStatusBadge(currentViewApplication.status)}</div>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Eingereicht am</h3>
+                    <p>{formatDate(currentViewApplication.created_at)}</p>
+                  </div>
+                </div>
+                
+                {Object.entries(currentViewApplication).map(([key, value]) => {
+                  // Skip internal fields and arrays/objects that would need special handling
+                  if (['id', 'user_id', 'created_at', 'updated_at', 'status'].includes(key) || 
+                      typeof value === 'object' || Array.isArray(value)) {
+                    return null;
+                  }
+                  
+                  return (
+                    <div key={key} className="border-t pt-4">
+                      <h3 className="text-sm font-medium text-gray-500 capitalize">
+                        {key.replace(/_/g, ' ')}
+                      </h3>
+                      <p className="mt-1 whitespace-pre-line">{value as string || 'Nicht angegeben'}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setViewApplicationDialog(false)}>
+              Schließen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Toaster />
+    </div>
+  );
+};
+
+export default Profile;
