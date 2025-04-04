@@ -35,8 +35,8 @@ import AdminPanel from './AdminPanel';
 type Application = {
   id: string;
   status: string;
-  created_at: any;
-  updated_at: any;
+  created_at: string;
+  updated_at: string;
 };
 
 const Profile = () => {
@@ -261,7 +261,7 @@ const Profile = () => {
 
   const lastChanged = user?.user_metadata?.username_changed_at
   ? new Date(user.user_metadata.username_changed_at)
-  : new Date();
+  : null;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -328,7 +328,7 @@ const Profile = () => {
                       {!isUsernameAvailable.valid && (
                         <p className="text-sm text-red-500">{isUsernameAvailable.reason}</p>
                       )}
-                      {user?.user_metadata?.name && (
+                      {lastChanged && (
                         <p className="text-sm text-gray-500">
                           Zuletzt geändert: {lastChanged.toLocaleDateString()}
                         </p>
