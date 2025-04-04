@@ -1,468 +1,184 @@
-
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { toast } from '@/hooks/use-toast';
-import { Mail, KeyRound, AlertTriangle, Eye, EyeOff, CheckCircle, ArrowLeft } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Mail, Lock, Loader2, GitHub, Google } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from '@/integrations/supabase/client';
 
 const Login = () => {
-  const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  const [activeView, setActiveView] = useState<'login-register' | 'reset-password'>('login-register');
-  
-  // Login state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
-  
-  // Register state
-  const [registerEmail, setRegisterEmail] = useState('');
-  const [registerPassword, setRegisterPassword] = useState('');
-  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [username, setUsername] = useState('');
-  const [registerError, setRegisterError] = useState<string | null>(null);
-  const [registrationSuccess, setRegistrationSuccess] = useState(false);
-  
-  // Reset password state
-  const [resetEmail, setResetEmail] = useState('');
-  const [resetSuccess, setResetSuccess] = useState(false);
-  const [resetError, setResetError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
-      setIsLoading(true);
-      setLoginError(null);
-      
-      // Zuerst sicherstellen, dass keine alte Session existiert
-      await supabase.auth.signOut();
+      setLoading(true);
+      setErrorMessage(null);
       
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password
+        email,
+        password
       });
       
-      if (error) throw error;
-
-      toast({
-        title: "Erfolgreich angemeldet",
-        description: "Willkommen zurück!",
-      });
-      
-      navigate('/profile');
-    } catch (error: any) {
-      console.error("Email login error:", error);
-      setLoginError(error.message || "E-Mail oder Passwort ist ungültig.");
-      
-      toast({
-        title: "Anmeldefehler",
-        description: error.message || "E-Mail oder Passwort ist ungültig.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRegistration = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setRegistrationSuccess(false);
-    
-    try {
-      if (registerPassword !== confirmPassword) {
-        setRegisterError("Passwörter stimmen nicht überein");
-        return;
-      }
-      
-      if (registerPassword.length < 8 || 
-          !/[a-zA-Z]/.test(registerPassword) || 
-          !/[0-9]/.test(registerPassword)) {
-        setRegisterError("Das Passwort muss mindestens 8 Zeichen lang sein und mindestens einen Buchstaben und eine Ziffer enthalten");
-        return;
-      }
-      
-      setIsLoading(true);
-      setRegisterError(null);
-      
-      const { error } = await supabase.auth.signUp({
-        email: registerEmail,
-        password: registerPassword,
-        options: {
-          data: {
-            username: username
-          },
-          emailRedirectTo: `${window.location.origin}/profile`
+      if (error) {
+        console.error("Email login error:", error);
+        let errorMsg = "Login fehlgeschlagen";
+        
+        if (error.message.includes("Invalid login credentials")) {
+          errorMsg = "Ungültige Anmeldedaten. Bitte überprüfe deine E-Mail und dein Passwort.";
+        } else if (error.message.includes("Email not confirmed")) {
+          errorMsg = "Deine E-Mail-Adresse wurde noch nicht bestätigt. Bitte überprüfe dein E-Mail-Postfach.";
         }
-      });
+        
+        setErrorMessage(errorMsg);
+        throw error;
+      }
       
-      if (error) throw error;
-
-      setRegistrationSuccess(true);
-      
-      setRegisterEmail('');
-      setRegisterPassword('');
-      setConfirmPassword('');
-      setUsername('');
-      
-      toast({
-        title: "Registrierung erfolgreich",
-        description: "Dein Account wurde erfolgreich erstellt. Bitte bestätige deine E-Mail Adresse.",
-      });
-    } catch (error: any) {
-      console.error("Registration error:", error);
-      setRegisterError(error.message || "Es gab ein Problem bei der Registrierung.");
-      
-      toast({
-        title: "Registrierungsfehler",
-        description: error.message || "Es gab ein Problem bei der Registrierung.",
-        variant: "destructive"
-      });
+      if (data?.user) {
+        toast({
+          title: "Anmeldung erfolgreich",
+          description: "Du wurdest erfolgreich angemeldet.",
+        });
+        
+        navigate('/profile');
+      }
+    } catch (error) {
+      console.error("Email login error:", error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handlePasswordReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleOAuthLogin = async (provider: 'github' | 'google') => {
     try {
-      setIsLoading(true);
-      setResetError(null);
-      setResetSuccess(false);
+      setLoading(true);
+      setErrorMessage(null);
       
-      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: `${window.location.origin}/profile?reset_password=true`,
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: provider,
+        options: {
+          redirectTo: window.location.origin + '/profile',
+        },
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error(`OAuth login error with ${provider}:`, error);
+        setErrorMessage(`Anmeldung mit ${provider} fehlgeschlagen: ${error.message}`);
+        throw error;
+      }
       
-      setResetSuccess(true);
-      
-      toast({
-        title: "E-Mail gesendet",
-        description: "Eine E-Mail zum Zurücksetzen deines Passworts wurde gesendet.",
-      });
-    } catch (error: any) {
-      console.error("Password reset error:", error);
-      setResetError(error.message || "Es gab ein Problem beim Zurücksetzen des Passworts.");
-      
-      toast({
-        title: "Fehler",
-        description: error.message || "Es gab ein Problem beim Zurücksetzen des Passworts.",
-        variant: "destructive"
-      });
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error(`OAuth login error with ${provider}:`, error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <Navbar />
-      
-      <main className="flex-grow flex items-center justify-center py-12 bg-gradient-to-b from-indigo-50 to-purple-50">
-        <Card className="w-full max-w-md shadow-lg border-t-4 border-t-indigo-600 animate-fade-in">
-          <CardHeader className="space-y-1 text-center">
-            {activeView === 'login-register' ? (
+    <div className="flex flex-col items-center justify-center min-h-screen py-2">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl">Anmelden</CardTitle>
+          <CardDescription>Gib deine E-Mail und dein Passwort ein, um dich anzumelden</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          {errorMessage && (
+            <Alert variant="destructive">
+              <AlertTitle>Fehler</AlertTitle>
+              <AlertDescription>{errorMessage}</AlertDescription>
+            </Alert>
+          )}
+          <div className="grid gap-2">
+            <Label htmlFor="email">E-Mail</Label>
+            <Input
+              id="email"
+              placeholder="me@example.com"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="password">Passwort</Label>
+            <Input
+              id="password"
+              placeholder="••••••••"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+          <Button onClick={handleEmailLogin} disabled={loading} className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+            {loading ? (
               <>
-                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Zugang</CardTitle>
-                <CardDescription className="text-gray-500">
-                  Melde dich an oder erstelle einen Account
-                </CardDescription>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Bitte warten...
               </>
             ) : (
               <>
-                <div className="flex items-center justify-center">
-                  <Button 
-                    variant="ghost" 
-                    className="absolute left-4 top-4" 
-                    onClick={() => setActiveView('login-register')}
-                  >
-                    <ArrowLeft size={16} className="mr-1" /> Zurück
-                  </Button>
-                </div>
-                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                  Passwort zurücksetzen
-                </CardTitle>
-                <CardDescription className="text-gray-500">
-                  Gib deine E-Mail Adresse ein, um ein neues Passwort zu setzen
-                </CardDescription>
+                <Mail className="mr-2 h-4 w-4" />
+                Mit E-Mail anmelden
               </>
             )}
-          </CardHeader>
-          <CardContent>
-            {activeView === 'login-register' ? (
+          </Button>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Oder
+              </span>
+            </div>
+          </div>
+          <Button variant="outline" onClick={() => handleOAuthLogin('github')} disabled={loading}>
+            {loading ? (
               <>
-                {loginError && (
-                  <Alert variant="destructive" className="mb-4">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>Anmeldeproblem</AlertTitle>
-                    <AlertDescription>{loginError}</AlertDescription>
-                  </Alert>
-                )}
-                
-                <Tabs defaultValue="login" className="w-full">
-                  <TabsList className="grid grid-cols-2 mb-4">
-                    <TabsTrigger value="login" className="flex items-center gap-1">
-                      <span>Login</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="register" className="flex items-center gap-1">
-                      <span>Registrieren</span>
-                    </TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="login" className="space-y-4">
-                    <form onSubmit={handleEmailLogin} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="email">E-Mail</Label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                          <Input 
-                            id="email"
-                            type="email" 
-                            placeholder="deine@email.de"
-                            className="pl-10"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <Label htmlFor="password">Passwort</Label>
-                          <Button 
-                            type="button" 
-                            variant="link" 
-                            className="h-auto p-0 text-xs text-blue-600"
-                            onClick={() => setActiveView('reset-password')}
-                          >
-                            Passwort vergessen?
-                          </Button>
-                        </div>
-                        <div className="relative">
-                          <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                          <Input 
-                            id="password"
-                            type={showPassword ? "text" : "password"}
-                            placeholder="••••••••"
-                            className="pl-10 pr-10"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                          />
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="icon" 
-                            className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-500"
-                            onClick={() => setShowPassword(!showPassword)}
-                          >
-                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <Button 
-                        type="submit" 
-                        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
-                        disabled={isLoading}
-                      >
-                        {isLoading ? (
-                          <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                        ) : (
-                          'Anmelden'
-                        )}
-                      </Button>
-                    </form>
-                  </TabsContent>
-                  
-                  <TabsContent value="register" className="space-y-4">
-                    {registerError && (
-                      <Alert variant="destructive" className="mb-4">
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertTitle>Registrierungsproblem</AlertTitle>
-                        <AlertDescription>{registerError}</AlertDescription>
-                      </Alert>
-                    )}
-                    
-                    {registrationSuccess && (
-                      <Alert className="mb-4 bg-green-50 border-green-200">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <AlertTitle className="text-green-800">Registrierung erfolgreich!</AlertTitle>
-                        <AlertDescription className="text-green-700">
-                          Dein Account wurde erfolgreich erstellt. Bitte überprüfe deine E-Mails und bestätige deine E-Mail-Adresse.
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                    
-                    <form onSubmit={handleRegistration} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="username">Benutzername</Label>
-                        <Input 
-                          id="username"
-                          type="text" 
-                          placeholder="Dein Benutzername"
-                          value={username}
-                          onChange={(e) => setUsername(e.target.value)}
-                          required
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="register-email">E-Mail</Label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                          <Input 
-                            id="register-email"
-                            type="email" 
-                            placeholder="deine@email.de"
-                            className="pl-10"
-                            value={registerEmail}
-                            onChange={(e) => setRegisterEmail(e.target.value)}
-                            required
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="register-password">Passwort</Label>
-                        <div className="relative">
-                          <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                          <Input 
-                            id="register-password"
-                            type={showRegisterPassword ? "text" : "password"}
-                            placeholder="••••••••"
-                            className="pl-10 pr-10"
-                            value={registerPassword}
-                            onChange={(e) => setRegisterPassword(e.target.value)}
-                            required
-                          />
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="icon" 
-                            className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-500"
-                            onClick={() => setShowRegisterPassword(!showRegisterPassword)}
-                          >
-                            {showRegisterPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="confirm-password">Passwort bestätigen</Label>
-                        <div className="relative">
-                          <KeyRound className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                          <Input 
-                            id="confirm-password"
-                            type={showConfirmPassword ? "text" : "password"}
-                            placeholder="••••••••"
-                            className="pl-10 pr-10"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            required
-                          />
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="icon" 
-                            className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-500"
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          >
-                            {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      <Button 
-                        type="submit" 
-                        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
-                        disabled={isLoading}
-                      >
-                        {isLoading ? 
-                          <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div> : 
-                          'Registrieren'
-                        }
-                      </Button>
-                    </form>
-                  </TabsContent>
-                </Tabs>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Bitte warten...
               </>
             ) : (
-              <div className="space-y-4">
-                {resetError && (
-                  <Alert variant="destructive" className="mb-4">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>Fehler</AlertTitle>
-                    <AlertDescription>{resetError}</AlertDescription>
-                  </Alert>
-                )}
-                
-                {resetSuccess && (
-                  <Alert className="mb-4 bg-green-50 border-green-200">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <AlertTitle className="text-green-800">E-Mail gesendet!</AlertTitle>
-                    <AlertDescription className="text-green-700">
-                      Eine E-Mail mit Anweisungen zum Zurücksetzen deines Passworts wurde an deine E-Mail-Adresse gesendet.
-                    </AlertDescription>
-                  </Alert>
-                )}
-                
-                <form onSubmit={handlePasswordReset} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="reset-email">E-Mail</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input 
-                        id="reset-email"
-                        type="email" 
-                        placeholder="deine@email.de"
-                        className="pl-10"
-                        value={resetEmail}
-                        onChange={(e) => setResetEmail(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                    ) : (
-                      'Passwort zurücksetzen'
-                    )}
-                  </Button>
-                </form>
-              </div>
+              <>
+                <GitHub className="mr-2 h-4 w-4" />
+                Mit GitHub anmelden
+              </>
             )}
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            <p className="text-sm text-gray-500">
-              Du musst angemeldet sein, um eine Bewerbung einzureichen
-            </p>
-          </CardFooter>
-        </Card>
-      </main>
-      
-      <Footer />
+          </Button>
+          <Button variant="outline" onClick={() => handleOAuthLogin('google')} disabled={loading}>
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Bitte warten...
+              </>
+            ) : (
+              <>
+                <Google className="mr-2 h-4 w-4" />
+                Mit Google anmelden
+              </>
+            )}
+          </Button>
+        </CardContent>
+        <div className="px-6 py-4 text-sm text-muted-foreground">
+          <Link to="/forgot-password" className="hover:text-blue-500">Passwort vergessen?</Link>
+        </div>
+      </Card>
+      <div className="mt-6 text-sm text-muted-foreground">
+        Noch kein Konto? <Link to="/register" className="text-blue-500 hover:underline">Registrieren</Link>
+      </div>
     </div>
   );
 };

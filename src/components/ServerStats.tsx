@@ -1,16 +1,9 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Share, Server, HelpCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-
-// Updated stats with real data
-const stats = {
-  discordMembers: 179,
-  partnerServers: 2,
-  servers: 1,
-  lastUpdated: '2025-04-04 14:30'
-};
+import { fetchServerStats, ServerStats as ServerStatsType } from '@/lib/stats';
 
 const StatCard = ({ title, value, icon: Icon, className = "", lastUpdated, color }) => {
   return (
@@ -39,6 +32,22 @@ const StatCard = ({ title, value, icon: Icon, className = "", lastUpdated, color
 };
 
 const ServerStats = () => {
+  const [stats, setStats] = useState<ServerStatsType>({
+    discordMembers: 179,
+    partnerServers: 2,
+    servers: 1,
+    lastUpdated: new Date().toISOString()
+  });
+
+  useEffect(() => {
+    const loadStats = async () => {
+      const serverStats = await fetchServerStats();
+      setStats(serverStats);
+    };
+
+    loadStats();
+  }, []);
+
   return (
     <section className="py-10 bg-gradient-to-b from-gray-50 to-white">
       <div className="container mx-auto px-4">
@@ -51,7 +60,7 @@ const ServerStats = () => {
             title="Discord Mitglieder" 
             value={stats.discordMembers} 
             icon={Users} 
-            lastUpdated={stats.lastUpdated}
+            lastUpdated={stats.lastUpdated ? new Date(stats.lastUpdated).toLocaleString('de-DE') : 'Unbekannt'}
             className="border-t-4 border-t-blue-500 hover:translate-y-[-5px]"
             color="bg-gradient-to-r from-blue-500 to-blue-600"
           />
@@ -59,7 +68,7 @@ const ServerStats = () => {
             title="Partner Server" 
             value={stats.partnerServers} 
             icon={Share}
-            lastUpdated={stats.lastUpdated}
+            lastUpdated={stats.lastUpdated ? new Date(stats.lastUpdated).toLocaleString('de-DE') : 'Unbekannt'}
             className="border-t-4 border-t-indigo-500 hover:translate-y-[-5px]"
             color="bg-gradient-to-r from-indigo-500 to-indigo-600"
           />
@@ -67,7 +76,7 @@ const ServerStats = () => {
             title="Server" 
             value={stats.servers} 
             icon={Server}
-            lastUpdated={stats.lastUpdated}
+            lastUpdated={stats.lastUpdated ? new Date(stats.lastUpdated).toLocaleString('de-DE') : 'Unbekannt'}
             className="border-t-4 border-t-purple-500 hover:translate-y-[-5px]"
             color="bg-gradient-to-r from-purple-500 to-purple-600"
           />

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -75,26 +74,12 @@ const App = () => {
     // Improved auth initialization
     const initializeAuth = async () => {
       try {
-        // Make sure to clear any stale auth state that might be causing issues
-        const currentSession = localStorage.getItem('supabase.auth.token');
-        if (currentSession && typeof currentSession === 'string') {
-          try {
-            const parsed = JSON.parse(currentSession);
-            if (!parsed.currentSession || new Date(parsed.expiresAt) < new Date()) {
-              localStorage.removeItem('supabase.auth.token');
-            }
-          } catch (e) {
-            // Invalid session data, remove it
-            localStorage.removeItem('supabase.auth.token');
-          }
-        }
-        
         // Set up auth state change listener first
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
           console.log("Auth state changed:", _event);
           if (!isMounted) return;
           
-          setSession(session);
+          setSession(newSession);
           setLoading(false);
         });
         

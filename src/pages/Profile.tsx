@@ -288,11 +288,11 @@ const Profile = () => {
     }
   };
 
-  const getRoleName = (role: string) => {
-    switch (role) {
-      default:
-        return 'Benutzer';
+  const getUserRoleName = () => {
+    if (isAdmin) {
+      return 'Administrator';
     }
+    return 'Benutzer';
   };
 
   const getStatusBadge = (status: string) => {
@@ -525,7 +525,7 @@ const Profile = () => {
                             </div>
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium">Rolle:</span>
-                              {getRoleName(user.role)}
+                              <span className="text-sm">{getUserRoleName()}</span>
                             </div>
                             {(!username || !discordId || !robloxId) && (
                               <Button 

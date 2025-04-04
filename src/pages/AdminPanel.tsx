@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { addAdmin, addModerator, removeUserRole, checkIsAdmin } from '@/lib/admin';
+import { updateServerStats } from '@/lib/stats';
 import { AlertCircle, CheckCircle, ShieldCheck, Shield, Loader2, Users, Edit, Trash, ChevronsUpDown, BarChart } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
