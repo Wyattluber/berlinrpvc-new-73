@@ -133,6 +133,52 @@ export async function updateAdminUser(id: string, role: string) {
   }
 }
 
+/**
+ * Check if a username is already taken
+ */
+export async function isUsernameTaken(username: string, currentUserEmail?: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.auth.admin.listUsers();
+    
+    if (error) {
+      console.error('Error checking username:', error);
+      return false;
+    }
+    
+    return data.users.some(user => 
+      user.user_metadata?.name?.toLowerCase() === username.toLowerCase() && 
+      user.email !== currentUserEmail
+    );
+  } catch (error) {
+    console.error('Error checking username:', error);
+    return false;
+  }
+}
+
+/**
+ * Update user email
+ */
+export async function updateUserEmail(newEmail: string): Promise<{success: boolean; message: string}> {
+  try {
+    const { error } = await supabase.auth.updateUser({ 
+      email: newEmail 
+    });
+    
+    if (error) throw error;
+    
+    return { 
+      success: true, 
+      message: 'E-Mail Aktualisierungsanfrage gesendet. Bitte überprüfe dein E-Mail-Postfach.' 
+    };
+  } catch (error: any) {
+    console.error('Error updating email:', error);
+    return { 
+      success: false, 
+      message: error.message || 'Fehler beim Aktualisieren der E-Mail' 
+    };
+  }
+}
+
 // Manually invalidate caches when needed (export this for use in components)
 export function invalidateAdminCache() {
   adminUsersCache = null;

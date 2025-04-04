@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+
+import React, { useState, useEffect, useContext, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Button } from '@/components/ui/button';
@@ -7,13 +8,26 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Settings, User, Calendar, BarChart, AlertCircle, CheckCircle, Clock, KeyRound, Eye, EyeOff, ShieldCheck, Users, Trash2, Edit } from 'lucide-react';
+import { 
+  Settings, User, Calendar, BarChart, AlertCircle, CheckCircle, Clock, KeyRound, Eye, EyeOff, 
+  ShieldCheck, Users, Trash2, Edit, Mail, Upload, Image, AlertTriangle
+} from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { SessionContext } from '@/App';
-import { checkIsAdmin, checkIsModerator, getTeamSettings, getUserRole, updateTeamSettings, getTotalUserCount, deleteApplication, getUserApplicationsHistory } from '@/lib/admin';
+import { 
+  checkIsAdmin, checkIsModerator, getTeamSettings, getUserRole, updateTeamSettings, 
+  getTotalUserCount, deleteApplication, getUserApplicationsHistory 
+} from '@/lib/admin';
+import {
+  fetchAdminUsers, getCachedUserCount, deleteAdminUser, updateAdminUser,
+  isUsernameTaken, updateUserEmail, invalidateAdminCache
+} from '@/lib/adminService';
+import { 
+  validateUsername, checkUsernameCooldown, getTimeBasedGreeting 
+} from '@/lib/usernameValidation';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableCaption 
@@ -22,6 +36,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
+import { Toaster } from '@/components/ui/toaster';
 
 interface UserProfile {
   id: string;
@@ -31,6 +46,8 @@ interface UserProfile {
   discordId?: string;
   robloxId?: string;
   avatar_url?: string;
+  last_username_change?: string;
+  email_changed?: boolean;
 }
 
 interface Application {
@@ -49,13 +66,16 @@ interface AdminUser {
 }
 
 const Profile = () => {
+  const [searchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  
   const navigate = useNavigate();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [discordId, setDiscordId] = useState('');
   const [robloxId, setRobloxId] = useState('');
   const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(tabParam || 'dashboard');
   const [applications, setApplications] = useState<Application[]>([]);
   const [isLoadingApplications, setIsLoadingApplications] = useState(false);
   const session = useContext(SessionContext);
@@ -81,6 +101,10 @@ const Profile = () => {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState(false);
   
+  const [newEmail, setNewEmail] = useState('');
+  const [showEmailChangeDialog, setShowEmailChangeDialog] = useState(false);
+  const [emailChangeError, setEmailChangeError] = useState<string | null>(null);
+  
   const [passwordValidation, setPasswordValidation] = useState({
     length: false,
     hasLetter: false,
@@ -91,6 +115,16 @@ const Profile = () => {
   const [verifiedDiscordId, setVerifiedDiscordId] = useState('');
   const [verifiedRobloxId, setVerifiedRobloxId] = useState('');
   const [hasModifiedIds, setHasModifiedIds] = useState(false);
+  
+  const [showUsernameChangeDialog, setShowUsernameChangeDialog] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [usernameValidationResult, setUsernameValidationResult] = useState<{valid: boolean; reason?: string}>({ valid: true });
+  const [isUsernameTakenCheck, setIsUsernameTakenCheck] = useState<boolean | null>(null);
+  const [usernameCooldown, setUsernameCooldown] = useState<{canChange: boolean; daysRemaining: number; nextChangeDate: Date | null}>({
+    canChange: true,
+    daysRemaining: 0,
+    nextChangeDate: null
+  });
 
   // Admin functionality
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -106,6 +140,32 @@ const Profile = () => {
   const [loadingAllApplications, setLoadingAllApplications] = useState(false);
   const [viewApplicationDialog, setViewApplicationDialog] = useState(false);
   const [currentViewApplication, setCurrentViewApplication] = useState<any>(null);
+  
+  // Profile image upload
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [greeting, setGreeting] = useState('');
+
+  // Time-based greeting update
+  useEffect(() => {
+    const updateGreeting = () => {
+      setGreeting(getTimeBasedGreeting());
+    };
+    
+    // Set initial greeting
+    updateGreeting();
+    
+    // Update greeting every minute
+    const interval = setInterval(updateGreeting, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const newTab = searchParams.get('tab');
+    if (newTab) {
+      setActiveTab(newTab);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     setPasswordValidation({
@@ -144,12 +204,14 @@ const Profile = () => {
 
       const userProfile: UserProfile = {
         id: user.id,
-        name: user.user_metadata?.full_name || user.user_metadata?.name || user.user_metadata?.username || 'User',
+        name: user.user_metadata?.name || user.user_metadata?.full_name || user.user_metadata?.username || 'User',
         email: user.email || '',
         role: 'user',
         discordId: user.user_metadata?.discord_id || '',
         robloxId: user.user_metadata?.roblox_id || '',
         avatar_url: user.user_metadata?.avatar_url || '',
+        last_username_change: user.user_metadata?.last_username_change || null,
+        email_changed: user.user_metadata?.email_changed || false,
       };
 
       setUser(userProfile);
@@ -158,6 +220,14 @@ const Profile = () => {
       setRobloxId(userProfile.robloxId || '');
       setVerifiedRobloxId(userProfile.robloxId || '');
       setUsername(userProfile.name || '');
+      setNewUsername(userProfile.name || '');
+      setNewEmail(userProfile.email || '');
+      
+      // Check username cooldown
+      if (userProfile.last_username_change) {
+        const cooldownInfo = checkUsernameCooldown(new Date(userProfile.last_username_change));
+        setUsernameCooldown(cooldownInfo);
+      }
       
       fetchApplicationsHistory(user.id);
       fetchTeamSettings();
@@ -179,7 +249,7 @@ const Profile = () => {
           
           if (adminStatus) {
             fetchUserCount();
-            fetchAdminUsers();
+            fetchAdminUsersData();
             fetchAllApplications();
           }
           
@@ -219,6 +289,28 @@ const Profile = () => {
       setHasModifiedIds(false);
     }
   }, [discordId, robloxId, verifiedDiscordId, verifiedRobloxId]);
+  
+  // Validate username when it changes
+  useEffect(() => {
+    const validateNewUsername = () => {
+      if (newUsername) {
+        const validationResult = validateUsername(newUsername);
+        setUsernameValidationResult(validationResult);
+        
+        // Check if username is taken (but only if it passed basic validation)
+        if (validationResult.valid && user?.email) {
+          checkIfUsernameTaken(newUsername, user.email);
+        } else {
+          setIsUsernameTakenCheck(null);
+        }
+      } else {
+        setUsernameValidationResult({ valid: false, reason: "Benutzername darf nicht leer sein" });
+        setIsUsernameTakenCheck(null);
+      }
+    };
+    
+    validateNewUsername();
+  }, [newUsername, user?.email]);
 
   const fetchApplicationsHistory = async (userId: string) => {
     setIsLoadingApplications(true);
@@ -252,29 +344,22 @@ const Profile = () => {
 
   const fetchUserCount = async () => {
     try {
-      const count = await getTotalUserCount();
+      const count = await getCachedUserCount();
       setUserCount(count);
     } catch (error) {
       console.error('Error fetching user count:', error);
     }
   };
 
-  const fetchAdminUsers = async () => {
+  const fetchAdminUsersData = async () => {
     setLoadingAdminUsers(true);
     try {
-      const { data, error } = await supabase
-        .from('admin_users')
-        .select('*');
-
-      if (error) {
-        throw error;
-      }
-
-      setUsers(data || []);
+      const users = await fetchAdminUsers();
+      setUsers(users);
       
       // Fetch usernames for all user IDs
-      if (data && data.length > 0) {
-        const userIds = data.map(user => user.user_id);
+      if (users && users.length > 0) {
+        const userIds = users.map(user => user.user_id);
         fetchUsernames(userIds);
       }
     } catch (error) {
@@ -328,6 +413,11 @@ const Profile = () => {
       console.error('Error in fetchUsernames:', error);
     }
   };
+  
+  const checkIfUsernameTaken = async (username: string, currentEmail: string) => {
+    const result = await isUsernameTaken(username, currentEmail);
+    setIsUsernameTakenCheck(result);
+  };
 
   const handleSaveProfile = () => {
     if (hasModifiedIds) {
@@ -374,6 +464,71 @@ const Profile = () => {
       toast({
         title: "Fehler",
         description: "Es gab ein Problem beim Speichern deines Profils.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleInitiateUsernameChange = () => {
+    if (!usernameCooldown.canChange) {
+      toast({
+        title: "Änderung nicht möglich",
+        description: `Du kannst deinen Benutzernamen erst in ${usernameCooldown.daysRemaining} Tagen wieder ändern.`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setNewUsername(username);
+    setShowUsernameChangeDialog(true);
+  };
+  
+  const confirmUsernameChange = async () => {
+    if (!newUsername || !usernameValidationResult.valid || isUsernameTakenCheck) {
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      const now = new Date().toISOString();
+      
+      const { error } = await supabase.auth.updateUser({
+        data: { 
+          name: newUsername,
+          last_username_change: now
+        }
+      });
+
+      if (error) throw error;
+
+      if (user) {
+        setUser({
+          ...user,
+          name: newUsername,
+          last_username_change: now
+        });
+      }
+      
+      setUsername(newUsername);
+      
+      // Update cooldown information
+      const cooldownInfo = checkUsernameCooldown(new Date(now));
+      setUsernameCooldown(cooldownInfo);
+      
+      toast({
+        title: "Benutzername geändert",
+        description: "Dein Benutzername wurde erfolgreich aktualisiert.",
+      });
+      
+      setShowUsernameChangeDialog(false);
+    } catch (error) {
+      console.error('Error updating username:', error);
+      toast({
+        title: "Fehler",
+        description: "Es gab ein Problem beim Ändern deines Benutzernamens.",
         variant: "destructive"
       });
     } finally {
@@ -437,6 +592,72 @@ const Profile = () => {
       setIsLoading(false);
     }
   };
+  
+  const handleShowEmailChangeDialog = () => {
+    if (user?.email_changed) {
+      toast({
+        title: "Hinweis",
+        description: "Du hast deine E-Mail bereits geändert. Weitere Änderungen sind nicht möglich.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setNewEmail(user?.email || '');
+    setEmailChangeError(null);
+    setShowEmailChangeDialog(true);
+  };
+  
+  const handleChangeEmail = async () => {
+    setEmailChangeError(null);
+    setIsLoading(true);
+    
+    if (!newEmail || newEmail === user?.email) {
+      setEmailChangeError("Bitte gib eine neue E-Mail-Adresse ein");
+      setIsLoading(false);
+      return;
+    }
+    
+    try {
+      // Mark that the user has changed their email
+      await supabase.auth.updateUser({
+        data: { 
+          email_changed: true
+        }
+      });
+      
+      const result = await updateUserEmail(newEmail);
+      
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+      
+      if (user) {
+        setUser({
+          ...user,
+          email_changed: true
+        });
+      }
+      
+      setShowEmailChangeDialog(false);
+      
+      toast({
+        title: "E-Mail-Änderung",
+        description: result.message,
+      });
+    } catch (error: any) {
+      console.error('Error updating email:', error);
+      setEmailChangeError(error.message || "Es gab ein Problem bei der Änderung der E-Mail");
+      
+      toast({
+        title: "Fehler",
+        description: error.message || "Es gab ein Problem bei der Änderung der E-Mail",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSaveTeamSettings = async () => {
     setIsLoading(true);
@@ -483,26 +704,24 @@ const Profile = () => {
   const handleSaveUser = async () => {
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('admin_users')
-        .update({ role: editRole })
-        .eq('id', editUserId);
-
-      if (error) {
-        throw error;
+      const result = await updateAdminUser(editUserId!, editRole);
+      
+      if (!result.success) {
+        throw new Error(result.message);
       }
-
+      
       toast({
         title: "Erfolgreich",
-        description: "Benutzer erfolgreich aktualisiert.",
+        description: result.message,
       });
-      fetchAdminUsers();
+      
+      fetchAdminUsersData();
       setEditDialogOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating user:', error);
       toast({
         title: "Fehler",
-        description: "Fehler beim Aktualisieren des Benutzers.",
+        description: error.message || "Fehler beim Aktualisieren des Benutzers.",
         variant: "destructive"
       });
     } finally {
@@ -513,25 +732,23 @@ const Profile = () => {
   const handleDeleteUser = async (id: string) => {
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('admin_users')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        throw error;
+      const result = await deleteAdminUser(id);
+      
+      if (!result.success) {
+        throw new Error(result.message);
       }
-
+      
       toast({
         title: "Erfolgreich",
-        description: "Benutzer erfolgreich gelöscht.",
+        description: result.message,
       });
-      fetchAdminUsers();
-    } catch (error) {
+      
+      fetchAdminUsersData();
+    } catch (error: any) {
       console.error('Error deleting user:', error);
       toast({
         title: "Fehler",
-        description: "Fehler beim Löschen des Benutzers.",
+        description: error.message || "Fehler beim Löschen des Benutzers.",
         variant: "destructive"
       });
     } finally {
@@ -582,6 +799,89 @@ const Profile = () => {
       setIsLoading(false);
       setConfirmDeleteDialog(false);
       setApplicationToDelete(null);
+    }
+  };
+  
+  const handleFileUpload = () => {
+    fileInputRef.current?.click();
+  };
+  
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Datei zu groß",
+        description: "Das Bild darf maximal 5MB groß sein.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Ungültiger Dateityp",
+        description: "Bitte wähle ein Bild (JPG, PNG, etc.).",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setUploadingImage(true);
+    
+    try {
+      // Upload image to Supabase Storage
+      const fileName = `avatar-${user?.id}-${Date.now()}`;
+      const { data, error } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file);
+      
+      if (error) throw error;
+      
+      // Get public URL for the uploaded image
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+      
+      if (!urlData.publicUrl) throw new Error("Couldn't get public URL");
+      
+      // Update user metadata with avatar URL
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { 
+          avatar_url: urlData.publicUrl
+        }
+      });
+      
+      if (updateError) throw updateError;
+      
+      // Update local state
+      if (user) {
+        setUser({
+          ...user,
+          avatar_url: urlData.publicUrl
+        });
+      }
+      
+      toast({
+        title: "Bild hochgeladen",
+        description: "Dein Profilbild wurde erfolgreich aktualisiert.",
+      });
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error);
+      toast({
+        title: "Fehler",
+        description: error.message || "Es gab ein Problem beim Hochladen des Bildes.",
+        variant: "destructive"
+      });
+    } finally {
+      setUploadingImage(false);
+      // Clear the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -695,6 +995,16 @@ const Profile = () => {
   const getUsernameById = (userId: string) => {
     return usernames[userId] || 'Unbekannter Benutzer';
   };
+  
+  const formatNextChangeDate = (date: Date | null) => {
+    if (!date) return '';
+    
+    return new Intl.DateTimeFormat('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).format(date);
+  };
 
   if (!user) return null;
 
@@ -710,7 +1020,7 @@ const Profile = () => {
                 <CardHeader className="pb-3">
                   <div className="flex items-center space-x-2">
                     {user.avatar_url ? (
-                      <div className="w-10 h-10 rounded-full overflow-hidden">
+                      <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-blue-100">
                         <img 
                           src={user.avatar_url} 
                           alt={user.name}
@@ -718,13 +1028,14 @@ const Profile = () => {
                         />
                       </div>
                     ) : (
-                      <div className="bg-blue-600 text-white p-2 rounded-full">
-                        <User size={24} />
+                      <div className="bg-blue-600 text-white p-3 rounded-full w-16 h-16 flex items-center justify-center">
+                        <User size={32} />
                       </div>
                     )}
                     <div>
-                      <CardTitle className="text-lg">{user.name}</CardTitle>
+                      <CardTitle className="text-lg">{greeting}, {user.name}</CardTitle>
                       <CardDescription className="text-xs truncate max-w-[180px]">{user.email}</CardDescription>
+                      <CardDescription className="text-xs text-blue-600">{getUserRoleName()}</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
@@ -733,7 +1044,10 @@ const Profile = () => {
                     <Button 
                       variant={activeTab === 'dashboard' ? 'default' : 'ghost'} 
                       className="w-full justify-start"
-                      onClick={() => setActiveTab('dashboard')}
+                      onClick={() => {
+                        setActiveTab('dashboard');
+                        navigate('/profile?tab=dashboard');
+                      }}
                     >
                       <BarChart size={16} className="mr-2" />
                       Dashboard
@@ -741,7 +1055,10 @@ const Profile = () => {
                     <Button 
                       variant={activeTab === 'profile' ? 'default' : 'ghost'} 
                       className="w-full justify-start"
-                      onClick={() => setActiveTab('profile')}
+                      onClick={() => {
+                        setActiveTab('profile');
+                        navigate('/profile?tab=profile');
+                      }}
                     >
                       <Settings size={16} className="mr-2" />
                       Einstellungen
@@ -749,7 +1066,10 @@ const Profile = () => {
                     <Button 
                       variant={activeTab === 'security' ? 'default' : 'ghost'} 
                       className="w-full justify-start"
-                      onClick={() => setActiveTab('security')}
+                      onClick={() => {
+                        setActiveTab('security');
+                        navigate('/profile?tab=security');
+                      }}
                     >
                       <KeyRound size={16} className="mr-2" />
                       Sicherheit
@@ -759,7 +1079,10 @@ const Profile = () => {
                       <Button 
                         variant={activeTab === 'admin' ? 'default' : 'ghost'} 
                         className="w-full justify-start mt-2"
-                        onClick={() => setActiveTab('admin')}
+                        onClick={() => {
+                          setActiveTab('admin');
+                          navigate('/profile?tab=admin');
+                        }}
                       >
                         <ShieldCheck size={16} className="mr-2" />
                         Admin Panel
@@ -888,6 +1211,10 @@ const Profile = () => {
                         <CardContent>
                           <div className="space-y-3">
                             <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium">Profilbild:</span>
+                              <span className="text-sm">{user.avatar_url ? "✓ Hochgeladen" : "✗ Fehlt"}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
                               <span className="text-sm font-medium">Benutzername:</span>
                               <span className="text-sm">{username ? "✓ Eingegeben" : "✗ Fehlt"}</span>
                             </div>
@@ -903,10 +1230,13 @@ const Profile = () => {
                               <span className="text-sm font-medium">Rolle:</span>
                               <span className="text-sm">{getUserRoleName()}</span>
                             </div>
-                            {(!username || !discordId || !robloxId) && (
+                            {(!username || !discordId || !robloxId || !user.avatar_url) && (
                               <Button 
                                 size="sm"
-                                onClick={() => setActiveTab('profile')}
+                                onClick={() => {
+                                  setActiveTab('profile');
+                                  navigate('/profile?tab=profile');
+                                }}
                               >
                                 Profil vervollständigen
                               </Button>
@@ -926,19 +1256,78 @@ const Profile = () => {
                     <CardDescription>Passe deine Profil-Informationen an</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
+                    <div className="flex justify-center mb-4">
+                      <div className="relative group">
+                        {user.avatar_url ? (
+                          <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-blue-100 group-hover:border-blue-200 transition-all">
+                            <img 
+                              src={user.avatar_url} 
+                              alt={user.name}
+                              className="w-full h-full object-cover" 
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-32 h-32 bg-blue-100 rounded-full flex items-center justify-center border-4 border-blue-50 group-hover:border-blue-200 transition-all">
+                            <User size={64} className="text-blue-400" />
+                          </div>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="absolute bottom-0 right-0 rounded-full p-2 bg-white shadow-md"
+                          onClick={handleFileUpload}
+                          disabled={uploadingImage}
+                        >
+                          {uploadingImage ? (
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+                          ) : (
+                            <Upload size={16} />
+                          )}
+                        </Button>
+                        <input 
+                          type="file" 
+                          ref={fileInputRef} 
+                          className="hidden" 
+                          accept="image/*"
+                          onChange={handleFileChange}
+                        />
+                      </div>
+                    </div>
+                    
                     <div className="space-y-2">
-                      <Label htmlFor="username">Benutzername</Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="username">Benutzername</Label>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={handleInitiateUsernameChange}
+                          disabled={!usernameCooldown.canChange}
+                        >
+                          <Edit size={14} className="mr-1" />
+                          Ändern
+                        </Button>
+                      </div>
                       <Input 
                         id="username" 
                         value={username} 
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder="Dein Benutzername"
+                        readOnly={true}
+                        className="bg-gray-50"
                       />
+                      {!usernameCooldown.canChange && (
+                        <p className="text-xs text-amber-600 flex items-center gap-1">
+                          <Clock size={12} />
+                          Änderung erst wieder ab dem {formatNextChangeDate(usernameCooldown.nextChangeDate)} möglich 
+                          (in {usernameCooldown.daysRemaining} Tagen)
+                        </p>
+                      )}
                     </div>
                     
                     <div className="space-y-2">
                       <Label htmlFor="email">E-Mail</Label>
-                      <Input id="email" type="email" value={user.email} disabled className="truncate" />
+                      <Input id="email" type="email" value={user.email} disabled className="truncate bg-gray-50" />
+                      <p className="text-xs text-gray-500">
+                        Die E-Mail-Adresse kann im Bereich "Sicherheit" geändert werden.
+                      </p>
                     </div>
                     
                     <div className="space-y-2">
@@ -993,7 +1382,7 @@ const Profile = () => {
                     
                     <div className="space-y-2">
                       <Label htmlFor="role">Rolle</Label>
-                      <Input id="role" value={getUserRoleName()} disabled />
+                      <Input id="role" value={getUserRoleName()} disabled className="bg-gray-50" />
                     </div>
                     
                     <Button
@@ -1008,136 +1397,175 @@ const Profile = () => {
               )}
 
               {activeTab === 'security' && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Sicherheitseinstellungen</CardTitle>
-                    <CardDescription>Passwort ändern</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {passwordError && (
-                      <Alert variant="destructive" className="mb-4">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Fehler</AlertTitle>
-                        <AlertDescription>{passwordError}</AlertDescription>
-                      </Alert>
-                    )}
-                    
-                    {passwordChangeSuccess && (
-                      <Alert className="mb-4 bg-green-50 border-green-200">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <AlertTitle className="text-green-800">Passwort geändert</AlertTitle>
-                        <AlertDescription className="text-green-700">
-                          Dein Passwort wurde erfolgreich aktualisiert.
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="current-password">Aktuelles Passwort</Label>
-                      <div className="relative">
-                        <Input 
-                          id="current-password"
-                          type={showCurrentPassword ? "text" : "password"} 
-                          placeholder="••••••••"
-                          value={currentPassword}
-                          onChange={(e) => setCurrentPassword(e.target.value)}
-                        />
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="icon" 
-                          className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-500"
-                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                <div className="space-y-6">
+                  {/* Email change section */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>E-Mail-Adresse ändern</CardTitle>
+                      <CardDescription>
+                        Du kannst deine E-Mail-Adresse einmalig ändern. Nach der Änderung ist keine weitere Änderung möglich.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium">Aktuelle E-Mail-Adresse:</p>
+                          <p className="text-sm">{user.email}</p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          onClick={handleShowEmailChangeDialog}
+                          disabled={isLoading || user.email_changed}
                         >
-                          {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="new-password">Neues Passwort</Label>
-                      <div className="relative">
-                        <Input 
-                          id="new-password"
-                          type={showNewPassword ? "text" : "password"} 
-                          placeholder="••••••••"
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                        />
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="icon" 
-                          className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-500"
-                          onClick={() => setShowNewPassword(!showNewPassword)}
-                        >
-                          {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                          <Mail size={16} className="mr-2" />
+                          E-Mail ändern
                         </Button>
                       </div>
                       
-                      <div className="text-xs space-y-1 mt-2">
-                        <p className="font-semibold text-gray-600">Passwort muss:</p>
-                        <div className="flex items-center gap-1">
-                          <div className={`w-3 h-3 rounded-full ${passwordValidation.length ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                          <span className={passwordValidation.length ? 'text-green-600' : 'text-gray-500'}>
-                            Mindestens 8 Zeichen lang sein
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className={`w-3 h-3 rounded-full ${passwordValidation.hasLetter ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                          <span className={passwordValidation.hasLetter ? 'text-green-600' : 'text-gray-500'}>
-                            Mindestens einen Buchstaben enthalten
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className={`w-3 h-3 rounded-full ${passwordValidation.hasNumber ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                          <span className={passwordValidation.hasNumber ? 'text-green-600' : 'text-gray-500'}>
-                            Mindestens eine Ziffer enthalten
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="confirm-new-password">Neues Passwort bestätigen</Label>
-                      <div className="relative">
-                        <Input 
-                          id="confirm-new-password"
-                          type={showConfirmPassword ? "text" : "password"} 
-                          placeholder="••••••••"
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                        />
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="icon" 
-                          className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-500"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        >
-                          {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </Button>
-                      </div>
-                      
-                      {confirmPassword && (
-                        <div className="flex items-center gap-1 mt-1 text-xs">
-                          <div className={`w-2 h-2 rounded-full ${confirmPassword === newPassword ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                          <span className={confirmPassword === newPassword ? 'text-green-600' : 'text-red-500'}>
-                            {confirmPassword === newPassword ? 'Passwörter stimmen überein' : 'Passwörter stimmen nicht überein'}
-                          </span>
-                        </div>
+                      {user.email_changed && (
+                        <Alert className="bg-blue-50 border-blue-200">
+                          <Mail className="h-4 w-4 text-blue-600" />
+                          <AlertTitle className="text-blue-800">E-Mail bereits geändert</AlertTitle>
+                          <AlertDescription className="text-blue-700">
+                            Du hast deine E-Mail-Adresse bereits geändert. Weitere Änderungen sind nicht möglich.
+                          </AlertDescription>
+                        </Alert>
                       )}
-                    </div>
-                    
-                    <Button
-                      className="bg-gradient-to-r from-blue-600 to-indigo-700 w-full"
-                      onClick={handleChangePassword}
-                      disabled={isLoading}
-                    >
-                      {isLoading ? "Passwort wird geändert..." : "Passwort ändern"}
-                    </Button>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                  
+                  {/* Password change section */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Passwort ändern</CardTitle>
+                      <CardDescription>Ändere dein Passwort regelmäßig für mehr Sicherheit</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      {passwordError && (
+                        <Alert variant="destructive" className="mb-4">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertTitle>Fehler</AlertTitle>
+                          <AlertDescription>{passwordError}</AlertDescription>
+                        </Alert>
+                      )}
+                      
+                      {passwordChangeSuccess && (
+                        <Alert className="mb-4 bg-green-50 border-green-200">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <AlertTitle className="text-green-800">Passwort geändert</AlertTitle>
+                          <AlertDescription className="text-green-700">
+                            Dein Passwort wurde erfolgreich aktualisiert.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="current-password">Aktuelles Passwort</Label>
+                        <div className="relative">
+                          <Input 
+                            id="current-password"
+                            type={showCurrentPassword ? "text" : "password"} 
+                            placeholder="••••••••"
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                          />
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="icon" 
+                            className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-500"
+                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          >
+                            {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="new-password">Neues Passwort</Label>
+                        <div className="relative">
+                          <Input 
+                            id="new-password"
+                            type={showNewPassword ? "text" : "password"} 
+                            placeholder="••••••••"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                          />
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="icon" 
+                            className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-500"
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                          >
+                            {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </Button>
+                        </div>
+                        
+                        <div className="text-xs space-y-1 mt-2">
+                          <p className="font-semibold text-gray-600">Passwort muss:</p>
+                          <div className="flex items-center gap-1">
+                            <div className={`w-3 h-3 rounded-full ${passwordValidation.length ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                            <span className={passwordValidation.length ? 'text-green-600' : 'text-gray-500'}>
+                              Mindestens 8 Zeichen lang sein
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className={`w-3 h-3 rounded-full ${passwordValidation.hasLetter ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                            <span className={passwordValidation.hasLetter ? 'text-green-600' : 'text-gray-500'}>
+                              Mindestens einen Buchstaben enthalten
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <div className={`w-3 h-3 rounded-full ${passwordValidation.hasNumber ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                            <span className={passwordValidation.hasNumber ? 'text-green-600' : 'text-gray-500'}>
+                              Mindestens eine Ziffer enthalten
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="confirm-new-password">Neues Passwort bestätigen</Label>
+                        <div className="relative">
+                          <Input 
+                            id="confirm-new-password"
+                            type={showConfirmPassword ? "text" : "password"} 
+                            placeholder="••••••••"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                          />
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="icon" 
+                            className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-500"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          >
+                            {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </Button>
+                        </div>
+                        
+                        {confirmPassword && (
+                          <div className="flex items-center gap-1 mt-1 text-xs">
+                            <div className={`w-2 h-2 rounded-full ${confirmPassword === newPassword ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                            <span className={confirmPassword === newPassword ? 'text-green-600' : 'text-red-500'}>
+                              {confirmPassword === newPassword ? 'Passwörter stimmen überein' : 'Passwörter stimmen nicht überein'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <Button
+                        className="bg-gradient-to-r from-blue-600 to-indigo-700 w-full"
+                        onClick={handleChangePassword}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? "Passwort wird geändert..." : "Passwort ändern"}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
               )}
 
               {activeTab === 'admin' && isAdmin && (
@@ -1438,6 +1866,7 @@ const Profile = () => {
         </div>
       </main>
       
+      {/* Verify IDs Dialog */}
       <Dialog open={showVerifyDialog} onOpenChange={setShowVerifyDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -1474,6 +1903,122 @@ const Profile = () => {
           <DialogFooter>
             <Button variant="outline" onClick={cancelIdChange}>Abbrechen</Button>
             <Button onClick={confirmIdChange}>Bestätigen und speichern</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Username Change Dialog */}
+      <Dialog open={showUsernameChangeDialog} onOpenChange={setShowUsernameChangeDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Benutzernamen ändern</DialogTitle>
+            <DialogDescription>
+              Benutzeränderungen können nur alle 30 Tage vorgenommen werden.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="new-username">Neuer Benutzername</Label>
+              <Input 
+                id="new-username" 
+                value={newUsername} 
+                onChange={(e) => setNewUsername(e.target.value)}
+                placeholder="Dein neuer Benutzername"
+              />
+              
+              {!usernameValidationResult.valid && newUsername && (
+                <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                  <AlertCircle size={12} />
+                  {usernameValidationResult.reason}
+                </p>
+              )}
+              
+              {isUsernameTakenCheck && (
+                <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                  <AlertCircle size={12} />
+                  Dieser Benutzername ist bereits vergeben
+                </p>
+              )}
+            </div>
+            
+            <Alert variant="warning" className="bg-amber-50 border-amber-200">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertTitle className="text-amber-800">Bitte beachte</AlertTitle>
+              <AlertDescription className="text-amber-700">
+                Nach der Änderung kannst du deinen Benutzernamen erst in 30 Tagen wieder ändern.
+              </AlertDescription>
+            </Alert>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowUsernameChangeDialog(false)}>Abbrechen</Button>
+            <Button 
+              onClick={confirmUsernameChange}
+              disabled={!usernameValidationResult.valid || isUsernameTakenCheck || isLoading}
+            >
+              {isLoading ? "Speichern..." : "Bestätigen und speichern"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Email Change Dialog */}
+      <Dialog open={showEmailChangeDialog} onOpenChange={setShowEmailChangeDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>E-Mail-Adresse ändern</DialogTitle>
+            <DialogDescription>
+              E-Mail-Änderungen können nur einmal vorgenommen werden. Nach der Änderung ist keine weitere Änderung möglich.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="current-email">Aktuelle E-Mail-Adresse</Label>
+              <Input 
+                id="current-email" 
+                value={user.email}
+                disabled
+                className="bg-gray-50"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="new-email">Neue E-Mail-Adresse</Label>
+              <Input 
+                id="new-email" 
+                type="email"
+                value={newEmail} 
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="deine-neue-email@beispiel.de"
+              />
+              
+              {emailChangeError && (
+                <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                  <AlertCircle size={12} />
+                  {emailChangeError}
+                </p>
+              )}
+            </div>
+            
+            <Alert variant="destructive" className="bg-red-50 border-red-200">
+              <AlertCircle className="h-4 w-4 text-red-600" />
+              <AlertTitle className="text-red-800">Wichtiger Hinweis</AlertTitle>
+              <AlertDescription className="text-red-700">
+                Du kannst deine E-Mail-Adresse nur einmal ändern. Nach dieser Änderung ist keine weitere Änderung möglich.
+              </AlertDescription>
+            </Alert>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEmailChangeDialog(false)}>Abbrechen</Button>
+            <Button 
+              onClick={handleChangeEmail}
+              disabled={!newEmail || newEmail === user.email || isLoading}
+            >
+              {isLoading ? "Wird geändert..." : "E-Mail ändern"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1609,8 +2154,10 @@ const Profile = () => {
       </Dialog>
       
       <Footer />
+      <Toaster />
     </div>
   );
 };
 
 export default Profile;
+
