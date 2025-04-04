@@ -138,6 +138,7 @@ export async function updateAdminUser(id: string, role: string) {
  */
 export async function isUsernameTaken(username: string, currentUserEmail?: string): Promise<boolean> {
   try {
+    // Fix the code to correctly handle user data
     const { data, error } = await supabase.auth.admin.listUsers();
     
     if (error) {
@@ -145,10 +146,16 @@ export async function isUsernameTaken(username: string, currentUserEmail?: strin
       return false;
     }
     
-    return data.users.some(user => 
-      user.user_metadata?.name?.toLowerCase() === username.toLowerCase() && 
-      user.email !== currentUserEmail
-    );
+    // Type-safe approach: check if data exists and has users array
+    if (data && data.users) {
+      return data.users.some(user => {
+        // Check if user_metadata exists and has name property
+        const userName = user.user_metadata?.name?.toLowerCase();
+        return userName === username.toLowerCase() && user.email !== currentUserEmail;
+      });
+    }
+    
+    return false;
   } catch (error) {
     console.error('Error checking username:', error);
     return false;
