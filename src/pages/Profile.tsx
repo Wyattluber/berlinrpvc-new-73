@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { SessionContext } from '../App';
-import { LoaderIcon, CheckCircle, Calendar, Clock, Users, MessageSquare, Bell, HelpCircle } from 'lucide-react';
+import { LoaderIcon, CheckCircle, Calendar, Clock, Users, MessageSquare, Bell, HelpCircle, AlertTriangle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { getUserApplicationsHistory, checkIsAdmin } from '@/lib/admin';
 import ProfileImageUpload from '@/components/ProfileImageUpload';
@@ -47,8 +47,11 @@ const Profile = () => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [username, setUsername] = useState('');
   const [userAvatar, setUserAvatar] = useState('');
+  const [discordId, setDiscordId] = useState('');
+  const [robloxId, setRobloxId] = useState('');
   const [isUsernameAvailable, setIsUsernameAvailable] = useState({ valid: true, reason: '' });
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
+  const [isUpdatingProfiles, setIsUpdatingProfiles] = useState(false);
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [emailUpdateMessage, setEmailUpdateMessage] = useState('');
@@ -116,6 +119,20 @@ const Profile = () => {
         setUser(userDetails?.user || null);
         setUsername(userDetails?.user?.user_metadata?.name || '');
         setUserAvatar(userDetails?.user?.user_metadata?.avatar_url || '');
+        
+        // Fetch user profile data
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('discord_id, roblox_id')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profileError) {
+          console.error("Error fetching profile data:", profileError);
+        } else if (profileData) {
+          setDiscordId(profileData.discord_id || '');
+          setRobloxId(profileData.roblox_id || '');
+        }
         
         // Check if user is admin
         const adminStatus = await checkIsAdmin();
@@ -237,11 +254,53 @@ const Profile = () => {
     }
   };
 
+  // Function to update Discord and Roblox IDs
+  const updateProfileData = async () => {
+    setIsUpdatingProfiles(true);
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          discord_id: discordId,
+          roblox_id: robloxId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', session?.user?.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Profil aktualisiert",
+        description: "Deine Profildaten wurden erfolgreich aktualisiert.",
+      });
+    } catch (error: any) {
+      console.error("Error updating profile data:", error);
+      toast({
+        title: "Fehler",
+        description: error.message || "Es gab ein Problem beim Aktualisieren deiner Profildaten.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpdatingProfiles(false);
+    }
+  };
+
   // Function to update email
   const updateEmail = async () => {
     setIsUpdatingEmail(true);
     setEmailUpdateMessage('');
     setEmailUpdateSuccess(false);
+    
+    if (!newEmail || !/^\S+@\S+\.\S+$/.test(newEmail)) {
+      toast({
+        title: "Fehler",
+        description: "Bitte gib eine gültige E-Mail-Adresse ein.",
+        variant: "destructive"
+      });
+      setIsUpdatingEmail(false);
+      return;
+    }
     
     try {
       const { error } = await supabase.auth.updateUser({
@@ -251,10 +310,10 @@ const Profile = () => {
       if (error) throw error;
       
       setEmailUpdateSuccess(true);
-      setEmailUpdateMessage('E-Mail Aktualisierungsanfrage gesendet. Bitte überprüfe dein E-Mail-Postfach.');
+      setEmailUpdateMessage('E-Mail Aktualisierungsanfrage gesendet. Bitte überprüfe dein E-Mail-Postfach, um die Änderung zu bestätigen.');
       toast({
         title: "E-Mail Aktualisierung",
-        description: "E-Mail Aktualisierungsanfrage gesendet. Bitte überprüfe dein E-Mail-Postfach.",
+        description: "E-Mail Aktualisierungsanfrage gesendet. Bitte überprüfe dein E-Mail-Postfach, um die Änderung zu bestätigen.",
       });
     } catch (error: any) {
       console.error("Error updating email:", error);
@@ -267,6 +326,32 @@ const Profile = () => {
       });
     } finally {
       setIsUpdatingEmail(false);
+    }
+  };
+  
+  // Function to request password reset
+  const requestPasswordReset = async () => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        user?.email || '',
+        {
+          redirectTo: window.location.origin + '/reset-password',
+        }
+      );
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Passwort-Reset",
+        description: "Eine E-Mail zum Zurücksetzen deines Passworts wurde versendet. Bitte überprüfe dein E-Mail-Postfach.",
+      });
+    } catch (error: any) {
+      console.error("Error requesting password reset:", error);
+      toast({
+        title: "Fehler",
+        description: error.message || "Es gab ein Problem beim Senden des Passwort-Reset-Links.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -443,8 +528,8 @@ const Profile = () => {
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-sm">Profilvollständigkeit</span>
-                            <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
-                              80%
+                            <span className={`text-xs px-2 py-1 rounded-full ${discordId && robloxId ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                              {discordId && robloxId ? '100%' : '80%'}
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
@@ -538,6 +623,53 @@ const Profile = () => {
                         </p>
                       )}
                     </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="discord_id">Discord ID</Label>
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          id="discord_id"
+                          placeholder="Deine Discord ID"
+                          value={discordId}
+                          onChange={(e) => setDiscordId(e.target.value)}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Deine Discord ID findest du in Discord unter Einstellungen &gt; Mein Account &gt; Discord-Tag
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="roblox_id">Roblox ID</Label>
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          id="roblox_id"
+                          placeholder="Deine Roblox ID"
+                          value={robloxId}
+                          onChange={(e) => setRobloxId(e.target.value)}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Deine Roblox ID findest du in deinem Roblox-Profil
+                      </p>
+                    </div>
+                    
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={isUpdatingProfiles}
+                      onClick={updateProfileData}
+                      className="mt-2"
+                    >
+                      {isUpdatingProfiles ? (
+                        <>
+                          <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
+                          Speichern...
+                        </>
+                      ) : (
+                        "Profildaten speichern"
+                      )}
+                    </Button>
                   </div>
                 </TabsContent>
                 
@@ -578,43 +710,90 @@ const Profile = () => {
                 <TabsContent value="security" className="p-6 space-y-4">
                   <CardTitle>Sicherheitseinstellungen</CardTitle>
                   <CardDescription>Ändere dein Passwort oder deine E-Mail-Adresse.</CardDescription>
-                  <div className="grid gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">E-Mail-Adresse</Label>
-                      <div className="flex items-center space-x-2">
-                        <Input
-                          id="email"
-                          placeholder="Neue E-Mail-Adresse"
-                          type="email"
-                          value={newEmail}
-                          onChange={(e) => setNewEmail(e.target.value)}
-                        />
-                        <Button
-                          type="button"
-                          size="sm"
-                          disabled={isUpdatingEmail}
-                          onClick={updateEmail}
-                        >
-                          {isUpdatingEmail ? (
-                            <>
-                              <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
-                              Aktualisieren...
-                            </>
-                          ) : (
-                            "Aktualisieren"
-                          )}
-                        </Button>
+                  
+                  <Card className="border border-blue-100">
+                    <CardHeader className="bg-blue-50">
+                      <CardTitle className="text-lg">E-Mail-Adresse ändern</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4 pt-4">
+                      <p className="text-sm">
+                        Deine aktuelle E-Mail-Adresse: <strong>{user?.email}</strong>
+                      </p>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Neue E-Mail-Adresse</Label>
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            id="email"
+                            placeholder="Neue E-Mail-Adresse"
+                            type="email"
+                            value={newEmail}
+                            onChange={(e) => setNewEmail(e.target.value)}
+                          />
+                          <Button
+                            type="button"
+                            disabled={isUpdatingEmail || !newEmail}
+                            onClick={updateEmail}
+                          >
+                            {isUpdatingEmail ? (
+                              <>
+                                <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
+                                Aktualisieren...
+                              </>
+                            ) : (
+                              "Aktualisieren"
+                            )}
+                          </Button>
+                        </div>
+                        {emailUpdateMessage && (
+                          <div className={`flex items-center space-x-2 p-2 rounded ${emailUpdateSuccess ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                            {emailUpdateSuccess ? (
+                              <CheckCircle className="h-4 w-4" />
+                            ) : (
+                              <AlertTriangle className="h-4 w-4" />
+                            )}
+                            <p className="text-sm">{emailUpdateMessage}</p>
+                          </div>
+                        )}
                       </div>
-                      {emailUpdateMessage && (
-                        <p className={`text-sm ${emailUpdateSuccess ? 'text-green-500' : 'text-red-500'}`}>
-                          {emailUpdateMessage}
-                        </p>
-                      )}
-                    </div>
-                    <Link to="/login">
-                      <Button variant="outline">Passwort ändern</Button>
-                    </Link>
-                  </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="border border-blue-100">
+                    <CardHeader className="bg-blue-50">
+                      <CardTitle className="text-lg">Passwort ändern</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4 pt-4">
+                      <p className="text-sm">
+                        Du kannst dein Passwort ändern, indem du einen Reset-Link an deine E-Mail-Adresse sendest.
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        onClick={requestPasswordReset}
+                      >
+                        Passwort-Reset-Link senden
+                      </Button>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="border border-amber-100">
+                    <CardHeader className="bg-amber-50">
+                      <CardTitle className="text-lg">Sicherheitshinweise</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 pt-4">
+                      <div className="flex items-start space-x-2">
+                        <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                        <p className="text-sm">Verwende ein starkes, einzigartiges Passwort für deinen Account.</p>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                        <p className="text-sm">Teile deine Anmeldedaten niemals mit anderen Personen.</p>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                        <p className="text-sm">Überprüfe regelmäßig deine Account-Aktivitäten auf verdächtige Vorgänge.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </TabsContent>
                 
                 {(isAdmin || session?.user?.email === 'admin@berlinrpvc.de') && (

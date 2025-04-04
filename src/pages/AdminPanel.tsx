@@ -32,6 +32,7 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, 
   Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell 
 } from 'recharts';
+import NewsManagement from '@/components/NewsManagement';
 
 type Application = {
   id: string;
@@ -695,10 +696,10 @@ const AdminPanel = () => {
     { title: "Dashboard", id: "dashboard", icon: LayoutDashboard },
     { title: "Benutzer", id: "users", icon: Users },
     { title: "Bewerbungen", id: "applications", icon: FileText },
+    { title: "Neuigkeiten", id: "news", icon: BellRing },
     { title: "Teameinstellungen", id: "team-settings", icon: Settings },
     { title: "Sicherheit", id: "security", icon: ShieldCheck },
-    { title: "Kontoverwaltung", id: "account", icon: UserCog },
-    { title: "Benachrichtigungen", id: "notifications", icon: BellRing }
+    { title: "Kontoverwaltung", id: "account", icon: UserCog }
   ];
   
   const renderContent = () => {
@@ -709,14 +710,14 @@ const AdminPanel = () => {
         return <UsersManagement adminUsers={adminUsers} handleUpdateRole={handleUpdateRole} handleDeleteUser={handleDeleteUser} />;
       case 'applications':
         return <ApplicationsManagement />;
+      case 'news':
+        return <NewsManagement />;
       case 'team-settings':
         return <TeamSettings />;
       case 'security':
         return <SecuritySettings />;
       case 'account':
         return <AccountDetails />;
-      case 'notifications':
-        return <NotificationSettings />;
       default:
         return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
     }
@@ -724,7 +725,7 @@ const AdminPanel = () => {
   
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="flex w-full">
+      <div className="flex w-full h-[70vh] overflow-auto">
         <Sidebar>
           <SidebarHeader className="flex items-center justify-center py-4">
             <h2 className="text-xl font-bold">Admin Panel</h2>
@@ -753,7 +754,7 @@ const AdminPanel = () => {
           </SidebarContent>
         </Sidebar>
         
-        <SidebarInset className="bg-gray-50">
+        <SidebarInset className="bg-gray-50 overflow-auto">
           <div className="p-6">
             {renderContent()}
           </div>
