@@ -2,27 +2,34 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 type ApplicationData = {
-  // Step 1
+  // Step 1 - Basic Information
   robloxUsername: string;
   robloxId: string;
   discordId: string;
   age: number | string;
+  activityLevel: number;
   
-  // Step 2
+  // Step 2 - Understanding Rules
+  whyModerator: string;
   frpUnderstanding: string;
   vdmUnderstanding: string;
   taschenRpUnderstanding: string;
   serverAgeUnderstanding: string;
   
-  // Step 3
+  // Step 3 - Situation Handling
   situationHandling: string;
   bodycamUnderstanding: string;
   friendRuleViolation: string;
-  otherServers: string;
+  
+  // Step 3 - Server Information
+  otherServerNames: string;
+  otherServerInvites: string;
+  
+  // Step 3 - Experience and Notes
   adminExperience: string;
-  activityLevel: number;
   notes: string;
   acceptTerms: boolean;
+  isUnder12: boolean; // Flag for underage users
 };
 
 type ApplicationContextType = {
@@ -34,6 +41,7 @@ type ApplicationContextType = {
   goToStep: (step: number) => void;
   totalSteps: number;
   resetForm: () => void;
+  setIsUnder12: (value: boolean) => void;
 };
 
 const defaultApplicationData: ApplicationData = {
@@ -41,6 +49,8 @@ const defaultApplicationData: ApplicationData = {
   robloxId: '',
   discordId: '',
   age: '',
+  activityLevel: 5,
+  whyModerator: '',
   frpUnderstanding: '',
   vdmUnderstanding: '',
   taschenRpUnderstanding: '',
@@ -48,11 +58,12 @@ const defaultApplicationData: ApplicationData = {
   situationHandling: '',
   bodycamUnderstanding: '',
   friendRuleViolation: '',
-  otherServers: '',
+  otherServerNames: '',
+  otherServerInvites: '',
   adminExperience: '',
-  activityLevel: 5,
   notes: '',
-  acceptTerms: false
+  acceptTerms: false,
+  isUnder12: false
 };
 
 export const ApplicationContext = createContext<ApplicationContextType | undefined>(undefined);
@@ -84,6 +95,10 @@ export const ApplicationProvider: React.FC<{children: ReactNode}> = ({ children 
     setApplicationData(defaultApplicationData);
     setCurrentStep(1);
   };
+  
+  const setIsUnder12 = (value: boolean) => {
+    setApplicationData(prev => ({ ...prev, isUnder12: value }));
+  };
 
   return (
     <ApplicationContext.Provider value={{
@@ -94,7 +109,8 @@ export const ApplicationProvider: React.FC<{children: ReactNode}> = ({ children 
       goToPreviousStep,
       goToStep,
       totalSteps,
-      resetForm
+      resetForm,
+      setIsUnder12
     }}>
       {children}
     </ApplicationContext.Provider>

@@ -210,9 +210,9 @@ export interface TeamSettings {
  */
 export async function getTeamSettings(): Promise<TeamSettings | null> {
   try {
-    // Using type assertion to avoid TypeScript error
+    // Using a type assertion to work around the type issues
     const { data, error } = await supabase
-      .from('team_settings')
+      .from('team_settings' as any)
       .select('*')
       .maybeSingle();
       
@@ -254,7 +254,7 @@ export async function updateTeamSettings(settings: {
     if (existingSettings && existingSettings.id) {
       // Update existing settings
       result = await supabase
-        .from('team_settings')
+        .from('team_settings' as any)
         .update({
           meeting_day: settings.meeting_day,
           meeting_time: settings.meeting_time,
@@ -267,7 +267,7 @@ export async function updateTeamSettings(settings: {
     } else {
       // Insert new settings
       result = await supabase
-        .from('team_settings')
+        .from('team_settings' as any)
         .insert({
           meeting_day: settings.meeting_day,
           meeting_time: settings.meeting_time,
