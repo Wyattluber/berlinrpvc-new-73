@@ -4,10 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { setSpecificUserAsAdmin } from '@/utils/adminUtils';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from '@/integrations/supabase/client';
+import { grantAdminPrivileges } from '@/lib/admin';
 
 const AdminSetup = () => {
   const navigate = useNavigate();
@@ -26,7 +26,7 @@ const AdminSetup = () => {
         // Check if user with this ID exists in admin_users table
         const { data, error } = await supabase
           .from('admin_users')
-          .select()
+          .select('*')
           .eq('user_id', specificUserId)
           .maybeSingle();
         
@@ -57,7 +57,7 @@ const AdminSetup = () => {
     try {
       console.log("Setting specific user as admin with ID:", specificUserId);
       
-      const result = await setSpecificUserAsAdmin(specificUserId, adminEmail);
+      const result = await grantAdminPrivileges(specificUserId, adminEmail);
       console.log("Admin account setup result:", result);
       
       if (!result.success) {

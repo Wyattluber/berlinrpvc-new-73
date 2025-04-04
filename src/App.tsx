@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
-import { isUserAdmin } from '@/utils/adminUtils';
+import { checkIsAdmin } from '@/lib/admin';
 import Index from "./pages/Index";
 import Apply from "./pages/Apply";
 import Partners from "./pages/Partners";
@@ -26,8 +26,8 @@ const App = () => {
   const [isAdmin, setIsAdmin] = useState(false);
 
   // Function to check if user is admin
-  const checkAdminStatus = async () => {
-    const adminStatus = await isUserAdmin();
+  const updateAdminStatus = async () => {
+    const adminStatus = await checkIsAdmin();
     console.log("Admin status checked:", adminStatus);
     setIsAdmin(adminStatus);
     return adminStatus;
@@ -40,7 +40,7 @@ const App = () => {
       
       // Check if user is admin
       if (session?.user) {
-        checkAdminStatus().then(() => {
+        updateAdminStatus().then(() => {
           setLoading(false);
         });
       } else {
@@ -55,7 +55,7 @@ const App = () => {
       
       // Update admin status when auth changes
       if (session?.user) {
-        await checkAdminStatus();
+        await updateAdminStatus();
       } else {
         setIsAdmin(false);
       }

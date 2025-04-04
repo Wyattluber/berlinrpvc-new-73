@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Menu, X, User, LogOut, Settings } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { isUserAdmin } from '@/utils/adminUtils';
+import { checkIsAdmin } from '@/lib/admin';
 import { toast } from '@/hooks/use-toast';
 
 const Navbar = () => {
@@ -23,7 +23,7 @@ const Navbar = () => {
         setIsLoggedIn(true);
         
         // Check if user is admin
-        const adminStatus = await isUserAdmin();
+        const adminStatus = await checkIsAdmin();
         setIsAdmin(adminStatus);
       } else {
         setIsLoggedIn(false);
