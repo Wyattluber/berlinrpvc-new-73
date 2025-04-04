@@ -146,14 +146,17 @@ export async function isUsernameTaken(username: string, currentUserEmail?: strin
       return false;
     }
     
-    // Type-safe approach: check if data exists and has users array
+    // Type-safe approach with explicit type check
     if (data && Array.isArray(data.users)) {
       return data.users.some(user => {
+        // Check if user has metadata fields in a type-safe way
+        const userData = user as any; // Use a safe type conversion approach
+        
         // Check if user_metadata exists and has name property
-        const userMetadata = user.user_metadata;
-        if (userMetadata && typeof userMetadata === 'object') {
-          const userName = userMetadata.name?.toLowerCase();
-          return userName === username.toLowerCase() && user.email !== currentUserEmail;
+        if (userData.user_metadata && typeof userData.user_metadata === 'object') {
+          const userName = userData.user_metadata.name?.toLowerCase();
+          // Ensure email comparison is also done safely
+          return userName === username.toLowerCase() && userData.email !== currentUserEmail;
         }
         return false;
       });
