@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   LoaderIcon, Users, FileText, Settings, LayoutDashboard, 
   UserCog, ShieldCheck, BellRing, ChevronRight, Trash2, PencilLine,
-  Activity, BarChart3, UserPlus, Server, Share, Info, X, Check
+  Activity, BarChart3, UserPlus, Server, Share, Info, X, Check, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { 
   SidebarProvider, 
@@ -34,6 +34,8 @@ import {
 } from 'recharts';
 import NewsManagement from '@/components/NewsManagement';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import UserRoleManager from '@/components/UserRoleManager';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 type Application = {
   id: string;
@@ -235,6 +237,8 @@ const UsersManagement = ({ adminUsers, handleUpdateRole, handleDeleteUser }: {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Benutzerverwaltung</h2>
+      
+      <UserRoleManager />
       
       <Card>
         <CardHeader>
@@ -678,6 +682,7 @@ const AdminPanel = () => {
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
   const [userCount, setUserCount] = useState<number>(0);
   const [activeSection, setActiveSection] = useState<string>('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   
   useEffect(() => {
     const checkAccess = async () => {
@@ -813,45 +818,57 @@ const AdminPanel = () => {
         return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
     }
   };
-  
+
   return (
-    <SidebarProvider defaultOpen={true}>
-      <div className="flex w-full h-full overflow-hidden">
-        <Sidebar>
-          <SidebarHeader className="flex items-center justify-center py-4">
-            <h2 className="text-xl font-bold">Admin Panel</h2>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {menuItems.map((item) => (
-                    <SidebarMenuItem key={item.id}>
-                      <SidebarMenuButton 
-                        onClick={() => setActiveSection(item.id)}
-                        isActive={activeSection === item.id}
-                        tooltip={item.title}
-                      >
-                        <item.icon />
-                        <span>{item.title}</span>
-                        <ChevronRight className="ml-auto h-4 w-4" />
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
-        </Sidebar>
-        
-        <SidebarInset className="bg-gray-50 overflow-y-auto">
-          <div className="p-6">
-            {renderContent()}
-          </div>
-        </SidebarInset>
+    <Collapsible open={sidebarOpen} onOpenChange={setSidebarOpen} className="w-full h-full">
+      <div className="flex justify-between items-center bg-muted/20 border-b p-4">
+        <h1 className="text-2xl font-bold">Admin Panel</h1>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" size="icon">
+            {sidebarOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          </Button>
+        </CollapsibleTrigger>
       </div>
-    </SidebarProvider>
+      
+      <CollapsibleContent>
+        <SidebarProvider defaultOpen={true}>
+          <div className="flex w-full h-full overflow-hidden">
+            <Sidebar>
+              <SidebarHeader className="flex items-center justify-center py-4">
+                <h2 className="text-xl font-bold">Navigation</h2>
+              </SidebarHeader>
+              <SidebarContent>
+                <SidebarGroup>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {menuItems.map((item) => (
+                        <SidebarMenuItem key={item.id}>
+                          <SidebarMenuButton 
+                            onClick={() => setActiveSection(item.id)}
+                            isActive={activeSection === item.id}
+                            tooltip={item.title}
+                          >
+                            <item.icon />
+                            <span>{item.title}</span>
+                            <ChevronRight className="ml-auto h-4 w-4" />
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              </SidebarContent>
+            </Sidebar>
+            
+            <SidebarInset className="bg-gray-50 overflow-y-auto">
+              <div className="p-6">
+                {renderContent()}
+              </div>
+            </SidebarInset>
+          </div>
+        </SidebarProvider>
+      </CollapsibleContent>
+    </Collapsible>
   );
 };
 

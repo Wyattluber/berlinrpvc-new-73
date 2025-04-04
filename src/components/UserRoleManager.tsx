@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { LoaderIcon, Plus, Search, UserPlus } from 'lucide-react';
+import { LoaderIcon, Search, UserPlus } from 'lucide-react';
 import { addAdminUserRole, findUserByEmailOrUsername } from '@/lib/adminService';
 import {
   Dialog,
@@ -30,7 +30,7 @@ const UserRoleManager = () => {
     if (!userQuery) {
       toast({
         title: 'Fehler',
-        description: 'Bitte gib eine Benutzer-ID, E-Mail-Adresse oder einen Benutzernamen ein.',
+        description: 'Bitte gib eine Benutzer-ID oder einen Benutzernamen ein.',
         variant: 'destructive',
       });
       return;
@@ -114,11 +114,11 @@ const UserRoleManager = () => {
   };
 
   return (
-    <Card className="w-full">
+    <Card className="w-full mb-6">
       <CardHeader>
         <CardTitle className="flex items-center">
           <UserPlus className="mr-2 h-5 w-5" />
-          Benutzerrollen verwalten
+          Benutzerrollen zuweisen
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -133,13 +133,13 @@ const UserRoleManager = () => {
             <DialogHeader>
               <DialogTitle>Benutzerrolle zuweisen</DialogTitle>
               <DialogDescription>
-                Suche nach einer Benutzer-ID, E-Mail oder einem Benutzernamen und weise eine Rolle zu.
+                Suche nach einer Benutzer-ID oder einem Benutzernamen und weise eine Rolle zu.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="flex items-center space-x-2">
                 <Input
-                  placeholder="Benutzer-ID, E-Mail oder Benutzername"
+                  placeholder="Benutzer-ID oder Benutzername"
                   value={userQuery}
                   onChange={(e) => setUserQuery(e.target.value)}
                   className="flex-1"
