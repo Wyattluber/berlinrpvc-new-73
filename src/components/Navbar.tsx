@@ -1,14 +1,17 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Menu, X, User, LogOut } from 'lucide-react';
+import { Menu, X, User, LogOut, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { AdminContext } from '@/App';
+import { Badge } from './ui/badge';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const isAdmin = useContext(AdminContext);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -81,6 +84,12 @@ const Navbar = () => {
                 <Link to="/profile" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300 flex items-center gap-1">
                   <User size={18} />
                   <span>Profil</span>
+                  {isAdmin && (
+                    <Badge variant="outline" className="ml-1 bg-red-500 text-white border-red-600 flex items-center gap-1">
+                      <ShieldCheck size={12} />
+                      Admin
+                    </Badge>
+                  )}
                 </Link>
                 <Button variant="ghost" className="hover:text-blue-200 text-white" onClick={handleLogout}>
                   <div className="flex items-center gap-2">
@@ -140,6 +149,12 @@ const Navbar = () => {
                 >
                   <User size={18} />
                   <span>Profil</span>
+                  {isAdmin && (
+                    <Badge variant="outline" className="ml-1 bg-red-500 text-white border-red-600 flex items-center gap-1">
+                      <ShieldCheck size={12} />
+                      Admin
+                    </Badge>
+                  )}
                 </Link>
                 <button
                   className="block w-full text-left hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-2"

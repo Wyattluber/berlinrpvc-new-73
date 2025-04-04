@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -7,11 +7,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Settings, User, Calendar, BarChart, AlertCircle, CheckCircle, Clock, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { Settings, User, Calendar, BarChart, AlertCircle, CheckCircle, Clock, KeyRound, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AdminContext } from '@/App';
 
 interface UserProfile {
   id: string;
@@ -37,8 +38,8 @@ const Profile = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [applications, setApplications] = useState<Application[]>([]);
   const [isLoadingApplications, setIsLoadingApplications] = useState(false);
+  const isAdmin = useContext(AdminContext);
 
-  // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -48,13 +49,12 @@ const Profile = () => {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordChangeSuccess, setPasswordChangeSuccess] = useState(false);
   
-  // Password validation
   const [passwordValidation, setPasswordValidation] = useState({
     length: false,
     hasLetter: false,
     hasNumber: false
   });
-  
+
   useEffect(() => {
     setPasswordValidation({
       length: newPassword.length >= 8,
@@ -63,7 +63,6 @@ const Profile = () => {
     });
   }, [newPassword]);
 
-  // Handle password reset from URL
   useEffect(() => {
     const url = new URL(window.location.href);
     const resetPassword = url.searchParams.get('reset_password');
@@ -79,7 +78,6 @@ const Profile = () => {
 
   useEffect(() => {
     const checkUser = async () => {
-      // Check Supabase authentication
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
@@ -94,12 +92,11 @@ const Profile = () => {
         return;
       }
 
-      // Extract user data
       const userProfile: UserProfile = {
         id: user.id,
         name: user.user_metadata?.full_name || user.user_metadata?.name || user.user_metadata?.username || 'User',
         email: user.email || '',
-        role: 'user',
+        role: isAdmin ? 'admin' : 'user',
         discordId: user.user_metadata?.discord_id || '',
         avatar_url: user.user_metadata?.avatar_url || '',
       };
@@ -107,13 +104,11 @@ const Profile = () => {
       setUser(userProfile);
       setDiscordId(userProfile.discordId || '');
       
-      // Fetch user applications
       fetchApplications(user.id);
     };
 
     checkUser();
     
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (!session) {
@@ -125,7 +120,7 @@ const Profile = () => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, isAdmin]);
 
   const fetchApplications = async (userId: string) => {
     setIsLoadingApplications(true);
@@ -148,7 +143,6 @@ const Profile = () => {
   const handleSaveProfile = () => {
     setIsLoading(true);
     
-    // Update user metadata
     const updateProfile = async () => {
       try {
         const { error } = await supabase.auth.updateUser({
@@ -189,7 +183,6 @@ const Profile = () => {
     setPasswordError(null);
     setPasswordChangeSuccess(false);
     
-    // Validate passwords
     if (newPassword !== confirmPassword) {
       setPasswordError("Die neuen Passwörter stimmen nicht überein");
       return;
@@ -253,9 +246,10 @@ const Profile = () => {
     }
   };
 
-  // Function to display the proper role name
   const getRoleName = (role: string) => {
     switch (role) {
+      case 'admin':
+        return 'Administrator';
       case 'moderator':
         return 'Moderator';
       default:
@@ -315,7 +309,6 @@ const Profile = () => {
       <main className="flex-grow py-8 bg-gradient-to-b from-gray-50 to-white">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row gap-6">
-            {/* Left sidebar */}
             <div className="w-full md:w-64">
               <Card>
                 <CardHeader className="pb-3">
@@ -338,6 +331,12 @@ const Profile = () => {
                       <CardDescription className="text-xs truncate">{user.email}</CardDescription>
                     </div>
                   </div>
+                  {isAdmin && (
+                    <Badge className="mt-2 bg-red-500 text-white border-red-600 flex items-center justify-center gap-1">
+                      <ShieldCheck size={14} />
+                      Administrator
+                    </Badge>
+                  )}
                 </CardHeader>
                 <CardContent className="py-2">
                   <nav className="space-y-1">
@@ -377,7 +376,6 @@ const Profile = () => {
               </Card>
             </div>
 
-            {/* Main content */}
             <div className="flex-1">
               {activeTab === 'dashboard' && (
                 <Card>
@@ -460,9 +458,16 @@ const Profile = () => {
                             </div>
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium">Rolle:</span>
-                              <span className="text-sm font-medium px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
-                                {getRoleName(user.role)}
-                              </span>
+                              {isAdmin ? (
+                                <Badge className="bg-red-500 text-white border-red-600 flex items-center gap-1">
+                                  <ShieldCheck size={12} />
+                                  Administrator
+                                </Badge>
+                              ) : (
+                                <span className="text-sm font-medium px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                                  {getRoleName(user.role)}
+                                </span>
+                              )}
                             </div>
                             {!discordId && (
                               <Button 
@@ -597,7 +602,6 @@ const Profile = () => {
                         </Button>
                       </div>
                       
-                      {/* Password requirements indicator */}
                       <div className="text-xs space-y-1 mt-2">
                         <p className="font-semibold text-gray-600">Passwort muss:</p>
                         <div className="flex items-center gap-1">
@@ -642,7 +646,6 @@ const Profile = () => {
                         </Button>
                       </div>
                       
-                      {/* Password match indicator */}
                       {confirmPassword && (
                         <div className="flex items-center gap-1 mt-1 text-xs">
                           <div className={`w-2 h-2 rounded-full ${confirmPassword === newPassword ? 'bg-green-500' : 'bg-red-500'}`}></div>

@@ -2,19 +2,34 @@
 import { supabase } from '@/integrations/supabase/client';
 
 /**
- * This file is a placeholder for future admin functionality.
- * Admin features have been temporarily removed and will be reimplemented later.
+ * Check if the current user has admin privileges
  */
-
-// Dummy function to avoid breaking any imports
 export async function checkIsAdmin() {
-  return false;
+  try {
+    // Get current session
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) return false;
+    
+    // Check if the user's email is in the admin list
+    // For simplicity, we're checking a specific email
+    // In a production app, you might want to check against a database table
+    const userEmail = session.user.email;
+    
+    // The email used during login (based on network logs)
+    return userEmail === 'info@berlinrpvc.de';
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return false;
+  }
 }
 
-// Dummy function to avoid breaking any imports
+/**
+ * This is a placeholder function for future admin management functionality
+ */
 export async function grantAdminPrivileges() {
   return {
     success: false,
-    message: 'Admin functionality is currently disabled'
+    message: 'Admin privilege management is not yet implemented'
   };
 }
