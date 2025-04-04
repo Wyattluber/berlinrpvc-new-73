@@ -1,4 +1,3 @@
-
 import React, { useContext, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { SessionContext } from '../App';
@@ -25,14 +24,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Menu, User, LogOut, Home, Users, Server, BookOpen, Shield, Settings } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { checkIsAdmin } from '@/lib/admin';
 
 const Navbar = () => {
   const session = useContext(SessionContext);
   const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   useEffect(() => {
@@ -63,7 +62,6 @@ const Navbar = () => {
     }
   };
   
-  // Close mobile menu when changing location
   useEffect(() => {
     setIsMenuOpen(false);
   }, [location.pathname]);
