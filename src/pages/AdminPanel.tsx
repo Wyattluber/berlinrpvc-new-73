@@ -36,6 +36,7 @@ import NewsManagement from '@/components/NewsManagement';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import UserRoleManager from '@/components/UserRoleManager';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import ApplicationsList from '@/components/ApplicationsList';
 
 type Application = {
   id: string;
@@ -351,7 +352,7 @@ const ApplicationsManagement = () => (
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <p>Bewerbungsübersicht wird geladen...</p>
+        <ApplicationsList />
       </CardContent>
     </Card>
   </div>
