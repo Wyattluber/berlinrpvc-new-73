@@ -14,8 +14,8 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import SubServers from "./pages/SubServers";
-import AdminPanel from "./pages/AdminPanel";
-import AdminDashboard from "./pages/AdminDashboard";
+import Impressum from "./pages/Impressum";
+import Datenschutz from "./pages/Datenschutz";
 import { ApplicationProvider } from "@/contexts/ApplicationContext";
 
 // Create context for session
@@ -193,12 +193,10 @@ const App = () => {
                   element={session ? <Profile /> : <Navigate to="/login" />} 
                 />
                 <Route path="/subservers" element={<SubServers />} />
+                <Route path="/impressum" element={<Impressum />} />
+                <Route path="/datenschutz" element={<Datenschutz />} />
                 <Route 
-                  path="/admin" 
-                  element={session ? <Navigate to="/profile?tab=admin" /> : <Navigate to="/login" />} 
-                />
-                <Route 
-                  path="/admin/dashboard" 
+                  path="/admin/*" 
                   element={session ? <Navigate to="/profile?tab=admin" /> : <Navigate to="/login" />} 
                 />
                 {/* Catch-all route */}
