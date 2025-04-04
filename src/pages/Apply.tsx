@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -11,7 +10,6 @@ import { toast } from '@/hooks/use-toast';
 import { Shield, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-// Updated job description with emoji formatting and corrected age requirement
 const jobDescription = {
   title: "Moderator",
   description: "Als Moderator hilfst du, den Server für alle Mitglieder angenehm zu gestalten. Du löst Konflikte, bearbeitest Tickets und unterstützt bei Veranstaltungen.",
@@ -88,11 +86,9 @@ const Apply = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
 
-  // Check if user is already admin/moderator before allowing to apply
   const checkUserStatus = async () => {
     setIsLoading(true);
     try {
-      // Check if user is logged in
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
@@ -104,7 +100,6 @@ const Apply = () => {
         return;
       }
       
-      // Check if user is already an admin or moderator
       const { data: adminData } = await supabase
         .from('admin_users')
         .select('role')
@@ -116,7 +111,6 @@ const Apply = () => {
         return;
       }
       
-      // Check if user already has a pending application
       const { data: applicationData } = await supabase
         .from('applications')
         .select('id, status')
@@ -132,7 +126,6 @@ const Apply = () => {
         return;
       }
       
-      // If all checks pass, proceed to application form
       navigate('/apply/form');
       
     } catch (error) {
@@ -152,7 +145,6 @@ const Apply = () => {
       <Navbar />
       
       <main className="flex-grow">
-        {/* Header Section */}
         <section className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white py-16">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-4xl font-bold mb-4">Werde Teil des Teams</h1>
@@ -160,14 +152,6 @@ const Apply = () => {
               Entdecke die verfügbaren Positionen in unserem BerlinRP-VC Team und finde heraus, 
               welche Rolle am besten zu dir passt.
             </p>
-            <Button 
-              size="lg" 
-              onClick={checkUserStatus}
-              disabled={isLoading}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 border-0"
-            >
-              {isLoading ? 'Bitte warten...' : 'Jetzt bewerben'}
-            </Button>
           </div>
         </section>
 
@@ -183,7 +167,6 @@ const Apply = () => {
           </div>
         )}
 
-        {/* Job Role Section */}
         <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
           <div className="container mx-auto px-4">
             <h2 className="text-3xl font-bold mb-10 text-center bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
@@ -197,7 +180,6 @@ const Apply = () => {
                   <CardDescription className="text-blue-100">{jobDescription.description}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow divide-y space-y-4">
-                  {/* Main tasks */}
                   <div className="pt-2">
                     <h4 className="font-semibold mb-2">Aufgaben:</h4>
                     <ul className="list-disc pl-5 space-y-1">
@@ -211,7 +193,6 @@ const Apply = () => {
                     </div>
                   </div>
                   
-                  {/* Detailed sections */}
                   <div className="pt-4 space-y-6">
                     <h3 className="text-lg font-bold mb-2 bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
                       Alles über den Bereich Moderation für Interessierte
@@ -248,20 +229,12 @@ const Apply = () => {
                   </div>
                 </CardContent>
                 <CardFooter className="border-t bg-gradient-to-r from-blue-50 to-indigo-50">
-                  <Button 
-                    onClick={checkUserStatus}
-                    disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 border-0"
-                  >
-                    {isLoading ? 'Bitte warten...' : 'Jetzt bewerben'}
-                  </Button>
                 </CardFooter>
               </Card>
             </div>
           </div>
         </section>
 
-        {/* Requirements Section */}
         <section className="py-16 bg-gradient-to-b from-white to-gray-50">
           <div className="container mx-auto px-4">
             <h2 className="text-3xl font-bold mb-8 text-center bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
