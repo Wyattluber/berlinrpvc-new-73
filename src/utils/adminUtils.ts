@@ -11,7 +11,7 @@ export async function isUserAdmin() {
       .from('admin_users')
       .select('*')
       .eq('user_id', user.id)
-      .maybeSingle(); // Changed from .single() to .maybeSingle()
+      .maybeSingle();
     
     return !!data;
   } catch (error) {
@@ -35,8 +35,7 @@ export async function createAdminAccount(email: string, password: string) {
     // Then add the user to the admin_users table
     const { data, error } = await supabase
       .from('admin_users')
-      .insert([{ user_id: authData.user.id, email }])
-      .select();
+      .insert([{ user_id: authData.user.id, email }]);
     
     if (error) throw error;
     
@@ -54,7 +53,7 @@ export async function checkAdminAccount(email: string) {
       .from('admin_users')
       .select('*')
       .eq('email', email)
-      .maybeSingle(); // Changed from .single() to .maybeSingle()
+      .maybeSingle();
     
     if (error && error.code !== 'PGRST116') throw error;
     
