@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { createAdminAccount, checkAdminAccount } from '@/utils/adminUtils';
+import { createAdminAccount, checkAdminAccount, makeUserAdmin } from '@/utils/adminUtils';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from '@/integrations/supabase/client';
@@ -28,7 +28,7 @@ const AdminSetup = () => {
           .from('admin_users')
           .select('*')
           .eq('email', adminEmail)
-          .maybeSingle(); // Changed from .single() to .maybeSingle()
+          .maybeSingle();
         
         if (error) throw error;
         
@@ -57,38 +57,55 @@ const AdminSetup = () => {
     try {
       console.log("Creating admin account with email:", adminEmail);
       
-      // Check if a user with this email already exists
-      const { data: existingUsers } = await supabase
-        .from('admin_users')
-        .select('email')
-        .eq('email', adminEmail);
-      
-      if (existingUsers && existingUsers.length > 0) {
-        console.log("Admin user already exists, signing in instead");
-        
-        // Try to sign in with the credentials
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: adminEmail,
-          password: adminPassword
-        });
-        
-        if (signInError) throw signInError;
-        
+      // First check if a user with this email already exists (but not as admin)
+      const { data: { user } } = await supabase.auth.signInWithPassword({
+        email: adminEmail,
+        password: adminPassword
+      }).catch(() => ({ data: { user: null } }));
+
+      if (user) {
+        console.log("User exists but may not be an admin, making them admin:", user.id);
+        // Make existing user an admin
+        await makeUserAdmin(user.id, adminEmail);
         setIsSuccess(true);
         toast({
-          title: "Admin-Konto existiert bereits",
-          description: "Erfolgreich als Administrator angemeldet!",
+          title: "Admin-Konto aktualisiert",
+          description: "Das Benutzerkonto wurde zum Admin-Konto hochgestuft.",
         });
       } else {
-        // Create a new admin account
-        const result = await createAdminAccount(adminEmail, adminPassword);
-        console.log("Admin account creation result:", result);
+        // Check if a user with this email already exists in admin_users
+        const { data: existingAdmins } = await supabase
+          .from('admin_users')
+          .select('email')
+          .eq('email', adminEmail);
         
-        setIsSuccess(true);
-        toast({
-          title: "Admin-Konto erstellt",
-          description: "Das Admin-Konto wurde erfolgreich eingerichtet!",
-        });
+        if (existingAdmins && existingAdmins.length > 0) {
+          console.log("Admin user already exists, signing in instead");
+          
+          // Try to sign in with the credentials
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: adminEmail,
+            password: adminPassword
+          });
+          
+          if (signInError) throw signInError;
+          
+          setIsSuccess(true);
+          toast({
+            title: "Admin-Konto existiert bereits",
+            description: "Erfolgreich als Administrator angemeldet!",
+          });
+        } else {
+          // Create a new admin account
+          const result = await createAdminAccount(adminEmail, adminPassword);
+          console.log("Admin account creation result:", result);
+          
+          setIsSuccess(true);
+          toast({
+            title: "Admin-Konto erstellt",
+            description: "Das Admin-Konto wurde erfolgreich eingerichtet!",
+          });
+        }
       }
     } catch (err: any) {
       console.error("Error handling admin account:", err);

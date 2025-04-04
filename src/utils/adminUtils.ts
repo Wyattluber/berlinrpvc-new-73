@@ -33,7 +33,7 @@ export async function createAdminAccount(email: string, password: string) {
     if (!authData.user) throw new Error('User creation failed');
     
     // Then add the user to the admin_users table
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('admin_users')
       .insert([{ user_id: authData.user.id, email }]);
     
@@ -60,6 +60,22 @@ export async function checkAdminAccount(email: string) {
     return !!data;
   } catch (error) {
     console.error('Error checking admin account:', error);
+    throw error;
+  }
+}
+
+// New function to make an existing user an admin
+export async function makeUserAdmin(userId: string, email: string) {
+  try {
+    const { error } = await supabase
+      .from('admin_users')
+      .insert([{ user_id: userId, email }]);
+    
+    if (error) throw error;
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error making user admin:', error);
     throw error;
   }
 }

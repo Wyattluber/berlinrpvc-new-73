@@ -8,10 +8,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Settings, User, Shield, Calendar, BarChart, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { Settings, User, Shield, Calendar, BarChart, AlertCircle, CheckCircle, Clock, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface UserProfile {
   id: string;
@@ -39,6 +40,45 @@ const Profile = () => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [isLoadingApplications, setIsLoadingApplications] = useState(false);
 
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState(false);
+  
+  // Password validation
+  const [passwordValidation, setPasswordValidation] = useState({
+    length: false,
+    hasLetter: false,
+    hasNumber: false
+  });
+  
+  useEffect(() => {
+    setPasswordValidation({
+      length: newPassword.length >= 8,
+      hasLetter: /[a-zA-Z]/.test(newPassword),
+      hasNumber: /[0-9]/.test(newPassword)
+    });
+  }, [newPassword]);
+
+  // Handle password reset from URL
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const resetPassword = url.searchParams.get('reset_password');
+
+    if (resetPassword === 'true') {
+      setActiveTab('security');
+      toast({
+        title: "Passwort zurücksetzen",
+        description: "Du kannst jetzt ein neues Passwort festlegen.",
+      });
+    }
+  }, []);
+
   useEffect(() => {
     const checkUser = async () => {
       // Check Supabase authentication
@@ -59,10 +99,10 @@ const Profile = () => {
       // Extract user data
       const userProfile: UserProfile = {
         id: user.id,
-        name: user.user_metadata?.full_name || user.user_metadata?.name || 'User',
+        name: user.user_metadata?.full_name || user.user_metadata?.name || user.user_metadata?.username || 'User',
         email: user.email || '',
         role: 'user',
-        discordId: user.user_metadata?.provider_id || '',
+        discordId: user.user_metadata?.discord_id || '',
         avatar_url: user.user_metadata?.avatar_url || '',
       };
 
@@ -71,7 +111,7 @@ const Profile = () => {
         .from('admin_users')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (!adminError && adminData) {
         userProfile.role = 'admin';
@@ -159,6 +199,53 @@ const Profile = () => {
     };
 
     updateProfile();
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError(null);
+    setPasswordChangeSuccess(false);
+    
+    // Validate passwords
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Die neuen Passwörter stimmen nicht überein");
+      return;
+    }
+    
+    if (newPassword.length < 8 || !(/[a-zA-Z]/.test(newPassword)) || !(/[0-9]/.test(newPassword))) {
+      setPasswordError("Das neue Passwort muss mindestens 8 Zeichen lang sein und mindestens einen Buchstaben und eine Ziffer enthalten");
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.updateUser({ 
+        password: newPassword 
+      });
+      
+      if (error) throw error;
+      
+      setPasswordChangeSuccess(true);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      
+      toast({
+        title: "Passwort geändert",
+        description: "Dein Passwort wurde erfolgreich aktualisiert.",
+      });
+    } catch (error: any) {
+      console.error('Error changing password:', error);
+      setPasswordError(error.message || "Es gab ein Problem bei der Änderung des Passworts");
+      
+      toast({
+        title: "Fehler",
+        description: error.message || "Es gab ein Problem bei der Änderung des Passworts",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -287,6 +374,14 @@ const Profile = () => {
                     >
                       <Settings size={16} className="mr-2" />
                       Einstellungen
+                    </Button>
+                    <Button 
+                      variant={activeTab === 'security' ? 'default' : 'ghost'} 
+                      className="w-full justify-start"
+                      onClick={() => setActiveTab('security')}
+                    >
+                      <KeyRound size={16} className="mr-2" />
+                      Sicherheit
                     </Button>
                     {isAdmin && (
                       <Button 
@@ -457,6 +552,141 @@ const Profile = () => {
                       disabled={isLoading}
                     >
                       {isLoading ? "Speichern..." : "Profil speichern"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              {activeTab === 'security' && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Sicherheitseinstellungen</CardTitle>
+                    <CardDescription>Passwort ändern</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {passwordError && (
+                      <Alert variant="destructive" className="mb-4">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Fehler</AlertTitle>
+                        <AlertDescription>{passwordError}</AlertDescription>
+                      </Alert>
+                    )}
+                    
+                    {passwordChangeSuccess && (
+                      <Alert className="mb-4 bg-green-50 border-green-200">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <AlertTitle className="text-green-800">Passwort geändert</AlertTitle>
+                        <AlertDescription className="text-green-700">
+                          Dein Passwort wurde erfolgreich aktualisiert.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="current-password">Aktuelles Passwort</Label>
+                      <div className="relative">
+                        <Input 
+                          id="current-password"
+                          type={showCurrentPassword ? "text" : "password"} 
+                          placeholder="••••••••"
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                        />
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="icon" 
+                          className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-500"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        >
+                          {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="new-password">Neues Passwort</Label>
+                      <div className="relative">
+                        <Input 
+                          id="new-password"
+                          type={showNewPassword ? "text" : "password"} 
+                          placeholder="••••••••"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                        />
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="icon" 
+                          className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-500"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                        >
+                          {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </Button>
+                      </div>
+                      
+                      {/* Password requirements indicator */}
+                      <div className="text-xs space-y-1 mt-2">
+                        <p className="font-semibold text-gray-600">Passwort muss:</p>
+                        <div className="flex items-center gap-1">
+                          <div className={`w-3 h-3 rounded-full ${passwordValidation.length ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                          <span className={passwordValidation.length ? 'text-green-600' : 'text-gray-500'}>
+                            Mindestens 8 Zeichen lang sein
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className={`w-3 h-3 rounded-full ${passwordValidation.hasLetter ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                          <span className={passwordValidation.hasLetter ? 'text-green-600' : 'text-gray-500'}>
+                            Mindestens einen Buchstaben enthalten
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className={`w-3 h-3 rounded-full ${passwordValidation.hasNumber ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                          <span className={passwordValidation.hasNumber ? 'text-green-600' : 'text-gray-500'}>
+                            Mindestens eine Ziffer enthalten
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-new-password">Neues Passwort bestätigen</Label>
+                      <div className="relative">
+                        <Input 
+                          id="confirm-new-password"
+                          type={showConfirmPassword ? "text" : "password"} 
+                          placeholder="••••••••"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                        />
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="icon" 
+                          className="absolute right-0 top-0 h-10 w-10 text-gray-400 hover:text-gray-500"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        >
+                          {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </Button>
+                      </div>
+                      
+                      {/* Password match indicator */}
+                      {confirmPassword && (
+                        <div className="flex items-center gap-1 mt-1 text-xs">
+                          <div className={`w-2 h-2 rounded-full ${confirmPassword === newPassword ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                          <span className={confirmPassword === newPassword ? 'text-green-600' : 'text-red-500'}>
+                            {confirmPassword === newPassword ? 'Passwörter stimmen überein' : 'Passwörter stimmen nicht überein'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <Button
+                      className="bg-gradient-to-r from-blue-600 to-indigo-700 w-full"
+                      onClick={handleChangePassword}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Passwort wird geändert..." : "Passwort ändern"}
                     </Button>
                   </CardContent>
                 </Card>
