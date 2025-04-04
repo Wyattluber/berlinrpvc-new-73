@@ -50,9 +50,9 @@ export async function fetchApplications() {
       const profileData = app.profiles;
       let username = null;
       
-      if (profileData && typeof profileData === 'object') {
-        // Use type assertion after checking the object structure
-        username = 'username' in profileData ? (profileData as { username: string | null }).username : null;
+      if (profileData !== null && typeof profileData === 'object') {
+        // Now TypeScript knows profileData is not null inside this block
+        username = 'username' in profileData ? profileData.username : null;
       }
       
       return {
