@@ -1,3 +1,4 @@
+
 import React, { useContext, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { SessionContext } from '../App';
@@ -67,40 +68,42 @@ const Navbar = () => {
   }, [location.pathname]);
   
   return (
-    <header className="bg-gray-800 text-white sticky top-0 z-10">
-      <div className="container mx-auto px-4 py-4">
+    <header className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white sticky top-0 z-10 shadow-md">
+      <div className="container mx-auto px-4 py-3">
         <div className="flex justify-between items-center">
-          <Link to="/" className="text-xl font-bold">Berlin RP</Link>
+          <Link to="/" className="text-xl font-bold flex items-center">
+            <span className="bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">BerlinRP-VC</span>
+          </Link>
           
           {isMobile ? (
             <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className="text-white hover:bg-blue-800">
                   <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="bg-gray-800 text-white border-gray-700 w-[300px]">
+              <SheetContent side="right" className="bg-gradient-to-b from-blue-900 to-indigo-900 text-white border-blue-700 w-[300px]">
                 <div className="flex flex-col h-full">
                   <div className="flex-1 mt-10">
                     <div className="space-y-6 px-2">
                       <div className="space-y-2">
                         <Link 
                           to="/" 
-                          className="flex items-center px-3 py-2 rounded-md text-sm hover:bg-gray-700"
+                          className="flex items-center px-3 py-2 rounded-md text-sm hover:bg-blue-800 transition-colors"
                         >
                           <Home className="mr-2 h-4 w-4" />
                           Startseite
                         </Link>
                         <Link 
                           to="/subservers" 
-                          className="flex items-center px-3 py-2 rounded-md text-sm hover:bg-gray-700"
+                          className="flex items-center px-3 py-2 rounded-md text-sm hover:bg-blue-800 transition-colors"
                         >
                           <Server className="mr-2 h-4 w-4" />
                           Subserver
                         </Link>
                         <Link 
                           to="/partners" 
-                          className="flex items-center px-3 py-2 rounded-md text-sm hover:bg-gray-700"
+                          className="flex items-center px-3 py-2 rounded-md text-sm hover:bg-blue-800 transition-colors"
                         >
                           <Users className="mr-2 h-4 w-4" />
                           Partner
@@ -110,7 +113,7 @@ const Navbar = () => {
                           <>
                             <Link 
                               to="/profile" 
-                              className="flex items-center px-3 py-2 rounded-md text-sm hover:bg-gray-700"
+                              className="flex items-center px-3 py-2 rounded-md text-sm hover:bg-blue-800 transition-colors"
                             >
                               <User className="mr-2 h-4 w-4" />
                               Mein Profil
@@ -119,7 +122,7 @@ const Navbar = () => {
                             {isAdmin && (
                               <Link 
                                 to="/profile?tab=admin" 
-                                className="flex items-center px-3 py-2 rounded-md text-sm hover:bg-gray-700"
+                                className="flex items-center px-3 py-2 rounded-md text-sm hover:bg-blue-800 transition-colors"
                               >
                                 <Shield className="mr-2 h-4 w-4" />
                                 Admin Panel
@@ -128,7 +131,7 @@ const Navbar = () => {
                             
                             <button 
                               onClick={handleLogout}
-                              className="flex w-full items-center px-3 py-2 rounded-md text-sm hover:bg-gray-700"
+                              className="flex w-full items-center px-3 py-2 rounded-md text-sm hover:bg-red-800 transition-colors"
                             >
                               <LogOut className="mr-2 h-4 w-4" />
                               Logout
@@ -138,7 +141,7 @@ const Navbar = () => {
                           <>
                             <Link 
                               to="/login" 
-                              className="flex items-center px-3 py-2 rounded-md text-sm hover:bg-gray-700"
+                              className="flex items-center px-3 py-2 rounded-md text-sm hover:bg-blue-800 transition-colors"
                             >
                               <User className="mr-2 h-4 w-4" />
                               Login
@@ -146,7 +149,7 @@ const Navbar = () => {
                             {!isAdmin && (
                               <Link 
                                 to="/apply" 
-                                className="flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-sm mt-4"
+                                className="flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-sm mt-4 transition-colors"
                               >
                                 <BookOpen className="mr-2 h-4 w-4" />
                                 Bewerben
@@ -162,25 +165,25 @@ const Navbar = () => {
             </Sheet>
           ) : (
             <div className="flex items-center space-x-4">
-              <NavigationMenu>
+              <NavigationMenu className="bg-transparent">
                 <NavigationMenuList>
                   <NavigationMenuItem>
                     <Link to="/">
-                      <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                      <NavigationMenuLink className={`${navigationMenuTriggerStyle()} text-white bg-transparent hover:bg-blue-800 hover:text-white`}>
                         Home
                       </NavigationMenuLink>
                     </Link>
                   </NavigationMenuItem>
                   <NavigationMenuItem>
                     <Link to="/subservers">
-                      <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                      <NavigationMenuLink className={`${navigationMenuTriggerStyle()} text-white bg-transparent hover:bg-blue-800 hover:text-white`}>
                         Subserver
                       </NavigationMenuLink>
                     </Link>
                   </NavigationMenuItem>
                   <NavigationMenuItem>
                     <Link to="/partners">
-                      <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                      <NavigationMenuLink className={`${navigationMenuTriggerStyle()} text-white bg-transparent hover:bg-blue-800 hover:text-white`}>
                         Partner
                       </NavigationMenuLink>
                     </Link>
@@ -190,50 +193,50 @@ const Navbar = () => {
                     <NavigationMenuItem>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                            <Avatar className="h-8 w-8">
+                          <Button variant="ghost" className="relative h-8 w-8 rounded-full bg-transparent hover:bg-blue-800">
+                            <Avatar className="h-8 w-8 border-2 border-blue-400">
                               <AvatarImage 
                                 src={session.user?.user_metadata?.avatar_url} 
                                 alt={session.user?.user_metadata?.name || "Avatar"} 
                               />
-                              <AvatarFallback>
+                              <AvatarFallback className="bg-blue-700 text-white">
                                 {session.user?.user_metadata?.name?.[0]?.toUpperCase() || "U"}
                               </AvatarFallback>
                             </Avatar>
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-56" align="end" forceMount>
+                        <DropdownMenuContent className="w-56 bg-blue-900 border-blue-700 text-white" align="end" forceMount>
                           <DropdownMenuLabel className="font-normal">
                             <div className="flex flex-col space-y-1">
                               <p className="text-sm font-medium leading-none">
                                 {session.user?.user_metadata?.name || "Benutzer"}
                               </p>
-                              <p className="text-xs leading-none text-muted-foreground">
+                              <p className="text-xs leading-none text-blue-300">
                                 {session.user?.email}
                               </p>
                             </div>
                           </DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem asChild>
-                            <Link to="/profile">
+                          <DropdownMenuSeparator className="bg-blue-700" />
+                          <DropdownMenuItem asChild className="hover:bg-blue-800 cursor-pointer">
+                            <Link to="/profile" className="w-full">
                               <User className="mr-2 h-4 w-4" />
                               <span>Mein Profil</span>
                             </Link>
                           </DropdownMenuItem>
                           
                           {isAdmin && (
-                            <DropdownMenuItem asChild>
-                              <Link to="/profile?tab=admin">
+                            <DropdownMenuItem asChild className="hover:bg-blue-800 cursor-pointer">
+                              <Link to="/profile?tab=admin" className="w-full">
                                 <Shield className="mr-2 h-4 w-4" />
                                 <span>Admin Panel</span>
                               </Link>
                             </DropdownMenuItem>
                           )}
                           
-                          <DropdownMenuSeparator />
+                          <DropdownMenuSeparator className="bg-blue-700" />
                           <DropdownMenuItem 
                             onClick={handleLogout}
-                            className="text-red-500 cursor-pointer"
+                            className="text-red-300 hover:bg-red-900 hover:text-white cursor-pointer"
                           >
                             <LogOut className="mr-2 h-4 w-4" />
                             <span>Logout</span>
@@ -245,7 +248,7 @@ const Navbar = () => {
                     <>
                       <NavigationMenuItem>
                         <Link to="/login">
-                          <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                          <NavigationMenuLink className={`${navigationMenuTriggerStyle()} text-white bg-transparent hover:bg-blue-800 hover:text-white`}>
                             Login
                           </NavigationMenuLink>
                         </Link>
@@ -254,7 +257,7 @@ const Navbar = () => {
                       {!isAdmin && (
                         <NavigationMenuItem>
                           <Link to="/apply">
-                            <Button className="bg-blue-600 hover:bg-blue-700">
+                            <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0">
                               Bewerben
                             </Button>
                           </Link>
