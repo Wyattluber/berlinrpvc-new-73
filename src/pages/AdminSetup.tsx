@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { createAdminAccount, checkAdminAccount, makeUserAdmin } from '@/utils/adminUtils';
+import { setSpecificUserAsAdmin } from '@/utils/adminUtils';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { supabase } from '@/integrations/supabase/client';
@@ -15,19 +15,19 @@ const AdminSetup = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Updated admin credentials as requested
+  // Admin credentials 
   const adminEmail = "info@berlinrpvc.de";
-  const adminPassword = "Wasserwoo123";
+  const specificUserId = "3ea1fee3-d6fa-4004-8a79-a41551f0b846";
 
   useEffect(() => {
     // Check if the admin account already exists
     const checkExistingAccount = async () => {
       try {
-        // Check if user with this email exists in admin_users table
+        // Check if user with this ID exists in admin_users table
         const { data, error } = await supabase
           .from('admin_users')
           .select('*')
-          .eq('email', adminEmail)
+          .eq('user_id', specificUserId)
           .maybeSingle();
         
         if (error) throw error;
@@ -55,77 +55,29 @@ const AdminSetup = () => {
     setError(null);
     
     try {
-      console.log("Creating admin account with email:", adminEmail);
+      console.log("Setting specific user as admin with ID:", specificUserId);
       
-      // First check if a user with this email already exists (but not as admin)
-      const { data: { user } } = await supabase.auth.signInWithPassword({
-        email: adminEmail,
-        password: adminPassword
-      }).catch(() => ({ data: { user: null } }));
-
-      if (user) {
-        console.log("User exists but may not be an admin, making them admin:", user.id);
-        // Make existing user an admin
-        await makeUserAdmin(user.id, adminEmail);
-        setIsSuccess(true);
-        
-        // Force refresh authentication status
-        await supabase.auth.refreshSession();
-        
-        toast({
-          title: "Admin-Konto aktualisiert",
-          description: "Das Benutzerkonto wurde zum Admin-Konto hochgestuft.",
-          variant: "default"
-        });
-        
-        // Redirect to admin panel automatically after successful upgrade
-        setTimeout(() => navigate('/admin'), 1500);
-      } else {
-        // Check if a user with this email already exists in admin_users
-        const { data: existingAdmins } = await supabase
-          .from('admin_users')
-          .select('email')
-          .eq('email', adminEmail);
-        
-        if (existingAdmins && existingAdmins.length > 0) {
-          console.log("Admin user already exists, signing in instead");
-          
-          // Try to sign in with the credentials
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: adminEmail,
-            password: adminPassword
-          });
-          
-          if (signInError) throw signInError;
-          
-          setIsSuccess(true);
-          toast({
-            title: "Admin-Konto existiert bereits",
-            description: "Erfolgreich als Administrator angemeldet!",
-            variant: "default"
-          });
-          
-          // Redirect to admin panel automatically after successful sign in
-          setTimeout(() => navigate('/admin'), 1500);
-        } else {
-          // Create a new admin account
-          const result = await createAdminAccount(adminEmail, adminPassword);
-          console.log("Admin account creation result:", result);
-          
-          setIsSuccess(true);
-          toast({
-            title: "Admin-Konto erstellt",
-            description: "Das Admin-Konto wurde erfolgreich eingerichtet!",
-            variant: "default"
-          });
-        }
-      }
+      const result = await setSpecificUserAsAdmin(specificUserId, adminEmail);
+      console.log("Admin account setup result:", result);
+      
+      setIsSuccess(true);
+      toast({
+        title: "Admin-Konto eingerichtet",
+        description: result.message || "Das Admin-Konto wurde erfolgreich eingerichtet!",
+        variant: "default"
+      });
+      
+      // Force refresh authentication status
+      await supabase.auth.refreshSession();
+      
+      // Redirect to admin panel automatically after success
+      setTimeout(() => navigate('/admin'), 1500);
     } catch (err: any) {
-      console.error("Error handling admin account:", err);
-      setError(err.message || "Fehler bei der Erstellung des Admin-Kontos");
+      console.error("Error setting up admin account:", err);
+      setError(err.message || "Fehler bei der Einrichtung des Admin-Kontos");
       toast({
         title: "Fehler",
-        description: err.message || "Fehler bei der Erstellung des Admin-Kontos",
+        description: err.message || "Fehler bei der Einrichtung des Admin-Kontos",
         variant: "destructive"
       });
     } finally {
@@ -156,8 +108,8 @@ const AdminSetup = () => {
               <CheckCircle className="h-4 w-4 text-green-600" />
               <AlertTitle className="text-green-800">Admin-Konto eingerichtet</AlertTitle>
               <AlertDescription className="text-green-700">
-                Das Admin-Konto mit der E-Mail {adminEmail} wurde erfolgreich eingerichtet.
-                Du kannst dich jetzt mit diesen Zugangsdaten im Login-Bereich einloggen.
+                Das Admin-Konto mit der ID {specificUserId} wurde erfolgreich eingerichtet.
+                Du kannst jetzt den Admin-Bereich nutzen.
               </AlertDescription>
             </Alert>
           ) : (
@@ -167,8 +119,8 @@ const AdminSetup = () => {
                 <p className="mt-1 p-2 border rounded-md bg-gray-50">{adminEmail}</p>
               </div>
               <div>
-                <p className="font-semibold">Admin Passwort:</p>
-                <p className="mt-1 p-2 border rounded-md bg-gray-50">••••••••••••</p>
+                <p className="font-semibold">Admin User ID:</p>
+                <p className="mt-1 p-2 border rounded-md bg-gray-50 text-xs break-all">{specificUserId}</p>
               </div>
             </div>
           )}
