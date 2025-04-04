@@ -50,9 +50,9 @@ export async function fetchApplications() {
       const profileData = app.profiles;
       let username = null;
       
+      // Fix: Use explicit null check without optional chaining
       if (profileData !== null && typeof profileData === 'object') {
-        // Use optional chaining to safely access username
-        username = profileData?.username || null;
+        username = profileData.username || null;
       }
       
       return {
