@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { checkIsAdmin, getTotalUserCount, TeamSettings } from './admin';
 
@@ -50,9 +51,8 @@ export async function fetchApplications() {
       let username = null;
       
       if (profileData !== null && typeof profileData === 'object') {
-        // Type assertion after checking to make TypeScript happy
-        const typedProfileData = profileData as { username?: string | null };
-        username = typedProfileData.username || null;
+        // Use optional chaining to safely access username
+        username = profileData?.username || null;
       }
       
       return {

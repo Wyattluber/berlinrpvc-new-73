@@ -21,6 +21,7 @@ interface Application {
   created_at: string;
   updated_at: string;
   notes: string | null;
+  username?: string | null;
   [key: string]: any;
 }
 
@@ -42,6 +43,7 @@ const ApplicationsList = () => {
     setLoading(true);
     try {
       const data = await fetchApplications();
+      console.log('Loaded applications:', data); // Debug log
       setApplications(data);
     } catch (error) {
       console.error('Error loading applications', error);
