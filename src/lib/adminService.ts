@@ -101,15 +101,24 @@ export async function getTeamSettings(): Promise<TeamSettings | null> {
   }
 }
 
+// Define a NewsItem interface to ensure type safety
+export interface NewsItem {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
+  updated_at?: string | null;
+}
+
 /**
  * Fetch news
  */
-export async function fetchNews() {
+export async function fetchNews(): Promise<NewsItem[]> {
   const now = Date.now();
   
   // Return cached data if valid
   if (newsCache && (now - newsCache.timestamp < CACHE_TTL)) {
-    return newsCache.news;
+    return newsCache.news as NewsItem[];
   }
   
   try {
@@ -122,11 +131,12 @@ export async function fetchNews() {
       throw error;
     }
     
-    newsCache = { news: data || [], timestamp: now };
-    return data || [];
+    const newsItems = data as NewsItem[];
+    newsCache = { news: newsItems, timestamp: now };
+    return newsItems;
   } catch (error) {
     console.error('Error fetching news:', error);
-    return newsCache?.news || [];
+    return newsCache?.news as NewsItem[] || [];
   }
 }
 

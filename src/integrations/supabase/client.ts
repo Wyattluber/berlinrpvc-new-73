@@ -9,7 +9,39 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+// Since the Database type doesn't include the news table yet (it's auto-generated),
+// we need to create a workaround to make TypeScript happy
+type CustomDatabase = Database & {
+  public: {
+    Tables: {
+      news: {
+        Row: {
+          id: string;
+          title: string;
+          content: string;
+          created_at: string;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          content: string;
+          created_at?: string;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          content?: string;
+          created_at?: string;
+          updated_at?: string | null;
+        };
+      } & Database['public']['Tables'];
+    }
+  } & Database['public'];
+};
+
+export const supabase = createClient<CustomDatabase>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,

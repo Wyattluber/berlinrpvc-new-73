@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { fetchNews, addNewsItem, updateNewsItem, deleteNewsItem } from '@/lib/adminService';
+import { fetchNews, addNewsItem, updateNewsItem, deleteNewsItem, NewsItem } from '@/lib/adminService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
@@ -11,14 +10,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { toast } from '@/hooks/use-toast';
 import { PlusCircle, Edit, Trash2, AlertTriangle, LoaderIcon } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-
-interface NewsItem {
-  id: string;
-  title: string;
-  content: string;
-  created_at: string;
-  updated_at?: string;
-}
 
 const formatRelativeTime = (dateString: string) => {
   const date = new Date(dateString);
@@ -56,7 +47,6 @@ const NewsManagement: React.FC = () => {
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Load news data
   useEffect(() => {
     const loadNews = async () => {
       setLoading(true);
@@ -111,7 +101,6 @@ const NewsManagement: React.FC = () => {
           description: "Neuigkeit wurde erfolgreich hinzugefügt"
         });
         
-        // Update the local state with the new item
         const updatedNews = [...news];
         if (result.data && result.data[0]) {
           updatedNews.unshift(result.data[0]);
@@ -155,7 +144,6 @@ const NewsManagement: React.FC = () => {
           description: "Neuigkeit wurde erfolgreich aktualisiert"
         });
         
-        // Update the local state
         const updatedNews = news.map(item => 
           item.id === activeNewsItem.id 
             ? { ...item, title, content, updated_at: new Date().toISOString() } 
@@ -188,7 +176,6 @@ const NewsManagement: React.FC = () => {
           description: "Neuigkeit wurde erfolgreich gelöscht"
         });
         
-        // Update the local state
         const updatedNews = news.filter(item => item.id !== id);
         setNews(updatedNews);
       } else {
@@ -282,7 +269,6 @@ const NewsManagement: React.FC = () => {
         </CardContent>
       </Card>
       
-      {/* Dialog for adding new news */}
       <Dialog open={newDialogOpen} onOpenChange={setNewDialogOpen}>
         <DialogContent className="sm:max-w-[525px]">
           <DialogHeader>
@@ -330,7 +316,6 @@ const NewsManagement: React.FC = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Dialog for editing news */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-[525px]">
           <DialogHeader>
