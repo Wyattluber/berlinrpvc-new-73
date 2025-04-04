@@ -25,6 +25,14 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // Function to check if user is admin
+  const checkAdminStatus = async () => {
+    const adminStatus = await isUserAdmin();
+    console.log("Admin status checked:", adminStatus);
+    setIsAdmin(adminStatus);
+    return adminStatus;
+  };
+
   useEffect(() => {
     // Check current auth status
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -32,8 +40,7 @@ const App = () => {
       
       // Check if user is admin
       if (session?.user) {
-        isUserAdmin().then(adminStatus => {
-          setIsAdmin(adminStatus);
+        checkAdminStatus().then(() => {
           setLoading(false);
         });
       } else {
@@ -43,12 +50,12 @@ const App = () => {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log("Auth state changed:", _event);
       setSession(session);
       
       // Update admin status when auth changes
       if (session?.user) {
-        const adminStatus = await isUserAdmin();
-        setIsAdmin(adminStatus);
+        await checkAdminStatus();
       } else {
         setIsAdmin(false);
       }

@@ -68,10 +68,18 @@ const AdminSetup = () => {
         // Make existing user an admin
         await makeUserAdmin(user.id, adminEmail);
         setIsSuccess(true);
+        
+        // Force refresh authentication status
+        await supabase.auth.refreshSession();
+        
         toast({
           title: "Admin-Konto aktualisiert",
           description: "Das Benutzerkonto wurde zum Admin-Konto hochgestuft.",
+          variant: "default"
         });
+        
+        // Redirect to admin panel automatically after successful upgrade
+        setTimeout(() => navigate('/admin'), 1500);
       } else {
         // Check if a user with this email already exists in admin_users
         const { data: existingAdmins } = await supabase
@@ -96,6 +104,9 @@ const AdminSetup = () => {
             description: "Erfolgreich als Administrator angemeldet!",
             variant: "default"
           });
+          
+          // Redirect to admin panel automatically after successful sign in
+          setTimeout(() => navigate('/admin'), 1500);
         } else {
           // Create a new admin account
           const result = await createAdminAccount(adminEmail, adminPassword);
@@ -166,9 +177,9 @@ const AdminSetup = () => {
           {isSuccess ? (
             <Button 
               className="w-full bg-indigo-600 hover:bg-indigo-700" 
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/admin')}
             >
-              Zur Anmeldeseite
+              Zur Admin-Seite
             </Button>
           ) : (
             <Button 
