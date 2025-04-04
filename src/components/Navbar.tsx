@@ -2,32 +2,25 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
-import { Menu, X, User, LogOut, Settings } from 'lucide-react';
+import { Menu, X, User, LogOut } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { checkIsAdmin } from '@/lib/admin';
 import { toast } from '@/hooks/use-toast';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check auth status and admin status when component mounts or location changes
+    // Check auth status when component mounts or location changes
     const checkAuthStatus = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session) {
         setIsLoggedIn(true);
-        
-        // Check if user is admin
-        const adminStatus = await checkIsAdmin();
-        setIsAdmin(adminStatus);
       } else {
         setIsLoggedIn(false);
-        setIsAdmin(false);
       }
     };
     
@@ -52,7 +45,6 @@ const Navbar = () => {
       });
       
       setIsLoggedIn(false);
-      setIsAdmin(false);
       navigate('/');
     } catch (error: any) {
       console.error("Logout error:", error);
@@ -90,12 +82,6 @@ const Navbar = () => {
                   <User size={18} />
                   <span>Profil</span>
                 </Link>
-                {isAdmin && (
-                  <Link to="/admin" className="hover:text-blue-200 py-2 px-3 rounded transition duration-300 flex items-center gap-1">
-                    <Settings size={18} />
-                    <span>Admin</span>
-                  </Link>
-                )}
                 <Button variant="ghost" className="hover:text-blue-200 text-white" onClick={handleLogout}>
                   <div className="flex items-center gap-2">
                     <LogOut size={18} />
@@ -155,15 +141,6 @@ const Navbar = () => {
                   <User size={18} />
                   <span>Profil</span>
                 </Link>
-                {isAdmin && (
-                  <Link to="/admin"
-                    className="block hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-2"
-                    onClick={toggleMenu}
-                  >
-                    <Settings size={18} />
-                    <span>Admin</span>
-                  </Link>
-                )}
                 <button
                   className="block w-full text-left hover:bg-blue-500 py-2 px-3 rounded transition duration-300 flex items-center gap-2"
                   onClick={() => {

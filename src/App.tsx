@@ -14,51 +14,25 @@ import ApplicationForm from "./pages/ApplicationForm";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
-import Admin from "./pages/Admin";
 import SubServers from "./pages/SubServers";
-import AdminSetup from "./pages/AdminSetup";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  // Function to check if user is admin
-  const updateAdminStatus = async () => {
-    const adminStatus = await checkIsAdmin();
-    console.log("Admin status checked:", adminStatus);
-    setIsAdmin(adminStatus);
-    return adminStatus;
-  };
 
   useEffect(() => {
     // Check current auth status
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      
-      // Check if user is admin
-      if (session?.user) {
-        updateAdminStatus().then(() => {
-          setLoading(false);
-        });
-      } else {
-        setLoading(false);
-      }
+      setLoading(false);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       console.log("Auth state changed:", _event);
       setSession(session);
-      
-      // Update admin status when auth changes
-      if (session?.user) {
-        await updateAdminStatus();
-      } else {
-        setIsAdmin(false);
-      }
     });
 
     return () => subscription.unsubscribe();
@@ -88,12 +62,7 @@ const App = () => {
               path="/profile" 
               element={session ? <Profile /> : <Navigate to="/login" />} 
             />
-            <Route 
-              path="/admin" 
-              element={isAdmin ? <Admin /> : <Navigate to={session ? "/profile" : "/login"} />} 
-            />
             <Route path="/subservers" element={<SubServers />} />
-            <Route path="/admin-setup" element={<AdminSetup />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -8,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Settings, User, Shield, Calendar, BarChart, AlertCircle, CheckCircle, Clock, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { Settings, User, Calendar, BarChart, AlertCircle, CheckCircle, Clock, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +35,6 @@ const Profile = () => {
   const [discordId, setDiscordId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [isAdmin, setIsAdmin] = useState(false);
   const [applications, setApplications] = useState<Application[]>([]);
   const [isLoadingApplications, setIsLoadingApplications] = useState(false);
 
@@ -105,20 +103,6 @@ const Profile = () => {
         discordId: user.user_metadata?.discord_id || '',
         avatar_url: user.user_metadata?.avatar_url || '',
       };
-
-      // Check if user is admin
-      const { data: adminData, error: adminError } = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (!adminError && adminData) {
-        userProfile.role = 'admin';
-        setIsAdmin(true);
-      } else {
-        setIsAdmin(false);
-      }
 
       setUser(userProfile);
       setDiscordId(userProfile.discordId || '');
@@ -272,8 +256,6 @@ const Profile = () => {
   // Function to display the proper role name
   const getRoleName = (role: string) => {
     switch (role) {
-      case 'admin':
-        return 'Administrator';
       case 'moderator':
         return 'Moderator';
       default:
@@ -383,16 +365,6 @@ const Profile = () => {
                       <KeyRound size={16} className="mr-2" />
                       Sicherheit
                     </Button>
-                    {isAdmin && (
-                      <Button 
-                        variant="ghost" 
-                        className="w-full justify-start"
-                        onClick={() => navigate('/admin')}
-                      >
-                        <Shield size={16} className="mr-2" />
-                        Admin-Bereich
-                      </Button>
-                    )}
                     <Button 
                       variant="outline" 
                       className="w-full justify-start text-red-500 hover:text-red-600 mt-4"
