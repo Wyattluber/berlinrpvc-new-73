@@ -17,6 +17,7 @@ import { getUserApplicationsHistory, checkIsAdmin } from '@/lib/admin';
 import ProfileImageUpload from '@/components/ProfileImageUpload';
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import MeetingCountdown from '@/components/MeetingCountdown';
 import {
   Accordion,
   AccordionContent,
