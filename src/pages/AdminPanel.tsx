@@ -70,7 +70,6 @@ const DashboardOverview = ({ userCount, adminUsers }: { userCount: number, admin
   useEffect(() => {
     const getStats = async () => {
       try {
-        // We'll use dummy data for now since fetchApplications has type errors
         const applicationsData: any[] = [];
         setApplications(applicationsData);
         
@@ -721,11 +720,11 @@ const NotificationSettings = () => (
             </div>
             <Button variant="outline">Aktivieren</Button>
           </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+);
 
 const AdminPanel = () => {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -861,3 +860,55 @@ const AdminPanel = () => {
         return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
       case 'users':
         return <UsersManagement adminUsers={adminUsers} handleUpdateRole={handleUpdateRole} handleDeleteUser={handleDeleteUser} />;
+      case 'applications':
+        return <ApplicationsManagement />;
+      case 'news':
+        return <NewsManagement />;
+      case 'partners':
+        return <PartnerServersManagement />;
+      case 'sub_servers':
+        return <SubServersManagement />;
+      case 'team-settings':
+        return <TeamSettings />;
+      case 'security':
+        return <SecuritySettings />;
+      case 'account':
+        return <AccountDetails />;
+      default:
+        return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex">
+      <SidebarProvider>
+        <Sidebar>
+          <SidebarHeader className="border-b px-6 py-5">
+            <h2 className="font-semibold text-xl">Admin Panel</h2>
+          </SidebarHeader>
+          <SidebarContent className="px-4 py-2">
+            <SidebarMenu>
+              {menuItems.map((item) => (
+                <SidebarMenuItem key={item.id}>
+                  <SidebarMenuButton
+                    className={activeSection === item.id ? "bg-accent text-accent-foreground" : ""}
+                    onClick={() => handleMenuClick(item.id)}
+                  >
+                    <item.icon className="mr-2 h-5 w-5" />
+                    <span>{item.title}</span>
+                    {activeSection === item.id && <ChevronRight className="ml-auto h-4 w-4" />}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarContent>
+        </Sidebar>
+        <div className="flex-1 p-6 overflow-auto">
+          {renderContent()}
+        </div>
+      </SidebarProvider>
+    </div>
+  );
+};
+
+export default AdminPanel;
