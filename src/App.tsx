@@ -196,11 +196,11 @@ const App = () => {
                 <Route path="/subservers" element={<SubServers />} />
                 <Route 
                   path="/admin" 
-                  element={session ? <AdminPanel /> : <Navigate to="/login" />} 
+                  element={session ? <Navigate to="/profile?tab=admin" /> : <Navigate to="/login" />} 
                 />
                 <Route 
                   path="/admin/dashboard" 
-                  element={session ? <AdminDashboard /> : <Navigate to="/login" />} 
+                  element={session ? <Navigate to="/profile?tab=admin" /> : <Navigate to="/login" />} 
                 />
                 {/* Catch-all route */}
                 <Route path="*" element={<NotFound />} />

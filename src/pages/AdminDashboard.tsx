@@ -27,8 +27,8 @@ const AdminDashboard = () => {
         // Only navigate if the component is still mounted
         if (isMounted) {
           setIsChecking(false);
-          // Always redirect to profile page with admin section
-          navigate('/profile');
+          // Navigate to profile page with admin tab parameter
+          navigate('/profile?tab=admin');
         }
       } catch (error) {
         console.error("Error checking admin status:", error);

@@ -1,7 +1,7 @@
 
 import { useState, useContext, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, ChevronDown, LogOut, User, Cog, ShieldCheck } from 'lucide-react';
+import { Menu, X, ChevronDown, LogOut, User, ShieldCheck } from 'lucide-react';
 import { SessionContext } from '@/App';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -105,30 +105,6 @@ const Navbar = () => {
               Bewerben
             </Link>
             
-            {(isAdmin || isModerator) && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="px-3 py-2 rounded-md text-sm font-medium text-blue-100 hover:bg-blue-700 hover:text-white flex items-center">
-                    <ShieldCheck className="h-4 w-4 mr-1" />
-                    Admin
-                    <ChevronDown className="ml-1 h-4 w-4" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel>Admin-Bereich</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => navigate('/admin')}>
-                    <Cog className="mr-2 h-4 w-4" />
-                    <span>Admin-Panel</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate('/admin/dashboard')}>
-                    <ShieldCheck className="mr-2 h-4 w-4" />
-                    <span>Bewerbungen</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-            
             {session ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -145,6 +121,13 @@ const Navbar = () => {
                     <User className="mr-2 h-4 w-4" />
                     <span>Mein Profil</span>
                   </DropdownMenuItem>
+                  {(isAdmin || isModerator) && (
+                    <DropdownMenuItem onClick={() => navigate('/profile?tab=admin')}>
+                      <ShieldCheck className="mr-2 h-4 w-4" />
+                      <span>Admin-Bereich</span>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Abmelden</span>
@@ -226,34 +209,6 @@ const Navbar = () => {
             Bewerben
           </Link>
           
-          {(isAdmin || isModerator) && (
-            <>
-              <Link
-                to="/admin"
-                className={`block px-3 py-2 rounded-md text-base font-medium ${
-                  location.pathname === '/admin' 
-                  ? 'bg-blue-800 text-white' 
-                  : 'text-blue-100 hover:bg-blue-700 hover:text-white'
-                }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Admin-Panel
-              </Link>
-              
-              <Link
-                to="/admin/dashboard"
-                className={`block px-3 py-2 rounded-md text-base font-medium ${
-                  location.pathname === '/admin/dashboard' 
-                  ? 'bg-blue-800 text-white' 
-                  : 'text-blue-100 hover:bg-blue-700 hover:text-white'
-                }`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Admin-Dashboard
-              </Link>
-            </>
-          )}
-          
           {session ? (
             <>
               <Link
@@ -267,6 +222,20 @@ const Navbar = () => {
               >
                 Mein Profil
               </Link>
+              
+              {(isAdmin || isModerator) && (
+                <Link
+                  to="/profile?tab=admin"
+                  className={`block px-3 py-2 rounded-md text-base font-medium ${
+                    location.pathname === '/profile' && location.search.includes('tab=admin')
+                    ? 'bg-blue-800 text-white' 
+                    : 'text-blue-100 hover:bg-blue-700 hover:text-white'
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Admin-Bereich
+                </Link>
+              )}
               
               <button
                 onClick={() => {

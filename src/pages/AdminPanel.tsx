@@ -1,404 +1,50 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { getTotalUserCount } from '@/lib/admin';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { checkIsAdmin } from '@/lib/admin';
+import { Loader2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Edit, Trash2, Users, Loader2, LayoutDashboard, User, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
-} from "@/components/ui/navigation-menu";
-
-// Define types for users data
-interface AdminUser {
-  id: string;
-  user_id: string;
-  role: string;
-  created_at: string;
-}
 
 const AdminPanel = () => {
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [editUserId, setEditUserId] = useState<string | null>(null);
-  const [editRole, setEditRole] = useState('');
-  const [open, setOpen] = useState(false);
-  const [userCount, setUserCount] = useState(0);
-  const [usernames, setUsernames] = useState<Record<string, string>>({});
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
-
-  // Use useMemo to prevent unnecessary re-renders
-  const memoizedUsers = useMemo(() => users, [users]);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Only fetch data once during initial load
-    if (!initialLoadComplete) {
-      fetchUsers();
-      fetchUserCount();
-      setInitialLoadComplete(true);
-    }
-  }, [initialLoadComplete]);
-
-  const fetchUserCount = async () => {
-    try {
-      const count = await getTotalUserCount();
-      setUserCount(count);
-    } catch (error) {
-      console.error('Error fetching user count:', error);
-    }
-  };
-
-  const fetchUsernames = async (userIds: string[]) => {
-    if (!userIds.length) return;
+    let isMounted = true;
     
-    try {
-      // For each user ID, we'll try to get more info from auth data if possible
-      // This is a workaround as we can't directly query auth.users
-      const usernameMap: Record<string, string> = {};
-      
-      // Default fallback naming pattern
-      userIds.forEach(userId => {
-        usernameMap[userId] = `User ${userId.substring(0, 6)}`;
-      });
-      
-      setUsernames(usernameMap);
-    } catch (error) {
-      console.error('Error in fetchUsernames:', error);
-    }
-  };
-
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('admin_users')
-        .select('*');
-
-      if (error) {
-        throw error;
-      }
-
-      setUsers(data || []);
-      
-      // Fetch usernames for all user IDs
-      if (data && data.length > 0) {
-        const userIds = data.map(user => user.user_id);
-        fetchUsernames(userIds);
-      }
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      toast({
-        title: "Fehler",
-        description: "Fehler beim Laden der Benutzer.",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEdit = (user: AdminUser) => {
-    setEditUserId(user.id);
-    setEditRole(user.role);
-    setOpen(true);
-  };
-
-  const handleSave = async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('admin_users')
-        .update({ role: editRole })
-        .eq('id', editUserId);
-
-      if (error) {
-        throw error;
-      }
-
-      toast({
-        title: "Erfolgreich",
-        description: "Benutzer erfolgreich aktualisiert.",
-      });
-      
-      // Update the local state to avoid a full refetch
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          user.id === editUserId ? { ...user, role: editRole } : user
-        )
-      );
-    } catch (error) {
-      console.error('Error updating user:', error);
-      toast({
-        title: "Fehler",
-        description: "Fehler beim Aktualisieren des Benutzers.",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-      setOpen(false);
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Bist du sicher, dass du diesen Benutzer löschen möchtest?")) {
-      setLoading(true);
+    const checkAdminStatus = async () => {
       try {
-        const { error } = await supabase
-          .from('admin_users')
-          .delete()
-          .eq('id', id);
-
-        if (error) {
-          throw error;
-        }
-
-        toast({
-          title: "Erfolgreich",
-          description: "Benutzer erfolgreich gelöscht.",
-        });
+        const adminStatus = await checkIsAdmin();
         
-        // Update local state instead of refetching
-        setUsers(prevUsers => prevUsers.filter(user => user.id !== id));
+        if (isMounted) {
+          // Instead of showing the panel here, redirect to Profile with admin tab
+          navigate('/profile?tab=admin');
+        }
       } catch (error) {
-        console.error('Error deleting user:', error);
-        toast({
-          title: "Fehler",
-          description: "Fehler beim Löschen des Benutzers.",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
+        console.error("Error checking admin status:", error);
+        if (isMounted) {
+          navigate('/profile');
+        }
       }
-    }
-  };
-
-  const getUsernameById = (userId: string) => {
-    return usernames[userId] || 'Unbekannter Benutzer';
-  };
+    };
+    
+    checkAdminStatus();
+    
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
+  }, [navigate]);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex flex-col min-h-screen">
       <Navbar />
-      
-      <div className="flex-1 bg-gradient-to-b from-gray-50 to-white">
-        <div className="container mx-auto py-10 px-4">
-          <Card className="mb-6">
-            <CardHeader className="bg-blue-50 border-b">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-3xl font-bold text-blue-900">Admin Panel</CardTitle>
-                  <CardDescription>Verwaltung des Bayern RP Servers</CardDescription>
-                </div>
-                <NavigationMenu>
-                  <NavigationMenuList>
-                    <NavigationMenuItem>
-                      <Link to="/admin/dashboard">
-                        <Button variant="outline" className="flex items-center gap-2">
-                          <LayoutDashboard size={16} />
-                          Dashboard
-                          <ArrowRight size={16} />
-                        </Button>
-                      </Link>
-                    </NavigationMenuItem>
-                  </NavigationMenuList>
-                </NavigationMenu>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-2xl">Registrierte Benutzer</CardTitle>
-                    <CardDescription>Gesamtzahl der registrierten Benutzer in Supabase</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-4xl font-bold text-blue-600">{userCount}</div>
-                  </CardContent>
-                  <CardFooter className="text-sm text-gray-500">
-                    Stand: {new Date().toLocaleString('de-DE')}
-                  </CardFooter>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-2xl">Admin-Benutzer</CardTitle>
-                    <CardDescription>Benutzer mit Admin-Rechten</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-4xl font-bold text-green-600">{memoizedUsers.length}</div>
-                  </CardContent>
-                  <CardFooter className="text-sm text-gray-500">
-                    Teamverwaltung unten ansehen
-                  </CardFooter>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-2xl">Bewerbungen</CardTitle>
-                    <CardDescription>Alle Bewerbungen verwalten</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex justify-center">
-                      <Link to="/admin/dashboard">
-                        <Button className="w-full">Zu Bewerbungen</Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="text-sm text-gray-500">
-                    Verwaltung im Admin-Dashboard
-                  </CardFooter>
-                </Card>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl flex items-center">
-                    <Users className="mr-2 h-5 w-5 text-blue-500" />
-                    Teamverwaltung
-                  </CardTitle>
-                  <CardDescription>
-                    Admin-Benutzer mit speziellen Rechten verwalten
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <div className="flex justify-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-                    </div>
-                  ) : (
-                    <Table>
-                      <TableCaption>Admin-Benutzer mit speziellen Rechten.</TableCaption>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[50px]">ID</TableHead>
-                          <TableHead>Benutzer</TableHead>
-                          <TableHead>Benutzer ID</TableHead>
-                          <TableHead>Rolle</TableHead>
-                          <TableHead>Erstellt am</TableHead>
-                          <TableHead className="text-right">Aktionen</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {memoizedUsers.map((user) => (
-                          <TableRow key={user.id}>
-                            <TableCell className="font-medium">{user.id.substring(0, 6)}...</TableCell>
-                            <TableCell className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-blue-500" />
-                              {getUsernameById(user.user_id)}
-                            </TableCell>
-                            <TableCell>{user.user_id.substring(0, 8)}...</TableCell>
-                            <TableCell>
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                user.role === 'admin' 
-                                  ? 'bg-red-100 text-red-800' 
-                                  : user.role === 'moderator' 
-                                    ? 'bg-blue-100 text-blue-800' 
-                                    : 'bg-gray-100 text-gray-800'
-                              }`}>
-                                {user.role || 'admin'}
-                              </span>
-                            </TableCell>
-                            <TableCell>{new Date(user.created_at).toLocaleString('de-DE')}</TableCell>
-                            <TableCell className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <span className="sr-only">Open menu</span>
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuLabel>Aktionen</DropdownMenuLabel>
-                                  <DropdownMenuItem onClick={() => handleEdit(user)}>
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    Bearbeiten
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem onClick={() => handleDelete(user.id)}>
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Löschen
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </CardContent>
-              </Card>
-            </CardContent>
-          </Card>
+      <main className="flex-grow flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-500 mb-4" />
+          <p className="text-gray-600">Leite weiter zum Admin-Bereich...</p>
         </div>
-      </div>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Benutzer bearbeiten</DialogTitle>
-            <DialogDescription>
-              Änderungen am Benutzer vornehmen. Klicke auf Speichern, wenn du fertig bist.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="role" className="text-right">
-                Rolle
-              </Label>
-              <Input 
-                id="role" 
-                value={editRole} 
-                onChange={(e) => setEditRole(e.target.value)} 
-                className="col-span-3" 
-                placeholder="admin oder moderator"
-              />
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <Button onClick={handleSave} className="w-full">Änderungen speichern</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
+      </main>
       <Footer />
     </div>
   );
