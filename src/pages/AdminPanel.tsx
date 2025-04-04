@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SessionContext } from '@/App';
@@ -7,46 +8,94 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
-import { addAdmin, addModerator, removeUserRole } from '@/lib/admin';
-import { AlertCircle, CheckCircle, ShieldCheck, Shield } from 'lucide-react';
+import { addAdmin, addModerator, removeUserRole, checkIsAdmin } from '@/lib/admin';
+import { AlertCircle, CheckCircle, ShieldCheck, Shield, Loader2, Users } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminPanel = () => {
   const [userId, setUserId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingAdminCheck, setLoadingAdminCheck] = useState(true);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const session = useContext(SessionContext);
+  const [adminUsers, setAdminUsers] = useState<any[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const session = useContext(SessionContext);
   const navigate = useNavigate();
 
+  // Load admin status and admin users list
   useEffect(() => {
-    // Check if user is logged in
-    if (!session) {
-      navigate('/login');
-      toast({
-        title: "Zugriff verweigert",
-        description: "Du musst angemeldet sein, um auf diese Seite zuzugreifen.",
-        variant: "destructive"
-      });
-      return;
-    }
+    let isMounted = true;
+    
+    const checkAdminStatus = async () => {
+      setLoadingAdminCheck(true);
+      
+      try {
+        // Check if user is logged in
+        if (!session?.user) {
+          navigate('/login');
+          toast({
+            title: "Zugriff verweigert",
+            description: "Du musst angemeldet sein, um auf diese Seite zuzugreifen.",
+            variant: "destructive"
+          });
+          return;
+        }
 
-    // For simplicity, we'll assume admin users have a specific email pattern
-    // In a real app, you would check against roles in the database
-    const userEmail = session.user?.email || '';
-    const isAdminUser = userEmail.includes('admin') || userEmail.endsWith('@berlinrp.de');
-    setIsAdmin(isAdminUser);
-
-    if (!isAdminUser) {
-      navigate('/profile');
-      toast({
-        title: "Zugriff verweigert",
-        description: "Du benötigst Admin-Rechte, um auf diese Seite zuzugreifen.",
-        variant: "destructive"
-      });
-    }
+        // Check if user is an admin with the security definer function
+        const adminStatus = await checkIsAdmin();
+        
+        if (isMounted) {
+          setIsAdmin(adminStatus);
+          
+          if (!adminStatus) {
+            navigate('/profile');
+            toast({
+              title: "Zugriff verweigert",
+              description: "Du benötigst Admin-Rechte, um auf diese Seite zuzugreifen.",
+              variant: "destructive"
+            });
+          } else {
+            // If user is admin, fetch admin users list
+            fetchAdminUsers();
+          }
+        }
+      } catch (error) {
+        console.error("Error checking admin status:", error);
+        if (isMounted) {
+          setErrorMessage("Fehler beim Überprüfen des Admin-Status.");
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingAdminCheck(false);
+        }
+      }
+    };
+    
+    checkAdminStatus();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [session, navigate]);
+
+  const fetchAdminUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('*');
+      
+      if (error) {
+        throw error;
+      }
+      
+      setAdminUsers(data || []);
+    } catch (error: any) {
+      console.error("Error fetching admin users:", error);
+    }
+  };
 
   const handleAddAdmin = async () => {
     if (!userId.trim()) {
@@ -66,6 +115,7 @@ const AdminPanel = () => {
           title: "Erfolgreich",
           description: result.message,
         });
+        fetchAdminUsers(); // Refresh the admin users list
       } else {
         setErrorMessage(result.message);
         toast({
@@ -99,6 +149,7 @@ const AdminPanel = () => {
           title: "Erfolgreich",
           description: result.message,
         });
+        fetchAdminUsers(); // Refresh the admin users list
       } else {
         setErrorMessage(result.message);
         toast({
@@ -132,6 +183,7 @@ const AdminPanel = () => {
           title: "Erfolgreich",
           description: result.message,
         });
+        fetchAdminUsers(); // Refresh the admin users list
       } else {
         setErrorMessage(result.message);
         toast({
@@ -147,8 +199,23 @@ const AdminPanel = () => {
     }
   };
 
+  if (loadingAdminCheck) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Navbar />
+        <main className="flex-grow flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-500 mb-4" />
+            <p className="text-gray-600">Überprüfe Admin-Rechte...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   if (!isAdmin) {
-    return null; // Don't render anything if not admin
+    return null; // User will be redirected in useEffect
   }
 
   return (
@@ -156,7 +223,7 @@ const AdminPanel = () => {
       <Navbar />
       
       <main className="flex-grow py-8 bg-gradient-to-b from-gray-50 to-white">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 space-y-8">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -206,7 +273,7 @@ const AdminPanel = () => {
                   disabled={isLoading}
                   className="bg-red-600 hover:bg-red-700 flex items-center gap-2"
                 >
-                  <ShieldCheck size={16} />
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck size={16} />}
                   Als Admin hinzufügen
                 </Button>
                 
@@ -215,7 +282,7 @@ const AdminPanel = () => {
                   disabled={isLoading}
                   className="bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
                 >
-                  <Shield size={16} />
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Shield size={16} />}
                   Als Moderator hinzufügen
                 </Button>
                 
@@ -225,20 +292,79 @@ const AdminPanel = () => {
                   variant="outline"
                   className="border-red-300 text-red-600 hover:bg-red-50"
                 >
-                  Rolle entfernen
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Rolle entfernen"}
                 </Button>
-              </div>
-              
-              <div className="mt-8 border-t pt-6">
-                <h3 className="text-lg font-medium mb-2">Anleitung</h3>
-                <ol className="space-y-2 text-sm text-gray-600 list-decimal pl-5">
-                  <li>Um einen Benutzer zum Admin zu machen, füge die Benutzer-ID in das Feld ein und klicke auf "Als Admin hinzufügen".</li>
-                  <li>Um einen Benutzer zum Moderator zu machen, füge die Benutzer-ID in das Feld ein und klicke auf "Als Moderator hinzufügen".</li>
-                  <li>Um eine Rolle zu entfernen, füge die Benutzer-ID in das Feld ein und klicke auf "Rolle entfernen".</li>
-                </ol>
               </div>
             </CardContent>
           </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="text-blue-500" />
+                Admin-Benutzer Liste
+              </CardTitle>
+              <CardDescription>
+                Aktuelle Benutzer mit Admin- oder Moderator-Berechtigungen
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {adminUsers.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Benutzer-ID</TableHead>
+                      <TableHead>Rolle</TableHead>
+                      <TableHead>Erstellt am</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {adminUsers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell className="font-mono text-sm">{user.user_id}</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            user.role === 'admin' 
+                              ? 'bg-red-100 text-red-800' 
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {user.role === 'admin' ? (
+                              <>
+                                <ShieldCheck className="mr-1 h-3 w-3" />
+                                Admin
+                              </>
+                            ) : (
+                              <>
+                                <Shield className="mr-1 h-3 w-3" />
+                                Moderator
+                              </>
+                            )}
+                          </span>
+                        </TableCell>
+                        <TableCell>{new Date(user.created_at).toLocaleString('de-DE')}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Users className="h-12 w-12 mx-auto text-gray-300 mb-2" />
+                  <p>Keine Admin-Benutzer gefunden</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          
+          <div className="mt-8 border-t pt-6">
+            <h3 className="text-lg font-medium mb-2">Anleitung</h3>
+            <ol className="space-y-2 text-sm text-gray-600 list-decimal pl-5">
+              <li>Um einen Benutzer zum Admin zu machen, füge die Benutzer-ID in das Feld ein und klicke auf "Als Admin hinzufügen".</li>
+              <li>Um einen Benutzer zum Moderator zu machen, füge die Benutzer-ID in das Feld ein und klicke auf "Als Moderator hinzufügen".</li>
+              <li>Um eine Rolle zu entfernen, füge die Benutzer-ID in das Feld ein und klicke auf "Rolle entfernen".</li>
+              <li>Admin-Benutzer haben volle Berechtigungen, um alle Daten zu verwalten.</li>
+              <li>Moderator-Benutzer haben eingeschränkte Berechtigungen, um bestimmte Daten zu verwalten.</li>
+            </ol>
+          </div>
         </div>
       </main>
       
