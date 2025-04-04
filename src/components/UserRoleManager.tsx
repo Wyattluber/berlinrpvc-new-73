@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +22,7 @@ const UserRoleManager = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedUserId, setSelectedUserId] = useState('');
-  const [role, setRole] = useState<'admin' | 'moderator' | 'member'>('member');
+  const [role, setRole] = useState<'admin' | 'moderator' | 'member'>('moderator');
   const [isAdding, setIsAdding] = useState(false);
 
   const handleSearch = async () => {
@@ -83,7 +82,7 @@ const UserRoleManager = () => {
 
     setIsAdding(true);
     try {
-      const result = await addAdminUserRole(selectedUserId, role);
+      const result = await addAdminUserRole(selectedUserId, role === 'member' ? 'moderator' : role as 'admin' | 'moderator');
       
       if (result.success) {
         toast({

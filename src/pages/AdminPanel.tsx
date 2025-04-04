@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { checkIsAdmin } from '@/lib/admin';
@@ -722,11 +721,11 @@ const NotificationSettings = () => (
             </div>
             <Button variant="outline">Aktivieren</Button>
           </div>
-        </div>
-      </CardContent>
-    </Card>
-  </div>
-);
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
 
 const AdminPanel = () => {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -862,59 +861,3 @@ const AdminPanel = () => {
         return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
       case 'users':
         return <UsersManagement adminUsers={adminUsers} handleUpdateRole={handleUpdateRole} handleDeleteUser={handleDeleteUser} />;
-      case 'applications':
-        return <ApplicationsManagement />;
-      case 'news':
-        return <NewsManagement />;
-      case 'partners':
-        return <PartnerServersManagement />;
-      case 'sub_servers':
-        return <SubServersManagement />;
-      case 'team-settings':
-        return <TeamSettings />;
-      case 'security':
-        return <SecuritySettings />;
-      case 'account':
-        return <AccountDetails />;
-      default:
-        return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
-    }
-  };
-  
-  return (
-    <div className="min-h-screen w-full">
-      <SidebarProvider>
-        <div className="min-h-screen flex w-full">
-          <Sidebar open={sidebarOpen} onOpenChange={setSidebarOpen}>
-            <SidebarHeader>
-              <div className="p-2">
-                <h2 className="text-lg font-bold">Admin Panel</h2>
-              </div>
-            </SidebarHeader>
-            <SidebarContent>
-              <SidebarMenu>
-                {menuItems.map(item => (
-                  <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton 
-                      className={activeSection === item.id ? "bg-accent" : ""}
-                      onClick={() => handleMenuClick(item.id)}
-                    >
-                      <item.icon className="h-5 w-5 mr-2" />
-                      <span>{item.title}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarContent>
-          </Sidebar>
-          
-          <div className="flex-1 p-6 overflow-auto">
-            {renderContent()}
-          </div>
-        </div>
-      </SidebarProvider>
-    </div>
-  );
-};
-
-export default AdminPanel;

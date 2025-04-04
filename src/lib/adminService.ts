@@ -19,6 +19,98 @@ let newsCache: { news: any[]; timestamp: number } | null = null;
 // Cache application seasons
 let applicationSeasonsCache: { seasons: any[]; timestamp: number } | null = null;
 
+// Cache applications
+let applicationsCache: { data: any[]; timestamp: number } | null = null;
+
+/**
+ * Fetch applications with caching
+ */
+export async function fetchApplications() {
+  const now = Date.now();
+  
+  // Return cached data if valid
+  if (applicationsCache && (now - applicationsCache.timestamp < CACHE_TTL)) {
+    return applicationsCache.data;
+  }
+  
+  try {
+    const { data, error } = await supabase
+      .from('applications')
+      .select('*, profiles:user_id(username)')
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      throw error;
+    }
+    
+    // Transform data to include username from profiles
+    const transformedData = data.map(app => ({
+      ...app,
+      username: app.profiles?.username || null
+    }));
+    
+    // Cache the result
+    applicationsCache = { 
+      data: transformedData, 
+      timestamp: now 
+    };
+    
+    return transformedData;
+  } catch (error) {
+    console.error('Error fetching applications:', error);
+    return applicationsCache?.data || [];
+  }
+}
+
+/**
+ * Update application status
+ */
+export async function updateApplicationStatus(applicationId: string, status: 'approved' | 'rejected', notes: string | null = null) {
+  const isAdmin = await checkIsAdmin();
+  if (!isAdmin) {
+    throw new Error('Keine Berechtigung');
+  }
+  
+  try {
+    const { error } = await supabase
+      .from('applications')
+      .update({ 
+        status, 
+        notes,
+        updated_at: new Date().toISOString() 
+      })
+      .eq('id', applicationId);
+      
+    if (error) {
+      throw error;
+    }
+    
+    // Invalidate applications cache
+    applicationsCache = null;
+    
+    // Attempt to send notification to user (this is optional)
+    try {
+      const { data } = await supabase
+        .from('applications')
+        .select('user_id')
+        .eq('id', applicationId)
+        .single();
+        
+      if (data?.user_id) {
+        await sendApplicationStatusNotification(applicationId, data.user_id, status);
+      }
+    } catch (notificationError) {
+      console.error('Error sending notification:', notificationError);
+      // We don't want to fail the status update if notification fails
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating application status:', error);
+    throw error;
+  }
+}
+
 /**
  * Fetch admin users with caching
  */
@@ -671,4 +763,5 @@ export function invalidateAdminCache() {
   teamSettingsCache = null;
   newsCache = null;
   applicationSeasonsCache = null;
+  applicationsCache = null;
 }
