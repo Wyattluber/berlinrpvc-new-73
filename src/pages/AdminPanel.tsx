@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { checkIsAdmin } from '@/lib/admin';
@@ -858,3 +859,23 @@ const AdminPanel = () => {
                             <item.icon />
                             <span>{item.title}</span>
                             <ChevronRight className="ml-auto h-4 w-4" />
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      ))}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              </SidebarContent>
+            </Sidebar>
+            
+            <div className="flex-1 overflow-y-auto p-6">
+              {renderContent()}
+            </div>
+          </div>
+        </SidebarProvider>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};
+
+export default AdminPanel;
