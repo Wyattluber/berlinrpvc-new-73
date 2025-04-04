@@ -17,6 +17,12 @@ import ProfileImageUpload from '@/components/ProfileImageUpload';
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import MeetingCountdown from '@/components/MeetingCountdown';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { loadNewsIntoProfile } from '@/helpers/newsLoader';
+import AdminPanel from '@/pages/AdminPanel';
+import { getTeamSettings } from '@/lib/adminService';
 
 type Application = {
   id: string;
@@ -29,6 +35,86 @@ type Application = {
 type ProfileLocks = {
   discord_locked: boolean;
   roblox_locked: boolean;
+};
+
+// Helper function to check if profile IDs are locked
+const checkProfileIdsLocked = async (userId: string): Promise<ProfileLocks> => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('discord_id, roblox_id')
+      .eq('id', userId)
+      .single();
+    
+    if (error) {
+      console.error('Error checking profile locks:', error);
+      return { discord_locked: false, roblox_locked: false };
+    }
+    
+    // If the IDs exist and are not empty, they are locked
+    return {
+      discord_locked: !!data?.discord_id,
+      roblox_locked: !!data?.roblox_id
+    };
+  } catch (error) {
+    console.error('Error checking profile locks:', error);
+    return { discord_locked: false, roblox_locked: false };
+  }
+};
+
+// Helper function to update user profile
+const updateUserProfile = async (userId: string, profileData: { discord_id?: string, roblox_id?: string }) => {
+  try {
+    // Check if values are valid
+    if (profileData.discord_id && !/^\d+$/.test(profileData.discord_id)) {
+      return { success: false, message: 'Discord ID muss nur aus Zahlen bestehen.' };
+    }
+    
+    if (profileData.roblox_id && !/^\d+$/.test(profileData.roblox_id)) {
+      return { success: false, message: 'Roblox ID muss nur aus Zahlen bestehen.' };
+    }
+    
+    // Get current profile data
+    const { data: existingProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('discord_id, roblox_id')
+      .eq('id', userId)
+      .single();
+    
+    if (profileError && profileError.code !== 'PGRST116') {
+      console.error('Error fetching profile:', profileError);
+      return { success: false, message: 'Fehler beim Abrufen des Profils.' };
+    }
+    
+    // Don't update if ID is already set (locked)
+    const updatedData: any = {};
+    
+    if (profileData.discord_id && !existingProfile?.discord_id) {
+      updatedData.discord_id = profileData.discord_id;
+    }
+    
+    if (profileData.roblox_id && !existingProfile?.roblox_id) {
+      updatedData.roblox_id = profileData.roblox_id;
+    }
+    
+    // Only update if there's something to update
+    if (Object.keys(updatedData).length > 0) {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update(updatedData)
+        .eq('id', userId);
+      
+      if (updateError) {
+        console.error('Error updating profile:', updateError);
+        return { success: false, message: 'Fehler beim Aktualisieren des Profils.' };
+      }
+    }
+    
+    return { success: true, message: 'Profil erfolgreich aktualisiert.' };
+  } catch (error) {
+    console.error('Error in updateUserProfile:', error);
+    return { success: false, message: 'Ein unerwarteter Fehler ist aufgetreten.' };
+  }
 };
 
 const Profile = () => {
@@ -183,6 +269,14 @@ const Profile = () => {
     
     return () => clearInterval(intervalId);
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'dashboard') {
+      setTimeout(() => {
+        loadNewsIntoProfile();
+      }, 500);
+    }
+  }, [activeTab]);
 
   const handleTabChange = (value: string) => {
     setSearchParams({ tab: value });
