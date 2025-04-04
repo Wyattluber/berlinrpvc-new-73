@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useApplication } from '@/contexts/ApplicationContext';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
@@ -85,6 +86,7 @@ const Step3Situation: React.FC<Step3Props> = ({ onBack }) => {
       const { error } = await supabase
         .from('applications')
         .insert({
+          user_id: user.id,
           roblox_username: applicationData.robloxUsername,
           roblox_id: applicationData.robloxId,
           discord_id: applicationData.discordId,
@@ -100,6 +102,7 @@ const Step3Situation: React.FC<Step3Props> = ({ onBack }) => {
           other_servers: `${data.other_server_names || ''} - ${serverInvite}`,
           admin_experience: data.admin_experience || null,
           notes: data.notes || null,
+          status: 'pending' // Set initial status
         });
 
       if (error) throw error;

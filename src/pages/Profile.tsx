@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { SessionContext } from '../App';
-import { ReloadIcon, CheckCircle } from 'lucide-react';
+import { LoaderIcon, CheckCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { getUserApplicationsHistory } from '@/lib/admin';
 import ProfileImageUpload from '@/components/ProfileImageUpload';
@@ -58,13 +59,15 @@ const Profile = () => {
     isLoading: isApplicationsLoading, 
     error: applicationsError, 
     refetch: refetchApplications 
-  } = useQuery(
-    ['userApplications', session?.user?.id], 
-    () => getUserApplicationsHistory(session?.user?.id || ''),
-    {
-      enabled: !!session?.user?.id, // Only run when the user is logged in
+  } = useQuery({
+    queryKey: ['userApplications', session?.user?.id], 
+    queryFn: () => getUserApplicationsHistory(session?.user?.id || ''),
+    enabled: !!session?.user?.id, // Only run when the user is logged in
+    meta: {
       onSuccess: (data) => {
-        setApplications(data || []);
+        if (data) {
+          setApplications(data as Application[]);
+        }
       },
       onError: (error: any) => {
         console.error('Error fetching applications:', error);
@@ -75,7 +78,7 @@ const Profile = () => {
         });
       }
     }
-  );
+  });
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -314,7 +317,7 @@ const Profile = () => {
                         >
                           {isUpdatingUsername ? (
                             <>
-                              <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                              <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
                               Aktualisieren...
                             </>
                           ) : (
@@ -338,7 +341,7 @@ const Profile = () => {
                   <CardDescription>Hier findest du eine Übersicht deiner bisherigen Bewerbungen.</CardDescription>
                   {isApplicationsLoading ? (
                     <div className="flex items-center justify-center">
-                      <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                      <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
                       Lade Bewerbungen...
                     </div>
                   ) : applicationsError ? (
@@ -388,7 +391,7 @@ const Profile = () => {
                         >
                           {isUpdatingEmail ? (
                             <>
-                              <ReloadIcon className="mr-2 h-4 w-4 animate-spin" />
+                              <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
                               Aktualisieren...
                             </>
                           ) : (
