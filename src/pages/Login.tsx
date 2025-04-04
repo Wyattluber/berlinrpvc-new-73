@@ -86,7 +86,7 @@ const Login = () => {
         description: "Die Anmeldung mit Discord ist derzeit nicht verfügbar.",
         variant: "default"
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Discord login error:", error);
     } finally {
       setIsLoading(false);
@@ -138,12 +138,11 @@ const Login = () => {
   };
 
   const validatePassword = () => {
-    const isValid = 
+    return (
       registerPassword.length >= 8 && 
       /[a-zA-Z]/.test(registerPassword) && 
-      /[0-9]/.test(registerPassword);
-      
-    return isValid;
+      /[0-9]/.test(registerPassword)
+    );
   };
 
   const handleRegistration = async (e: React.FormEvent) => {
@@ -164,7 +163,7 @@ const Login = () => {
       setIsLoading(true);
       setRegisterError(null);
       
-      const userData = {
+      const { error } = await supabase.auth.signUp({
         email: registerEmail,
         password: registerPassword,
         options: {
@@ -174,9 +173,7 @@ const Login = () => {
           },
           emailRedirectTo: `${window.location.origin}/profile`
         }
-      };
-
-      const { data, error } = await supabase.auth.signUp(userData);
+      });
       
       if (error) throw error;
 
