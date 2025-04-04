@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -1032,3 +1033,1025 @@ const Profile = () => {
                       </div>
                     )}
                     <div>
+                      <h2 className="text-lg font-semibold">{user.name}</h2>
+                      <p className="text-sm text-gray-500">{user.email}</p>
+                      <Badge variant="outline" className="mt-1 text-xs">
+                        {getUserRoleName()}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-3">
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={handleFileChange}
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="w-full"
+                      onClick={handleFileUpload}
+                      disabled={uploadingImage}
+                    >
+                      {uploadingImage ? (
+                        <>Hochladen...</>
+                      ) : (
+                        <>
+                          <Upload className="mr-2" size={14} />
+                          Profilbild ändern
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardHeader>
+                
+                <CardContent className="pb-2">
+                  <Tabs defaultValue={activeTab} onValueChange={setActiveTab} orientation="vertical" className="w-full">
+                    <TabsList className="flex flex-col h-full space-y-1 w-full">
+                      <TabsTrigger value="dashboard" className="justify-start">
+                        <BarChart className="mr-2" size={16} />
+                        Dashboard
+                      </TabsTrigger>
+                      <TabsTrigger value="profile" className="justify-start">
+                        <User className="mr-2" size={16} />
+                        Profil
+                      </TabsTrigger>
+                      <TabsTrigger value="security" className="justify-start">
+                        <KeyRound className="mr-2" size={16} />
+                        Sicherheit
+                      </TabsTrigger>
+                      <TabsTrigger value="applications" className="justify-start">
+                        <Mail className="mr-2" size={16} />
+                        Bewerbungen
+                      </TabsTrigger>
+                      {isModerator && (
+                        <TabsTrigger value="team" className="justify-start">
+                          <Users className="mr-2" size={16} />
+                          Team
+                        </TabsTrigger>
+                      )}
+                      {isAdmin && (
+                        <TabsTrigger value="admin" className="justify-start">
+                          <ShieldCheck className="mr-2" size={16} />
+                          Admin
+                        </TabsTrigger>
+                      )}
+                      <TabsTrigger value="settings" className="justify-start">
+                        <Settings className="mr-2" size={16} />
+                        Einstellungen
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </CardContent>
+                
+                <CardFooter>
+                  <Button 
+                    variant="outline" 
+                    className="w-full" 
+                    onClick={handleLogout}
+                  >
+                    Abmelden
+                  </Button>
+                </CardFooter>
+              </Card>
+            </div>
+            
+            <div className="flex-1">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsContent value="dashboard" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>{greeting}, {user.name}!</CardTitle>
+                      <CardDescription>
+                        Hier siehst du eine Übersicht zu deinem Benutzerkonto.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid gap-4">
+                        <div className="flex flex-col space-y-1.5">
+                          <h3 className="text-lg font-semibold">Willkommen zurück!</h3>
+                          <p className="text-sm text-gray-500">
+                            Hier kannst du dein Profil verwalten, deine Bewerbungen einsehen
+                            und deine Accounteinstellungen ändern.
+                          </p>
+                        </div>
+                        
+                        <Alert className="bg-blue-50 border-blue-200">
+                          <Calendar className="h-4 w-4 text-blue-600" />
+                          <AlertTitle>Hilfe benötigt?</AlertTitle>
+                          <AlertDescription>
+                            Wenn du Hilfe benötigst, kannst du uns gerne über Discord kontaktieren.
+                          </AlertDescription>
+                        </Alert>
+                        
+                        {applications.length > 0 && (
+                          <div className="mt-4">
+                            <h3 className="text-lg font-semibold mb-2">Deine letzten Bewerbungen</h3>
+                            <div className="space-y-2">
+                              {applications.slice(0, 3).map((app) => (
+                                <div key={app.id} className="p-3 border rounded-md flex justify-between items-center bg-gray-50">
+                                  <div>
+                                    <p className="text-sm font-medium">Bewerbung vom {formatDate(app.created_at)}</p>
+                                    {getStatusBadge(app.status)}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="profile" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Profil</CardTitle>
+                      <CardDescription>
+                        Hier kannst du deine Profilinformationen bearbeiten.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Benutzername</Label>
+                        <div className="flex flex-wrap gap-2">
+                          <Input 
+                            id="name" 
+                            value={username} 
+                            onChange={(e) => setUsername(e.target.value)} 
+                            disabled={isLoading}
+                            className="flex-1"
+                          />
+                          <Button 
+                            type="button" 
+                            variant="outline"
+                            onClick={handleInitiateUsernameChange}
+                            disabled={isLoading}
+                            className="flex items-center"
+                          >
+                            <Edit size={16} className="mr-2" />
+                            Ändern
+                          </Button>
+                        </div>
+                        {!usernameCooldown.canChange && (
+                          <p className="text-xs text-orange-500 mt-1">
+                            Du kannst deinen Benutzernamen erst wieder ändern am {formatNextChangeDate(usernameCooldown.nextChangeDate)}.
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="email">E-Mail Adresse</Label>
+                        <div className="flex flex-wrap gap-2">
+                          <Input 
+                            id="email" 
+                            value={user.email} 
+                            disabled
+                            className="flex-1 bg-gray-50"
+                          />
+                          <Button 
+                            type="button" 
+                            variant="outline"
+                            onClick={handleShowEmailChangeDialog}
+                            disabled={isLoading || user.email_changed}
+                            className="flex items-center"
+                          >
+                            <Edit size={16} className="mr-2" />
+                            Ändern
+                          </Button>
+                        </div>
+                        {user.email_changed && (
+                          <p className="text-xs text-orange-500 mt-1">
+                            E-Mail-Adressen können nur einmal geändert werden.
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="discord">Discord ID</Label>
+                        <Input 
+                          id="discord" 
+                          value={discordId} 
+                          onChange={(e) => setDiscordId(e.target.value)} 
+                          placeholder="z.B. username#1234" 
+                          disabled={isLoading}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="roblox">Roblox ID</Label>
+                        <Input 
+                          id="roblox" 
+                          value={robloxId} 
+                          onChange={(e) => setRobloxId(e.target.value)} 
+                          placeholder="Deine Roblox ID" 
+                          disabled={isLoading}
+                        />
+                      </div>
+                    </CardContent>
+                    <CardFooter className="border-t px-6 py-4">
+                      <Button 
+                        onClick={handleSaveProfile} 
+                        disabled={isLoading}
+                        className="ml-auto"
+                      >
+                        {isLoading ? "Speichern..." : "Speichern"}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </TabsContent>
+                
+                {/* Security Tab */}
+                <TabsContent value="security" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Sicherheit</CardTitle>
+                      <CardDescription>
+                        Hier kannst du dein Passwort ändern.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="currentPassword">Aktuelles Passwort</Label>
+                        <div className="relative">
+                          <Input 
+                            id="currentPassword" 
+                            type={showCurrentPassword ? "text" : "password"}
+                            value={currentPassword} 
+                            onChange={(e) => setCurrentPassword(e.target.value)} 
+                            disabled={isLoading}
+                          />
+                          <button 
+                            type="button"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          >
+                            {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="newPassword">Neues Passwort</Label>
+                        <div className="relative">
+                          <Input 
+                            id="newPassword" 
+                            type={showNewPassword ? "text" : "password"}
+                            value={newPassword} 
+                            onChange={(e) => setNewPassword(e.target.value)} 
+                            disabled={isLoading}
+                          />
+                          <button 
+                            type="button"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                          >
+                            {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
+                          <div className={`p-2 rounded-md text-xs ${passwordValidation.length ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-500'}`}>
+                            <span className="flex items-center">
+                              {passwordValidation.length ? <CheckCircle size={12} className="mr-1" /> : <AlertCircle size={12} className="mr-1" />}
+                              Mindestens 8 Zeichen
+                            </span>
+                          </div>
+                          <div className={`p-2 rounded-md text-xs ${passwordValidation.hasLetter ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-500'}`}>
+                            <span className="flex items-center">
+                              {passwordValidation.hasLetter ? <CheckCircle size={12} className="mr-1" /> : <AlertCircle size={12} className="mr-1" />}
+                              Mind. 1 Buchstabe
+                            </span>
+                          </div>
+                          <div className={`p-2 rounded-md text-xs ${passwordValidation.hasNumber ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-500'}`}>
+                            <span className="flex items-center">
+                              {passwordValidation.hasNumber ? <CheckCircle size={12} className="mr-1" /> : <AlertCircle size={12} className="mr-1" />}
+                              Mind. 1 Ziffer
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="confirmPassword">Passwort bestätigen</Label>
+                        <div className="relative">
+                          <Input 
+                            id="confirmPassword" 
+                            type={showConfirmPassword ? "text" : "password"}
+                            value={confirmPassword} 
+                            onChange={(e) => setConfirmPassword(e.target.value)} 
+                            disabled={isLoading}
+                          />
+                          <button 
+                            type="button"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          >
+                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                        </div>
+                      </div>
+                      
+                      {passwordError && (
+                        <Alert variant="destructive" className="mt-2">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertTitle>Fehler</AlertTitle>
+                          <AlertDescription>{passwordError}</AlertDescription>
+                        </Alert>
+                      )}
+                      
+                      {passwordChangeSuccess && (
+                        <Alert className="bg-green-50 border-green-200 text-green-800">
+                          <CheckCircle className="h-4 w-4" />
+                          <AlertTitle>Erfolg</AlertTitle>
+                          <AlertDescription>Dein Passwort wurde erfolgreich geändert.</AlertDescription>
+                        </Alert>
+                      )}
+                    </CardContent>
+                    <CardFooter className="border-t px-6 py-4">
+                      <Button 
+                        onClick={handleChangePassword} 
+                        disabled={isLoading || !newPassword || !confirmPassword}
+                        className="ml-auto"
+                      >
+                        {isLoading ? "Speichern..." : "Passwort ändern"}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </TabsContent>
+                
+                {/* Applications Tab */}
+                <TabsContent value="applications" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Deine Bewerbungen</CardTitle>
+                      <CardDescription>
+                        Hier siehst du deine bisherigen Bewerbungen und deren Status.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {isLoadingApplications ? (
+                        <div className="flex justify-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        </div>
+                      ) : applications.length > 0 ? (
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Datum</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Aktualisiert</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {applications.map((application) => (
+                                <TableRow key={application.id}>
+                                  <TableCell>{formatDate(application.created_at)}</TableCell>
+                                  <TableCell>{getStatusBadge(application.status)}</TableCell>
+                                  <TableCell className="text-muted-foreground">
+                                    {formatDate(application.updated_at)}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <Mail className="mx-auto h-12 w-12 text-gray-300" />
+                          <p className="mt-2 text-gray-500">Du hast noch keine Bewerbungen eingereicht.</p>
+                          <Button 
+                            className="mt-4" 
+                            onClick={() => navigate('/apply/form')}
+                          >
+                            Jetzt bewerben
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                {/* Team Tab */}
+                {isModerator && (
+                  <TabsContent value="team" className="space-y-4">
+                    <Card>
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <CardTitle>Team-Einstellungen</CardTitle>
+                            <CardDescription>
+                              Verwalte die Team-Einstellungen und Termine.
+                            </CardDescription>
+                          </div>
+                          {!editTeamSettings && (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => setEditTeamSettings(true)}
+                            >
+                              <Edit size={16} className="mr-2" />
+                              Bearbeiten
+                            </Button>
+                          )}
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        {isLoadingTeamSettings ? (
+                          <div className="flex justify-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                          </div>
+                        ) : teamSettings ? (
+                          editTeamSettings ? (
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="meeting_day">Meeting-Tag</Label>
+                                  <Input 
+                                    id="meeting_day" 
+                                    value={newTeamSettings.meeting_day} 
+                                    onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_day: e.target.value})} 
+                                    placeholder="z.B. Montag" 
+                                    disabled={isLoading}
+                                  />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <Label htmlFor="meeting_time">Meeting-Zeit</Label>
+                                  <Input 
+                                    id="meeting_time" 
+                                    value={newTeamSettings.meeting_time} 
+                                    onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_time: e.target.value})} 
+                                    placeholder="z.B. 19:00 Uhr" 
+                                    disabled={isLoading}
+                                  />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <Label htmlFor="meeting_frequency">Meeting-Häufigkeit</Label>
+                                  <Input 
+                                    id="meeting_frequency" 
+                                    value={newTeamSettings.meeting_frequency} 
+                                    onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_frequency: e.target.value})} 
+                                    placeholder="z.B. Wöchentlich" 
+                                    disabled={isLoading}
+                                  />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <Label htmlFor="meeting_location">Meeting-Ort</Label>
+                                  <Input 
+                                    id="meeting_location" 
+                                    value={newTeamSettings.meeting_location} 
+                                    onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_location: e.target.value})} 
+                                    placeholder="z.B. Discord Voice Channel #team" 
+                                    disabled={isLoading}
+                                  />
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label htmlFor="meeting_notes">Notizen</Label>
+                                <Textarea 
+                                  id="meeting_notes" 
+                                  value={newTeamSettings.meeting_notes} 
+                                  onChange={(e) => setNewTeamSettings({...newTeamSettings, meeting_notes: e.target.value})} 
+                                  placeholder="Zusätzliche Informationen für das Team" 
+                                  disabled={isLoading}
+                                  rows={4}
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="bg-gray-50 p-4 rounded-md">
+                                  <h3 className="font-medium text-gray-700 mb-1">Meeting-Tag</h3>
+                                  <p className="text-gray-900">{teamSettings.meeting_day || 'Nicht festgelegt'}</p>
+                                </div>
+                                
+                                <div className="bg-gray-50 p-4 rounded-md">
+                                  <h3 className="font-medium text-gray-700 mb-1">Meeting-Zeit</h3>
+                                  <p className="text-gray-900">{teamSettings.meeting_time || 'Nicht festgelegt'}</p>
+                                </div>
+                                
+                                <div className="bg-gray-50 p-4 rounded-md">
+                                  <h3 className="font-medium text-gray-700 mb-1">Häufigkeit</h3>
+                                  <p className="text-gray-900">{teamSettings.meeting_frequency || 'Nicht festgelegt'}</p>
+                                </div>
+                                
+                                <div className="bg-gray-50 p-4 rounded-md">
+                                  <h3 className="font-medium text-gray-700 mb-1">Ort</h3>
+                                  <p className="text-gray-900">{teamSettings.meeting_location || 'Nicht festgelegt'}</p>
+                                </div>
+                              </div>
+                              
+                              {teamSettings.meeting_notes && (
+                                <div className="bg-gray-50 p-4 rounded-md">
+                                  <h3 className="font-medium text-gray-700 mb-1">Notizen</h3>
+                                  <p className="text-gray-900 whitespace-pre-line">{teamSettings.meeting_notes}</p>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        ) : (
+                          <div className="text-center py-8">
+                            <Calendar className="mx-auto h-12 w-12 text-gray-300" />
+                            <p className="mt-2 text-gray-500">Keine Team-Einstellungen vorhanden.</p>
+                          </div>
+                        )}
+                      </CardContent>
+                      {editTeamSettings && (
+                        <CardFooter className="border-t px-6 py-4 flex justify-between">
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setEditTeamSettings(false)}
+                            disabled={isLoading}
+                          >
+                            Abbrechen
+                          </Button>
+                          <Button 
+                            onClick={handleSaveTeamSettings} 
+                            disabled={isLoading}
+                          >
+                            {isLoading ? "Speichern..." : "Speichern"}
+                          </Button>
+                        </CardFooter>
+                      )}
+                    </Card>
+                  </TabsContent>
+                )}
+                
+                {/* Admin Tab */}
+                {isAdmin && (
+                  <TabsContent value="admin" className="space-y-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Admin-Bereich</CardTitle>
+                        <CardDescription>
+                          Verwalte Benutzer und Bewerbungen.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {/* Users Section */}
+                        <div>
+                          <h3 className="text-lg font-semibold mb-4">Benutzer-Verwaltung</h3>
+                          <div className="bg-blue-50 p-4 rounded-md mb-4 flex justify-between items-center">
+                            <div className="flex items-center">
+                              <Users className="h-5 w-5 text-blue-600 mr-2" />
+                              <span>Insgesamt <strong>{userCount}</strong> Benutzer registriert</span>
+                            </div>
+                          </div>
+                          
+                          {loadingAdminUsers ? (
+                            <div className="flex justify-center py-8">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                            </div>
+                          ) : users.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Benutzer</TableHead>
+                                    <TableHead>Rolle</TableHead>
+                                    <TableHead>Hinzugefügt am</TableHead>
+                                    <TableHead className="text-right">Aktionen</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {users.map((user) => (
+                                    <TableRow key={user.id}>
+                                      <TableCell>{getUsernameById(user.user_id)}</TableCell>
+                                      <TableCell>
+                                        <Badge variant="outline" className={
+                                          user.role === 'admin' 
+                                            ? 'bg-red-50 text-red-700 border-red-200' 
+                                            : user.role === 'moderator'
+                                              ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                              : ''
+                                        }>
+                                          {user.role === 'admin' ? 'Administrator' : user.role === 'moderator' ? 'Moderator' : user.role}
+                                        </Badge>
+                                      </TableCell>
+                                      <TableCell>{formatDate(user.created_at)}</TableCell>
+                                      <TableCell className="text-right">
+                                        <div className="flex justify-end items-center space-x-2">
+                                          <Button 
+                                            variant="outline" 
+                                            size="sm"
+                                            onClick={() => handleEditUser(user)}
+                                          >
+                                            <Edit size={14} />
+                                          </Button>
+                                          <Button 
+                                            variant="outline" 
+                                            size="sm"
+                                            className="text-red-600 border-red-200 hover:text-red-700 hover:bg-red-50"
+                                            onClick={() => handleDeleteUser(user.id)}
+                                          >
+                                            <Trash2 size={14} />
+                                          </Button>
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          ) : (
+                            <div className="text-center py-8">
+                              <Users className="mx-auto h-12 w-12 text-gray-300" />
+                              <p className="mt-2 text-gray-500">Keine Benutzer vorhanden.</p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Applications Section */}
+                        <div className="mt-8 pt-8 border-t border-gray-100">
+                          <h3 className="text-lg font-semibold mb-4">Bewerbungs-Verwaltung</h3>
+                          
+                          {loadingAllApplications ? (
+                            <div className="flex justify-center py-8">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                            </div>
+                          ) : allApplications.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>ID</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Datum</TableHead>
+                                    <TableHead className="text-right">Aktionen</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {allApplications.map((application) => (
+                                    <TableRow key={application.id}>
+                                      <TableCell className="font-mono text-xs">
+                                        {application.id.substring(0, 8)}...
+                                      </TableCell>
+                                      <TableCell>{getStatusBadge(application.status)}</TableCell>
+                                      <TableCell>{formatDate(application.created_at)}</TableCell>
+                                      <TableCell className="text-right">
+                                        <div className="flex justify-end items-center space-x-2">
+                                          <Button 
+                                            variant="outline" 
+                                            size="sm"
+                                            onClick={() => handleViewApplication(application)}
+                                          >
+                                            <Eye size={14} />
+                                          </Button>
+                                          <Button 
+                                            variant="outline" 
+                                            size="sm"
+                                            className="text-red-600 border-red-200 hover:text-red-700 hover:bg-red-50"
+                                            onClick={() => handleDeleteApplication(application.id)}
+                                          >
+                                            <Trash2 size={14} />
+                                          </Button>
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          ) : (
+                            <div className="text-center py-8">
+                              <Mail className="mx-auto h-12 w-12 text-gray-300" />
+                              <p className="mt-2 text-gray-500">Keine Bewerbungen vorhanden.</p>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                )}
+                
+                {/* Settings Tab */}
+                <TabsContent value="settings" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Einstellungen</CardTitle>
+                      <CardDescription>
+                        Verwalte deine Account-Einstellungen und Präferenzen.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <Alert className="bg-amber-50 border-amber-200">
+                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                        <AlertTitle>Achtung</AlertTitle>
+                        <AlertDescription>
+                          Das Löschen deines Accounts ist permanent und kann nicht rückgängig gemacht werden.
+                        </AlertDescription>
+                      </Alert>
+                    </CardContent>
+                    <CardFooter className="flex-col items-start space-y-2">
+                      <Button 
+                        variant="destructive" 
+                        className="flex items-center"
+                      >
+                        <Trash2 size={16} className="mr-2" />
+                        Account löschen
+                      </Button>
+                      <p className="text-xs text-gray-500">
+                        Diese Aktion löscht alle deine Daten und kann nicht rückgängig gemacht werden.
+                      </p>
+                    </CardFooter>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
+        </div>
+      </main>
+      
+      <Footer />
+
+      {/* Username Change Dialog */}
+      <Dialog open={showUsernameChangeDialog} onOpenChange={setShowUsernameChangeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Benutzernamen ändern</DialogTitle>
+            <DialogDescription>
+              Gib deinen neuen Benutzernamen ein. Diese Änderung wird für alle sichtbar sein.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="newUsername">Neuer Benutzername</Label>
+              <Input 
+                id="newUsername" 
+                value={newUsername} 
+                onChange={(e) => setNewUsername(e.target.value)} 
+                placeholder="Neuer Benutzername" 
+              />
+              
+              {!usernameValidationResult.valid && newUsername && (
+                <p className="text-sm text-red-500">{usernameValidationResult.reason}</p>
+              )}
+              
+              {isUsernameTakenCheck && (
+                <p className="text-sm text-red-500">Dieser Benutzername ist bereits vergeben.</p>
+              )}
+              
+              <p className="text-xs text-gray-500 mt-2">
+                Hinweis: Du kannst deinen Benutzernamen nur alle 30 Tage ändern.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowUsernameChangeDialog(false)}
+            >
+              Abbrechen
+            </Button>
+            <Button 
+              onClick={confirmUsernameChange} 
+              disabled={!newUsername || !usernameValidationResult.valid || isUsernameTakenCheck === true || isLoading}
+            >
+              Bestätigen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ID Verification Dialog */}
+      <Dialog open={showVerifyDialog} onOpenChange={setShowVerifyDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bestätigung erforderlich</DialogTitle>
+            <DialogDescription>
+              Du hast deine Discord oder Roblox ID geändert. Bitte bestätige, dass die Änderungen korrekt sind.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {discordId !== verifiedDiscordId && (
+              <div className="space-y-2">
+                <Label>Discord ID</Label>
+                <div className="flex items-center gap-2">
+                  <div className="bg-gray-100 p-2 rounded flex-1">
+                    <span className="text-gray-500">Aktuell:</span> {verifiedDiscordId || 'Nicht gesetzt'}
+                  </div>
+                  <span className="text-gray-400">→</span>
+                  <div className="bg-blue-50 p-2 rounded flex-1">
+                    <span className="text-blue-500">Neu:</span> {discordId || 'Nicht gesetzt'}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {robloxId !== verifiedRobloxId && (
+              <div className="space-y-2">
+                <Label>Roblox ID</Label>
+                <div className="flex items-center gap-2">
+                  <div className="bg-gray-100 p-2 rounded flex-1">
+                    <span className="text-gray-500">Aktuell:</span> {verifiedRobloxId || 'Nicht gesetzt'}
+                  </div>
+                  <span className="text-gray-400">→</span>
+                  <div className="bg-blue-50 p-2 rounded flex-1">
+                    <span className="text-blue-500">Neu:</span> {robloxId || 'Nicht gesetzt'}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={cancelIdChange}
+            >
+              Abbrechen
+            </Button>
+            <Button 
+              onClick={confirmIdChange}
+            >
+              Bestätigen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Change Dialog */}
+      <Dialog open={showEmailChangeDialog} onOpenChange={setShowEmailChangeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>E-Mail-Adresse ändern</DialogTitle>
+            <DialogDescription>
+              Gib deine neue E-Mail-Adresse ein. Du erhältst eine Bestätigungs-E-Mail an die neue Adresse.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="newEmail">Neue E-Mail-Adresse</Label>
+              <Input 
+                id="newEmail" 
+                type="email"
+                value={newEmail} 
+                onChange={(e) => setNewEmail(e.target.value)} 
+                placeholder="neue@email.de" 
+              />
+              
+              {emailChangeError && (
+                <p className="text-sm text-red-500">{emailChangeError}</p>
+              )}
+              
+              <Alert className="mt-4" variant="default">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Wichtiger Hinweis</AlertTitle>
+                <AlertDescription>
+                  Du kannst deine E-Mail-Adresse nur einmal ändern. Bitte stelle sicher, dass die neue Adresse korrekt ist.
+                </AlertDescription>
+              </Alert>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowEmailChangeDialog(false)}
+            >
+              Abbrechen
+            </Button>
+            <Button 
+              onClick={handleChangeEmail} 
+              disabled={!newEmail || newEmail === user.email || isLoading}
+            >
+              Bestätigen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Admin User Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Benutzer bearbeiten</DialogTitle>
+            <DialogDescription>
+              Ändere die Rolle des Benutzers.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="role">Rolle</Label>
+              <select 
+                id="role"
+                value={editRole}
+                onChange={(e) => setEditRole(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md"
+              >
+                <option value="user">Benutzer</option>
+                <option value="moderator">Moderator</option>
+                <option value="admin">Administrator</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setEditDialogOpen(false)}
+            >
+              Abbrechen
+            </Button>
+            <Button 
+              onClick={handleSaveUser} 
+              disabled={isLoading}
+            >
+              Speichern
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Application Confirmation Dialog */}
+      <Dialog open={confirmDeleteDialog} onOpenChange={setConfirmDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bewerbung löschen</DialogTitle>
+            <DialogDescription>
+              Möchtest du diese Bewerbung wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setConfirmDeleteDialog(false)}
+            >
+              Abbrechen
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={confirmDeleteApplication} 
+              disabled={isLoading}
+            >
+              Löschen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Application Dialog */}
+      <Dialog open={viewApplicationDialog} onOpenChange={setViewApplicationDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Bewerbungsdetails</DialogTitle>
+            <DialogDescription>
+              Vollständige Informationen zur Bewerbung.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+            {currentViewApplication && (
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <h3 className="font-medium text-gray-700 mb-1">ID</h3>
+                  <p className="text-xs font-mono">{currentViewApplication.id}</p>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <h3 className="font-medium text-gray-700 mb-1">Status</h3>
+                  <div>{getStatusBadge(currentViewApplication.status)}</div>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <h3 className="font-medium text-gray-700 mb-1">Eingereicht am</h3>
+                  <p>{formatDate(currentViewApplication.created_at)}</p>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <h3 className="font-medium text-gray-700 mb-1">Aktualisiert am</h3>
+                  <p>{formatDate(currentViewApplication.updated_at)}</p>
+                </div>
+                
+                {currentViewApplication.notes && (
+                  <div className="bg-gray-50 p-4 rounded-md">
+                    <h3 className="font-medium text-gray-700 mb-1">Notizen</h3>
+                    <p className="whitespace-pre-line">{currentViewApplication.notes}</p>
+                  </div>
+                )}
+                
+                {/* Additional application fields would be displayed here */}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setViewApplicationDialog(false)}
+            >
+              Schließen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default Profile;
