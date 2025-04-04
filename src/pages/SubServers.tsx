@@ -29,6 +29,7 @@ const SubServers = () => {
         const { data, error } = await supabase
           .from('sub_servers')
           .select('*')
+          .order('status', { ascending: false }) // Active servers first, then coming_soon and inactive
           .order('name', { ascending: true });
 
         if (error) {
@@ -71,6 +72,61 @@ const SubServers = () => {
     }
   };
 
+  // Group servers by status
+  const activeServers = subServers.filter(server => server.status === 'active');
+  const comingSoonServers = subServers.filter(server => server.status === 'coming_soon');
+  const inactiveServers = subServers.filter(server => server.status === 'inactive');
+
+  const renderServerCard = (server: SubServer) => (
+    <Card key={server.id} className="overflow-hidden border-0 shadow-lg group hover:shadow-xl transition-all duration-300">
+      <div className={`h-2 bg-gradient-to-r ${server.color}`}></div>
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-xl flex items-center gap-2">
+            <span className="text-2xl">{server.icon}</span>
+            <span>{server.name}</span>
+          </CardTitle>
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(server.status)}`}>
+            {getStatusLabel(server.status)}
+          </span>
+        </div>
+        <CardDescription>{server.description}</CardDescription>
+      </CardHeader>
+      <CardContent className="pb-4">
+        <p className="text-gray-600 text-sm">
+          {server.status === 'coming_soon' ? 
+            'Dieser Server befindet sich derzeit in Entwicklung und wird in Kürze verfügbar sein.' : 
+            server.status === 'inactive' ? 
+            'Dieser Server ist derzeit nicht verfügbar.' :
+            'Verbinde dich jetzt mit diesem Server und beginne dein Roleplay-Abenteuer!'}
+        </p>
+      </CardContent>
+      <CardFooter>
+        <Button 
+          disabled={server.status !== 'active' || !server.link}
+          variant={server.status === 'active' && server.link ? "default" : "outline"} 
+          className={server.status === 'active' && server.link ? 
+            `w-full bg-gradient-to-r ${server.color} group-hover:shadow-md transition-all duration-300` : 
+            "w-full text-gray-500"}
+          asChild={server.status === 'active' && server.link ? true : false}
+        >
+          {server.status === 'active' && server.link ? (
+            <a href={server.link} target="_blank" rel="noopener noreferrer">
+              <span className="flex items-center gap-2">
+                <span>Server beitreten</span>
+                <ExternalLink size={16} className="transition-transform group-hover:translate-x-1" />
+              </span>
+            </a>
+          ) : (
+            <span>
+              {server.status === 'coming_soon' ? 'Demnächst verfügbar' : 'Derzeit nicht verfügbar'}
+            </span>
+          )}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -92,56 +148,34 @@ const SubServers = () => {
               <LoaderIcon className="h-10 w-10 animate-spin text-indigo-400" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-              {subServers.map(server => (
-                <Card key={server.id} className="overflow-hidden border-0 shadow-lg group hover:shadow-xl transition-all duration-300">
-                  <div className={`h-2 bg-gradient-to-r ${server.color}`}></div>
-                  <CardHeader className="pb-3">
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="text-xl flex items-center gap-2">
-                        <span className="text-2xl">{server.icon}</span>
-                        <span>{server.name}</span>
-                      </CardTitle>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(server.status)}`}>
-                        {getStatusLabel(server.status)}
-                      </span>
-                    </div>
-                    <CardDescription>{server.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="pb-4">
-                    <p className="text-gray-600 text-sm">
-                      {server.status === 'coming_soon' ? 
-                        'Dieser Server befindet sich derzeit in Entwicklung und wird in Kürze verfügbar sein.' : 
-                        server.status === 'inactive' ? 
-                        'Dieser Server ist derzeit nicht verfügbar.' :
-                        'Verbinde dich jetzt mit diesem Server und beginne dein Roleplay-Abenteuer!'}
-                    </p>
-                  </CardContent>
-                  <CardFooter>
-                    <Button 
-                      disabled={server.status !== 'active' || !server.link}
-                      variant={server.status === 'active' && server.link ? "default" : "outline"} 
-                      className={server.status === 'active' && server.link ? 
-                        `w-full bg-gradient-to-r ${server.color} group-hover:shadow-md transition-all duration-300` : 
-                        "w-full text-gray-500"}
-                      asChild={server.status === 'active' && server.link ? true : false}
-                    >
-                      {server.status === 'active' && server.link ? (
-                        <a href={server.link} target="_blank" rel="noopener noreferrer">
-                          <span className="flex items-center gap-2">
-                            <span>Server beitreten</span>
-                            <ExternalLink size={16} className="transition-transform group-hover:translate-x-1" />
-                          </span>
-                        </a>
-                      ) : (
-                        <span>
-                          {server.status === 'coming_soon' ? 'Demnächst verfügbar' : 'Derzeit nicht verfügbar'}
-                        </span>
-                      )}
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
+            <div className="space-y-10 max-w-5xl mx-auto">
+              {activeServers.length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-bold mb-4 text-center">Aktive Server</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {activeServers.map(server => renderServerCard(server))}
+                  </div>
+                </div>
+              )}
+              
+              {comingSoonServers.length > 0 && (
+                <div className="mt-12">
+                  <h2 className="text-2xl font-bold mb-4 text-center">Demnächst verfügbar</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {comingSoonServers.map(server => renderServerCard(server))}
+                  </div>
+                </div>
+              )}
+              
+              {inactiveServers.length > 0 && (
+                <div className="mt-12">
+                  <h2 className="text-2xl font-bold mb-4 text-center">Inaktive Server</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {inactiveServers.map(server => renderServerCard(server))}
+                  </div>
+                </div>
+              )}
+              
               {subServers.length === 0 && (
                 <div className="col-span-2 text-center py-8">
                   <p className="text-gray-500">Keine Unterserver gefunden.</p>

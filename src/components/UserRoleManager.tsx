@@ -23,7 +23,7 @@ const UserRoleManager = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [selectedUserId, setSelectedUserId] = useState('');
-  const [role, setRole] = useState<'admin' | 'moderator'>('moderator');
+  const [role, setRole] = useState<'admin' | 'moderator' | 'member'>('member');
   const [isAdding, setIsAdding] = useState(false);
 
   const handleSearch = async () => {
@@ -124,7 +124,7 @@ const UserRoleManager = () => {
       <CardContent className="space-y-4">
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
           <DialogTrigger asChild>
-            <Button className="w-full">
+            <Button>
               <UserPlus className="mr-2 h-4 w-4" />
               Neue Benutzerrolle zuweisen
             </Button>
@@ -139,7 +139,7 @@ const UserRoleManager = () => {
             <div className="space-y-4 py-4">
               <div className="flex items-center space-x-2">
                 <Input
-                  placeholder="Benutzer-ID oder Benutzername"
+                  placeholder="Benutzer-ID, Email oder Benutzername"
                   value={userQuery}
                   onChange={(e) => setUserQuery(e.target.value)}
                   className="flex-1"
@@ -166,6 +166,7 @@ const UserRoleManager = () => {
                       onClick={() => handleSelectUser(user.id)}
                     >
                       <p className="font-medium text-sm">{user.username || 'Unbekannter Benutzer'}</p>
+                      <p className="text-xs text-gray-500 mt-1">Email: {user.email || 'Keine Email'}</p>
                       <p className="text-xs text-gray-500 mt-1">ID: {user.id}</p>
                     </div>
                   ))}
@@ -175,6 +176,14 @@ const UserRoleManager = () => {
               <div className="space-y-2 mt-4">
                 <Label>Rolle</Label>
                 <div className="flex space-x-2">
+                  <Button 
+                    type="button"
+                    variant={role === 'member' ? 'default' : 'outline'}
+                    className="flex-1"
+                    onClick={() => setRole('member')}
+                  >
+                    Mitglied
+                  </Button>
                   <Button 
                     type="button"
                     variant={role === 'moderator' ? 'default' : 'outline'}

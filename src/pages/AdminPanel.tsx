@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { checkIsAdmin } from '@/lib/admin';
 import { toast } from '@/hooks/use-toast';
-import { fetchAdminUsers, getCachedUserCount, updateAdminUser, deleteAdminUser, updateTeamSettings, getTeamSettings } from '@/lib/adminService';
+import { fetchAdminUsers, getCachedUserCount, updateAdminUser, deleteAdminUser, updateTeamSettings, getTeamSettings, fetchApplications } from '@/lib/adminService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   LoaderIcon, Users, FileText, Settings, LayoutDashboard, 
   UserCog, ShieldCheck, BellRing, ChevronRight, Trash2, PencilLine,
-  Activity, BarChart3, UserPlus, Server, Share, Info, X, Check, ChevronDown, ChevronUp
+  Activity, BarChart3, UserPlus, Server, Share, Info, X, Check, ChevronDown, ChevronUp, CheckCircle
 } from 'lucide-react';
 import { 
   SidebarProvider, 
@@ -57,148 +57,205 @@ const userActivityData = [
   { name: 'Sun', users: 10 },
 ];
 
-const applicationStatusData = [
-  { name: 'Angenommen', value: 15, color: '#4ade80' },
-  { name: 'Abgelehnt', value: 8, color: '#f87171' },
-  { name: 'Ausstehend', value: 12, color: '#60a5fa' },
-];
-
-const COLORS = ['#4ade80', '#f87171', '#60a5fa'];
-
-const DashboardOverview = ({ userCount, adminUsers }: { userCount: number, adminUsers: any[] }) => (
-  <div className="space-y-6">
-    <h2 className="text-2xl font-bold">Dashboard Übersicht</h2>
+const DashboardOverview = ({ userCount, adminUsers }: { userCount: number, adminUsers: any[] }) => {
+  const [applications, setApplications] = useState<any[]>([]);
+  const [stats, setStats] = useState({
+    totalUsers: userCount,
+    adminUsers: adminUsers.length,
+    pendingApplications: 0,
+    approvedApplications: 0,
+    rejectedApplications: 0
+  });
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const getStats = async () => {
+      try {
+        // Load applications to get real stats
+        const applicationsData = await fetchApplications();
+        setApplications(applicationsData);
+        
+        // Calculate real stats
+        const pendingCount = applicationsData.filter(app => app.status === 'pending').length;
+        const approvedCount = applicationsData.filter(app => app.status === 'approved').length;
+        const rejectedCount = applicationsData.filter(app => app.status === 'rejected').length;
+        
+        setStats({
+          totalUsers: userCount,
+          adminUsers: adminUsers.length,
+          pendingApplications: pendingCount,
+          approvedApplications: approvedCount,
+          rejectedApplications: rejectedCount
+        });
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card className="border-l-4 border-l-blue-500">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Benutzer gesamt
-          </CardTitle>
-          <Users className="h-4 w-4 text-blue-500" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{userCount}</div>
-          <p className="text-xs text-muted-foreground">Registrierte Benutzer</p>
-        </CardContent>
-      </Card>
+    getStats();
+  }, [userCount, adminUsers]);
+  
+  const applicationStatusData = [
+    { name: 'Angenommen', value: stats.approvedApplications, color: '#4ade80' },
+    { name: 'Abgelehnt', value: stats.rejectedApplications, color: '#f87171' },
+    { name: 'Ausstehend', value: stats.pendingApplications, color: '#60a5fa' },
+  ];
+  
+  const COLORS = ['#4ade80', '#f87171', '#60a5fa'];
+  
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">Dashboard Übersicht</h2>
       
-      <Card className="border-l-4 border-l-purple-500">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Admin-Benutzer
-          </CardTitle>
-          <ShieldCheck className="h-4 w-4 text-purple-500" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{adminUsers.length}</div>
-          <p className="text-xs text-muted-foreground">Team Mitglieder</p>
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-l-4 border-l-blue-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Benutzer gesamt
+            </CardTitle>
+            <Users className="h-4 w-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalUsers}</div>
+            <p className="text-xs text-muted-foreground">Registrierte Benutzer</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-l-4 border-l-purple-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Admin-Benutzer
+            </CardTitle>
+            <ShieldCheck className="h-4 w-4 text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.adminUsers}</div>
+            <p className="text-xs text-muted-foreground">Team Mitglieder</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-l-4 border-l-green-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Neue Bewerbungen
+            </CardTitle>
+            <FileText className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.pendingApplications}</div>
+            <p className="text-xs text-muted-foreground">Ausstehende Bewerbungen</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-l-4 border-l-amber-500">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Genehmigte Bewerbungen
+            </CardTitle>
+            <CheckCircle className="h-4 w-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.approvedApplications}</div>
+            <p className="text-xs text-muted-foreground">Angenommene Bewerbungen</p>
+          </CardContent>
+        </Card>
+      </div>
       
-      <Card className="border-l-4 border-l-green-500">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Neue Bewerbungen
-          </CardTitle>
-          <FileText className="h-4 w-4 text-green-500" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">12</div>
-          <p className="text-xs text-muted-foreground">Letzte 7 Tage</p>
-        </CardContent>
-      </Card>
+      <div className="mt-8">
+        <h3 className="text-lg font-semibold mb-3">Server Statistiken</h3>
+        <ServerStats isAdmin={true} />
+      </div>
       
-      <Card className="border-l-4 border-l-amber-500">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Server Aktivität
-          </CardTitle>
-          <Activity className="h-4 w-4 text-amber-500" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">89%</div>
-          <p className="text-xs text-muted-foreground">Serverauslastung</p>
-        </CardContent>
-      </Card>
-    </div>
-    
-    <div className="mt-8">
-      <h3 className="text-lg font-semibold mb-3">Server Statistiken</h3>
-      <ServerStats isAdmin={true} />
-    </div>
-    
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-      <Card className="h-auto">
-        <CardHeader>
-          <CardTitle className="text-base">Benutzeraktivität</CardTitle>
-          <CardDescription>Tägliche aktive Benutzer (letzte Woche)</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={userActivityData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="users" stroke="#3b82f6" activeDot={{ r: 8 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card className="h-auto">
-        <CardHeader>
-          <CardTitle className="text-base">Bewerbungsstatus</CardTitle>
-          <CardDescription>Verteilung der Bewerbungen nach Status</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={applicationStatusData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {applicationStatusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-    
-    <Card className="mt-6">
-      <CardHeader>
-        <CardTitle>Letzte Aktivitäten</CardTitle>
-        <CardDescription>Die neuesten Ereignisse im System</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="p-4 text-center border rounded-md bg-muted/50">
-            <Info className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground">Keine Aktivitäten gefunden.</p>
-            <p className="text-xs mt-1 text-muted-foreground">Aktivitäten werden automatisch protokolliert, wenn Benutzer Aktionen durchführen.</p>
-          </div>
+      {applications.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          <Card className="h-auto">
+            <CardHeader>
+              <CardTitle className="text-base">Bewerbungsstatus</CardTitle>
+              <CardDescription>Verteilung der Bewerbungen nach Status</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={applicationStatusData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="value"
+                      label={({ name, percent }) => percent > 0 ? `${name} ${(percent * 100).toFixed(0)}%` : ''}
+                    >
+                      {applicationStatusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="h-auto">
+            <CardHeader>
+              <CardTitle className="text-base">Neueste Bewerbungen</CardTitle>
+              <CardDescription>Die 5 neuesten Bewerbungen</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Benutzer</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Datum</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {applications.slice(0, 5).map((app) => (
+                      <TableRow key={app.id}>
+                        <TableCell>{app.username || "Unbekannt"}</TableCell>
+                        <TableCell>
+                          {app.status === 'pending' && <span className="text-amber-500">Ausstehend</span>}
+                          {app.status === 'approved' && <span className="text-green-500">Angenommen</span>}
+                          {app.status === 'rejected' && <span className="text-red-500">Abgelehnt</span>}
+                        </TableCell>
+                        <TableCell>{new Date(app.created_at).toLocaleDateString('de-DE')}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </CardContent>
-    </Card>
-  </div>
-);
+      )}
+      
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Letzte Aktivitäten</CardTitle>
+          <CardDescription>Die neuesten Ereignisse im System</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="p-4 text-center border rounded-md bg-muted/50">
+              <Info className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground">Keine Aktivitäten gefunden.</p>
+              <p className="text-xs mt-1 text-muted-foreground">
+                Um Benutzer-Logins zu protokollieren, muss die auth_logs Tabelle in der Datenbank konfiguriert werden.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
 
 const UsersManagement = ({ adminUsers, handleUpdateRole, handleDeleteUser }: { 
   adminUsers: any[], 
@@ -237,6 +294,28 @@ const UsersManagement = ({ adminUsers, handleUpdateRole, handleDeleteUser }: {
     }
   };
 
+  const getRoleBadgeClass = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'bg-blue-100 text-blue-800';
+      case 'moderator':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return 'Administrator';
+      case 'moderator':
+        return 'Moderator';
+      default:
+        return 'Mitglied';
+    }
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Benutzerverwaltung</h2>
@@ -250,7 +329,7 @@ const UsersManagement = ({ adminUsers, handleUpdateRole, handleDeleteUser }: {
             Verwalte Benutzer mit administrativen Berechtigungen
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           {adminUsers.length === 0 ? (
             <div className="p-4 text-center border rounded-md bg-muted/50">
               <Info className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
@@ -258,16 +337,19 @@ const UsersManagement = ({ adminUsers, handleUpdateRole, handleDeleteUser }: {
               <p className="text-xs mt-1 text-muted-foreground">Admin-Benutzer müssen direkt in der Datenbank hinzugefügt werden.</p>
             </div>
           ) : (
-            <div className="space-y-2">
-              <div className="grid grid-cols-3 gap-4 mb-2 px-3 py-2 bg-muted/30 rounded font-medium text-sm">
-                <div>E-Mail</div>
+            <div className="space-y-2 min-w-[700px]">
+              <div className="grid grid-cols-4 gap-4 mb-2 px-3 py-2 bg-muted/30 rounded font-medium text-sm">
+                <div>Benutzer</div>
+                <div>Login E-Mail</div>
                 <div>Rolle</div>
                 <div className="text-right">Aktionen</div>
               </div>
               
               {adminUsers.map((user) => (
-                <div key={user.id} className="grid grid-cols-3 gap-4 items-center p-3 border rounded hover:bg-gray-50">
-                  <div className="text-sm font-medium truncate">{user.email || "Kein E-Mail"}</div>
+                <div key={user.id} className="grid grid-cols-4 gap-4 items-center p-3 border rounded hover:bg-gray-50">
+                  <div className="text-sm font-medium truncate">{user.username || user.email || "Unbekannter Benutzer"}</div>
+                  
+                  <div className="text-sm truncate">{user.email || "Keine E-Mail"}</div>
                   
                   <div>
                     {editingUser === user.id ? (
@@ -278,13 +360,12 @@ const UsersManagement = ({ adminUsers, handleUpdateRole, handleDeleteUser }: {
                         <SelectContent>
                           <SelectItem value="admin">Administrator</SelectItem>
                           <SelectItem value="moderator">Moderator</SelectItem>
+                          <SelectItem value="member">Mitglied</SelectItem>
                         </SelectContent>
                       </Select>
                     ) : (
-                      <span className={`text-sm px-2 py-1 rounded-full ${
-                        user.role === 'admin' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                      }`}>
-                        {user.role === 'admin' ? 'Administrator' : 'Moderator'}
+                      <span className={`text-sm px-2 py-1 rounded-full ${getRoleBadgeClass(user.role)}`}>
+                        {getRoleLabel(user.role)}
                       </span>
                     )}
                   </div>
@@ -366,8 +447,6 @@ const TeamSettings = () => {
   const [settings, setSettings] = useState({
     meeting_day: '',
     meeting_time: '',
-    meeting_frequency: '',
-    meeting_location: '',
     meeting_notes: ''
   });
   const [loading, setLoading] = useState(true);
@@ -382,8 +461,6 @@ const TeamSettings = () => {
           setSettings({
             meeting_day: teamSettings.meeting_day || '',
             meeting_time: teamSettings.meeting_time || '',
-            meeting_frequency: teamSettings.meeting_frequency || '',
-            meeting_location: teamSettings.meeting_location || '',
             meeting_notes: teamSettings.meeting_notes || ''
           });
         }
@@ -444,64 +521,35 @@ const TeamSettings = () => {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="meeting_day">Meeting-Tag</Label>
-                  <Select 
-                    value={settings.meeting_day} 
-                    onValueChange={(value) => setSettings({...settings, meeting_day: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Tag auswählen" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monday">Montag</SelectItem>
-                      <SelectItem value="tuesday">Dienstag</SelectItem>
-                      <SelectItem value="wednesday">Mittwoch</SelectItem>
-                      <SelectItem value="thursday">Donnerstag</SelectItem>
-                      <SelectItem value="friday">Freitag</SelectItem>
-                      <SelectItem value="saturday">Samstag</SelectItem>
-                      <SelectItem value="sunday">Sonntag</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="meeting_day">Meeting-Tag</Label>
+                <Select 
+                  value={settings.meeting_day} 
+                  onValueChange={(value) => setSettings({...settings, meeting_day: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tag auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monday">Montag</SelectItem>
+                    <SelectItem value="tuesday">Dienstag</SelectItem>
+                    <SelectItem value="wednesday">Mittwoch</SelectItem>
+                    <SelectItem value="thursday">Donnerstag</SelectItem>
+                    <SelectItem value="friday">Freitag</SelectItem>
+                    <SelectItem value="saturday">Samstag</SelectItem>
+                    <SelectItem value="sunday">Sonntag</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="meeting_time">Meeting-Zeit</Label>
-                  <Input 
-                    id="meeting_time" 
-                    type="time" 
-                    value={settings.meeting_time} 
-                    onChange={(e) => setSettings({...settings, meeting_time: e.target.value})}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="meeting_frequency">Meeting-Häufigkeit</Label>
-                  <Select 
-                    value={settings.meeting_frequency} 
-                    onValueChange={(value) => setSettings({...settings, meeting_frequency: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Häufigkeit auswählen" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="weekly">Wöchentlich</SelectItem>
-                      <SelectItem value="biweekly">Zweiwöchentlich</SelectItem>
-                      <SelectItem value="monthly">Monatlich</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="meeting_location">Meeting-Ort</Label>
-                  <Input 
-                    id="meeting_location" 
-                    value={settings.meeting_location} 
-                    onChange={(e) => setSettings({...settings, meeting_location: e.target.value})}
-                    placeholder="Discord, TeamSpeak, etc."
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="meeting_time">Meeting-Zeit</Label>
+                <Input 
+                  id="meeting_time" 
+                  type="time" 
+                  value={settings.meeting_time} 
+                  onChange={(e) => setSettings({...settings, meeting_time: e.target.value})}
+                />
               </div>
 
               <div className="space-y-2">
@@ -816,69 +864,4 @@ const AdminPanel = () => {
       case 'news':
         return <NewsManagement />;
       case 'partners':
-        return <PartnerServersManagement />;
-      case 'sub_servers':
-        return <SubServersManagement />;
-      case 'team-settings':
-        return <TeamSettings />;
-      case 'security':
-        return <SecuritySettings />;
-      case 'account':
-        return <AccountDetails />;
-      default:
-        return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
-    }
-  };
-
-  return (
-    <Collapsible open={sidebarOpen} onOpenChange={setSidebarOpen} className="w-full h-full">
-      <div className="flex justify-between items-center bg-muted/20 border-b p-4">
-        <h1 className="text-2xl font-bold">Admin Panel</h1>
-        <CollapsibleTrigger asChild>
-          <Button variant="ghost" size="icon">
-            {sidebarOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-          </Button>
-        </CollapsibleTrigger>
-      </div>
-      
-      <CollapsibleContent>
-        <SidebarProvider defaultOpen={true}>
-          <div className="flex w-full h-full overflow-hidden">
-            <Sidebar>
-              <SidebarHeader className="flex items-center justify-center py-4">
-                <h2 className="text-xl font-bold">Navigation</h2>
-              </SidebarHeader>
-              <SidebarContent>
-                <SidebarGroup>
-                  <SidebarGroupContent>
-                    <SidebarMenu>
-                      {menuItems.map((item) => (
-                        <SidebarMenuItem key={item.id}>
-                          <SidebarMenuButton 
-                            onClick={() => setActiveSection(item.id)}
-                            isActive={activeSection === item.id}
-                            tooltip={item.title}
-                          >
-                            <item.icon />
-                            <span>{item.title}</span>
-                            <ChevronRight className="ml-auto h-4 w-4" />
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      ))}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </SidebarGroup>
-              </SidebarContent>
-            </Sidebar>
-            
-            <div className="flex-1 overflow-y-auto p-6">
-              {renderContent()}
-            </div>
-          </div>
-        </SidebarProvider>
-      </CollapsibleContent>
-    </Collapsible>
-  );
-};
-
-export default AdminPanel;
+        return <
