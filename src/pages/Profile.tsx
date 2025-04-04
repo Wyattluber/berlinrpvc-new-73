@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext, lazy } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,6 +41,7 @@ import {
 import AdminPanel from './AdminPanel';
 import { getTeamSettings } from '@/lib/adminService';
 import { checkProfileIdsLocked, updateUserProfile } from '@/lib/auth';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 type Application = {
   id: string;
@@ -74,7 +74,7 @@ const Profile = () => {
   const [emailUpdateMessage, setEmailUpdateMessage] = useState('');
   const [emailUpdateSuccess, setEmailUpdateSuccess] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isModerator, setIsModerator] = useState(false); // Added moderator state
+  const [isModerator, setIsModerator] = useState(false);
   const [activeSeasonApplications, setActiveSeasonApplications] = useState<Application[]>([]);
   const [previousSeasonApplications, setPreviousSeasonApplications] = useState<Application[]>([]);
   const [teamSettings, setTeamSettings] = useState<any>(null);
@@ -89,34 +89,23 @@ const Profile = () => {
   const { 
     isLoading: isApplicationsLoading, 
     error: applicationsError, 
+    data: applicationsData,
     refetch: refetchApplications 
   } = useQuery({
     queryKey: ['userApplications', session?.user?.id], 
     queryFn: () => getUserApplicationsHistory(session?.user?.id || ''),
-    enabled: !!session?.user?.id, 
-    meta: {
-      onSuccess: (data) => {
-        if (data) {
-          const allApplications = data as Application[];
-          setApplications(allApplications);
-          
-          // Filter applications by season (active vs. previous)
-          // For now we'll just show all in activeSeasonApplications
-          // In the future, when we implement seasons, we'll filter based on season_id
-          setActiveSeasonApplications(allApplications);
-          setPreviousSeasonApplications([]);
-        }
-      },
-      onError: (error: any) => {
-        console.error('Error fetching applications:', error);
-        toast({
-          title: "Fehler",
-          description: "Es gab ein Problem beim Abrufen deiner Bewerbungen.",
-          variant: "destructive"
-        });
-      }
-    }
+    enabled: !!session?.user?.id,
   });
+
+  useEffect(() => {
+    if (applicationsData) {
+      const allApplications = applicationsData as Application[];
+      setApplications(allApplications);
+      
+      setActiveSeasonApplications(allApplications);
+      setPreviousSeasonApplications([]);
+    }
+  }, [applicationsData]);
 
   useEffect(() => {
     const fetchTeamSettings = async () => {
@@ -149,7 +138,6 @@ const Profile = () => {
         setUsername(userDetails?.user?.user_metadata?.name || '');
         setUserAvatar(userDetails?.user?.user_metadata?.avatar_url || '');
         
-        // Check profile locks status
         const locks = await checkProfileIdsLocked(session.user.id);
         setProfileLocks(locks);
         
@@ -166,11 +154,9 @@ const Profile = () => {
           setRobloxId(profileData.roblox_id || '');
         }
         
-        // Check for admin status
         const adminStatus = await checkIsAdmin();
         setIsAdmin(adminStatus);
         
-        // Check for moderator status by querying admin_users with role = 'moderator'
         const { data: modData, error: modError } = await supabase
           .from('admin_users')
           .select('*')
@@ -303,7 +289,6 @@ const Profile = () => {
         throw new Error(result.message);
       }
       
-      // Update locks status after successful update
       const locks = await checkProfileIdsLocked(session?.user?.id || '');
       setProfileLocks(locks);
       
@@ -417,8 +402,6 @@ const Profile = () => {
       return;
     }
     
-    // In a real implementation, we would search for the user by email and then add the role
-    // For now, we'll just show a toast
     toast({
       title: "Rolle vergeben",
       description: `${roleType === 'admin' ? 'Admin' : 'Moderator'}-Rolle an ${roleUserEmail} vergeben.`,
@@ -429,7 +412,6 @@ const Profile = () => {
     setRoleType('moderator');
   };
 
-  // Determine if the Bewerbungen tab should be shown
   const showApplicationsTab = !isAdminOrModerator();
 
   if (loading) {
@@ -452,8 +434,6 @@ const Profile = () => {
   const lastChanged = user?.user_metadata?.username_changed_at
   ? new Date(user.user_metadata.username_changed_at)
   : null;
-
-  const MeetingCountdown = React.lazy(() => import('@/components/MeetingCountdown'));
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -493,7 +473,7 @@ const Profile = () => {
                     <TabsTrigger value="applications">Bewerbungen</TabsTrigger>
                   )}
                   <TabsTrigger value="security">Sicherheit</TabsTrigger>
-                  {(isAdmin || session?.user?.email === 'admin@berlinrpvc.de') && (
+                  {(isAdmin || isModerator) && (
                     <TabsTrigger value="admin">Admin Dashboard</TabsTrigger>
                   )}
                 </TabsList>
@@ -525,13 +505,13 @@ const Profile = () => {
                         <CardContent>
                           {isApplicationsLoading ? (
                             <div className="text-sm text-gray-600">Lade Bewerbungen...</div>
-                          ) : activeSeasonApplications.length > 0 ? (
+                          ) : applications.length > 0 ? (
                             <div className="space-y-2">
                               <div className="text-sm mb-2">
                                 <span className="font-medium">Anzahl: </span> 
-                                {activeSeasonApplications.length}
+                                {applications.length}
                               </div>
-                              {activeSeasonApplications.slice(0, 3).map((app) => (
+                              {applications.slice(0, 3).map((app) => (
                                 <div key={app.id} className="text-sm p-2 bg-white rounded-md border border-purple-200 shadow-sm">
                                   <p className="font-medium">Status: {app.status}</p>
                                   <p className="text-xs text-gray-500">
@@ -539,13 +519,13 @@ const Profile = () => {
                                   </p>
                                 </div>
                               ))}
-                              {activeSeasonApplications.length > 3 && (
+                              {applications.length > 3 && (
                                 <Button 
                                   variant="link" 
                                   className="text-purple-600 p-0 h-auto text-sm"
                                   onClick={() => handleTabChange('applications')}
                                 >
-                                  Alle {activeSeasonApplications.length} Bewerbungen anzeigen
+                                  Alle {applications.length} Bewerbungen anzeigen
                                 </Button>
                               )}
                             </div>
@@ -781,68 +761,73 @@ const Profile = () => {
                     
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <h3 className="text-lg font-semibold">Aktuelle Saison</h3>
+                        <h3 className="text-lg font-semibold">Aktuelle Bewerbungen</h3>
                         <p className="text-sm text-gray-500">
-                          Anzahl Bewerbungen: {activeSeasonApplications.length}
+                          Anzahl Bewerbungen: {applications.length}
                         </p>
                       </div>
                     </div>
                     
                     {isApplicationsLoading ? (
-                      <div className="flex items-center justify-center">
-                        <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
-                        Lade Bewerbungen...
+                      <div className="flex items-center justify-center p-8">
+                        <LoaderIcon className="mr-2 h-6 w-6 animate-spin text-blue-500" />
+                        <span>Lade Bewerbungen...</span>
                       </div>
                     ) : applicationsError ? (
-                      <p className="text-red-500">Fehler beim Laden der Bewerbungen.</p>
-                    ) : activeSeasonApplications.length === 0 ? (
-                      <p>Du hast noch keine Bewerbungen in der aktuellen Saison eingereicht.</p>
+                      <div className="p-8 text-center">
+                        <AlertTriangle className="h-10 w-10 text-yellow-500 mx-auto mb-2" />
+                        <p className="text-red-500">Fehler beim Laden der Bewerbungen.</p>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="mt-2"
+                          onClick={() => refetchApplications()}
+                        >
+                          Erneut versuchen
+                        </Button>
+                      </div>
+                    ) : applications.length === 0 ? (
+                      <div className="p-8 text-center bg-gray-50 rounded-md">
+                        <p>Du hast noch keine Bewerbungen eingereicht.</p>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="mt-2"
+                          onClick={() => navigate('/apply')}
+                        >
+                          Neue Bewerbung starten
+                        </Button>
+                      </div>
                     ) : (
-                      <Accordion type="single" collapsible>
-                        {activeSeasonApplications.map((app) => (
-                          <AccordionItem key={app.id} value={app.id}>
-                            <AccordionTrigger>
-                              {new Date(app.created_at).toLocaleDateString()} - {app.status}
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <p>
-                                Bewerbungsstatus: {app.status}
-                                <br />
-                                Erstellt am: {new Date(app.created_at).toLocaleString()}
-                                <br />
-                                Zuletzt aktualisiert: {new Date(app.updated_at).toLocaleString()}
-                              </p>
-                            </AccordionContent>
-                          </AccordionItem>
-                        ))}
-                      </Accordion>
-                    )}
-                    
-                    {previousSeasonApplications.length > 0 && (
-                      <>
-                        <Separator className="my-6" />
-                        <div className="mt-8">
-                          <h3 className="text-lg font-semibold mb-4">Vorherige Saisons</h3>
-                          <Accordion type="single" collapsible>
-                            {previousSeasonApplications.map((app) => (
-                              <AccordionItem key={app.id} value={app.id}>
-                                <AccordionTrigger>
-                                  {new Date(app.created_at).toLocaleDateString()} - {app.status}
-                                </AccordionTrigger>
-                                <AccordionContent>
-                                  <p>
-                                    Bewerbungsstatus: {app.status}
-                                    <br />
-                                    Erstellt am: {new Date(app.created_at).toLocaleString()}
-                                    <br />
-                                    Zuletzt aktualisiert: {new Date(app.updated_at).toLocaleString()}
-                                  </p>
-                                </AccordionContent>
-                              </AccordionItem>
+                      <div className="border rounded-md overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Datum</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Letzte Aktualisierung</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {applications.map((app) => (
+                              <TableRow key={app.id}>
+                                <TableCell>{new Date(app.created_at).toLocaleDateString('de-DE')}</TableCell>
+                                <TableCell>
+                                  <span className={`px-2 py-1 rounded-full text-xs ${
+                                    app.status === 'accepted' ? 'bg-green-100 text-green-800' : 
+                                    app.status === 'rejected' ? 'bg-red-100 text-red-800' : 
+                                    app.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                    'bg-blue-100 text-blue-800'
+                                  }`}>
+                                    {app.status}
+                                  </span>
+                                </TableCell>
+                                <TableCell>{new Date(app.updated_at).toLocaleDateString('de-DE')}</TableCell>
+                              </TableRow>
                             ))}
-                          </Accordion>
-                        </div>
-                      </>
+                          </TableBody>
+                        </Table>
+                      </div>
                     )}
                   </TabsContent>
                 )}
@@ -936,7 +921,7 @@ const Profile = () => {
                   </Card>
                 </TabsContent>
                 
-                {(isAdmin || session?.user?.email === 'admin@berlinrpvc.de') && (
+                {(isAdmin || isModerator) && (
                   <TabsContent value="admin" className="h-auto overflow-hidden rounded-md border">
                     <div className="p-4 bg-blue-50 flex justify-between items-center">
                       <h3 className="text-lg font-semibold">Admin-Funktionen</h3>

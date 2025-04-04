@@ -1,5 +1,4 @@
 
-import { fetchNews } from '@/lib/adminService';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -19,13 +18,16 @@ export async function loadNewsIntoProfile() {
       </div>
     `;
     
-    // Fetch news items directly from Supabase for better reliability
+    // Fetch news items from Supabase with simplified query
     const { data: newsItems, error } = await supabase
       .from('news')
       .select('*')
       .order('created_at', { ascending: false });
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching news:', error);
+      throw error;
+    }
     
     // Clear loading indicator
     newsContainer.innerHTML = '';
@@ -103,8 +105,9 @@ export async function loadNewsIntoProfile() {
 // Auto-load news when script is imported in profile page
 document.addEventListener('DOMContentLoaded', () => {
   if (window.location.pathname === '/profile') {
+    // Give a slight delay to ensure the container is rendered
     setTimeout(() => {
       loadNewsIntoProfile();
-    }, 500); // Slight delay to ensure the container is rendered
+    }, 300);
   }
 });
