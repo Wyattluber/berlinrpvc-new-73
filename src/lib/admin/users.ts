@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 // Cache for user count to prevent too many requests
@@ -304,11 +303,12 @@ export async function getUserProfile(userId: string) {
     
     if (error) throw error;
     
-    // Ensure we have an object with properties even if data is null
-    return data || { username: '', avatar_url: '' };
+    // Return the data or a default object with the expected properties
+    return data || { id: userId, username: '', avatar_url: '', discord_id: '', roblox_id: '' };
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    return { username: '', avatar_url: '' };
+    // Return a default object with the expected properties
+    return { id: userId, username: '', avatar_url: '', discord_id: '', roblox_id: '' };
   }
 }
 
