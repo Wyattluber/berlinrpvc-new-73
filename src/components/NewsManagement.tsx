@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { fetchNews, addNewsItem, updateNewsItem, deleteNewsItem } from '@/lib/admin/news';
+import { fetchNews, addNewsItem, updateNewsItem, deleteNewsItem, NewsItem } from '@/lib/admin/news';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
@@ -9,6 +9,9 @@ import { PlusCircle, Edit, Trash2, AlertTriangle, LoaderIcon, Info } from 'lucid
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 const formatRelativeTime = (dateString: string) => {
   const date = new Date(dateString);
@@ -312,7 +315,7 @@ const NewsManagement: React.FC = () => {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Neuigkeit löschen</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Bist du sicher, dass du diese Neuigkeit löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.
+                              Bist du sicher, dass du diese Neuigkeit löschen möchtest? Diese Aktion kann nicht r��ckgängig gemacht werden.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>

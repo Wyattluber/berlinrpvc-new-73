@@ -1,171 +1,200 @@
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from '@/components/ui/form';
-import { Calendar as CalendarIcon, LoaderIcon } from 'lucide-react';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { createTeamAbsence } from '@/lib/admin/team';
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
+import { format } from "date-fns";
+import { toast } from "@/hooks/use-toast";
+import { CalendarIcon, LoaderIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { de } from "date-fns/locale";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { submitTeamAbsence } from '@/lib/admin';
 
-const FormSchema = z.object({
-  userId: z.string().min(1, {
-    message: "User ID is required.",
+// Define the props interface for the TeamAbsenceForm component
+interface TeamAbsenceFormProps {
+  userId: string;
+}
+
+// Create a schema for the form validation
+const formSchema = z.object({
+  startDate: z.date({
+    required_error: "Ein Startdatum ist erforderlich.",
   }),
   endDate: z.date({
-    required_error: "A date is required.",
+    required_error: "Ein Enddatum ist erforderlich.",
+  }).refine(date => date >= new Date(), {
+    message: "Das Enddatum muss in der Zukunft liegen.",
   }),
-  reason: z.string().min(1, {
-    message: "Reason is required.",
+  reason: z.string().min(5, {
+    message: "Der Grund muss mindestens 5 Zeichen lang sein.",
   }),
 });
 
-const TeamAbsenceForm = () => {
-  const [isCreating, setIsCreating] = useState(false);
-
-  const form = useForm<z.infer<typeof FormSchema>>({
-    resolver: zodResolver(FormSchema),
+const TeamAbsenceForm: React.FC<TeamAbsenceFormProps> = ({ userId }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
-      userId: "",
+      startDate: new Date(),
       endDate: new Date(),
       reason: "",
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof FormSchema>) => {
-    setIsCreating(true);
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsSubmitting(true);
     try {
-      const endDateString = values.endDate.toISOString();
-      const result = await createTeamAbsence(values.userId, endDateString, values.reason);
-      
+      const result = await submitTeamAbsence(userId, values.startDate, values.endDate, values.reason);
       if (result.success) {
+        toast({
+          title: "Erfolgreich",
+          description: "Abwesenheit eingereicht!",
+        });
         form.reset();
-        alert("Team absence created successfully!");
       } else {
-        alert(`Failed to create team absence: ${result.message}`);
+        toast({
+          title: "Fehler",
+          description: result.message || "Es gab ein Problem beim Einreichen der Abwesenheit.",
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      console.error("Error creating team absence:", error);
-      alert("An error occurred while creating the team absence.");
+      console.error("Error submitting absence:", error);
+      toast({
+        title: "Fehler",
+        description: "Es gab ein Problem beim Einreichen der Abwesenheit.",
+        variant: "destructive",
+      });
     } finally {
-      setIsCreating(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Create Team Absence</CardTitle>
-        <CardDescription>Create a new team absence entry.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="userId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>User ID</FormLabel>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="startDate"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Startdatum</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
                   <FormControl>
-                    <Input placeholder="User ID" {...field} />
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-[240px] pl-3 text-left font-normal",
+                        !field.value && "text-muted-foreground"
+                      )}
+                    >
+                      {field.value ? (
+                        format(field.value, "PPP", { locale: de })
+                      ) : (
+                        <span>Datum auswählen</span>
+                      )}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
                   </FormControl>
-                  <FormDescription>
-                    Enter the ID of the user who will be absent.
-                  </FormDescription>
-                  <FormDescription>
-                    This should be the Supabase User ID.
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="endDate"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>End Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-[240px] pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) =>
-                          date < new Date()
-                        }
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormDescription>
-                    Enter the last day of absence.
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="reason"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Reason</FormLabel>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    locale={de}
+                    selected={field.value}
+                    onSelect={field.onChange}
+                    disabled={(date) => date < new Date()}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <FormDescription>
+                Wähle das Startdatum deiner Abwesenheit.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="endDate"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Enddatum</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
                   <FormControl>
-                    <Textarea
-                      placeholder="Reason for absence"
-                      className="resize-none"
-                      {...field}
-                    />
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-[240px] pl-3 text-left font-normal",
+                        !field.value && "text-muted-foreground"
+                      )}
+                    >
+                      {field.value ? (
+                        format(field.value, "PPP", { locale: de })
+                      ) : (
+                        <span>Datum auswählen</span>
+                      )}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
                   </FormControl>
-                  <FormDescription>
-                    Enter the reason for the absence.
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-            <Button type="submit" disabled={isCreating}>
-              {isCreating ? (
-                <>
-                  <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                "Create Absence"
-              )}
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
-      <CardFooter>
-        <p className="text-xs text-muted-foreground">
-          Please fill out all fields to create a new team absence entry.
-        </p>
-      </CardFooter>
-    </Card>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    locale={de}
+                    selected={field.value}
+                    onSelect={field.onChange}
+                    disabled={(date) => date < new Date()}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <FormDescription>
+                Wähle das Enddatum deiner Abwesenheit.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="reason"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Grund</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Ich kann an diesem Tag nicht, weil..."
+                  className="resize-none"
+                  {...field}
+                />
+              </FormControl>
+              <FormDescription>
+                Bitte gib einen kurzen Grund für deine Abwesenheit an.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? (
+            <>
+              <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
+              Einreichen...
+            </>
+          ) : (
+            "Abwesenheit einreichen"
+          )}
+        </Button>
+      </form>
+    </Form>
   );
 };
 
