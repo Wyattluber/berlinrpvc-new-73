@@ -317,6 +317,36 @@ export type Database = {
         }
         Relationships: []
       }
+      team_absences: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          reason: string
+          start_date: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          reason: string
+          start_date?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          reason?: string
+          start_date?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       team_settings: {
         Row: {
           created_at: string | null

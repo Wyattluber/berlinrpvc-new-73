@@ -8,11 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { LoaderIcon, Calendar } from 'lucide-react';
-import { format } from 'date-fns';
-import { de } from 'date-fns/locale';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
+import { LoaderIcon } from 'lucide-react';
 
 const defaultNotesText = "Team-Meeting findet im Discord Moderator-Stage-Kanal statt. Wer nicht kann meldet sich bitte ab.";
 
