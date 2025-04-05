@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 // Cache for user count to prevent too many requests
@@ -268,6 +267,47 @@ export async function addAdminUserRole(userId: string, role: 'admin' | 'moderato
   } catch (error: any) {
     console.error('Error adding admin user role:', error);
     return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Get user information including applications history
+ */
+export async function getUserApplicationsHistory(userId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('applications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+      
+    if (error) throw error;
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching user applications history:', error);
+    return [];
+  }
+}
+
+/**
+ * Get user profile information
+ */
+export async function getUserProfile(userId: string) {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
+    if (error) throw error;
+    
+    // Ensure we have an object with properties even if data is null
+    return data || { username: '', avatar_url: '' };
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    return { username: '', avatar_url: '' };
   }
 }
 

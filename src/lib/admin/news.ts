@@ -38,6 +38,18 @@ export async function fetchNews(page = 1, limit = 10) {
 }
 
 /**
+ * Create a new news item - alias for createNews to maintain backward compatibility
+ */
+export async function addNewsItem(title: string, content: string, status: string = 'planned', isServerWide: boolean = false) {
+  return createNews({
+    title,
+    content,
+    status,
+    is_server_wide: isServerWide
+  });
+}
+
+/**
  * Create a new news item
  */
 export async function createNews(newsData: Partial<NewsItem>) {
@@ -55,6 +67,18 @@ export async function createNews(newsData: Partial<NewsItem>) {
     console.error('Error creating news:', error);
     return { success: false, message: error.message };
   }
+}
+
+/**
+ * Update an existing news item - alias for updateNews to maintain backward compatibility
+ */
+export async function updateNewsItem(id: string, title: string, content: string, status: string, isServerWide: boolean) {
+  return updateNews(id, {
+    title,
+    content,
+    status,
+    is_server_wide: isServerWide
+  });
 }
 
 /**
@@ -76,6 +100,13 @@ export async function updateNews(id: string, newsData: Partial<NewsItem>) {
     console.error('Error updating news:', error);
     return { success: false, message: error.message };
   }
+}
+
+/**
+ * Delete a news item - alias for deleteNews to maintain backward compatibility
+ */
+export async function deleteNewsItem(id: string) {
+  return deleteNews(id);
 }
 
 /**

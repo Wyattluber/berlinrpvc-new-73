@@ -87,8 +87,10 @@ const NewsManagement: React.FC = () => {
     const loadNews = async () => {
       setLoading(true);
       try {
-        const newsData = await fetchNews();
-        setNews(newsData);
+        const result = await fetchNews();
+        if (result && Array.isArray(result.data)) {
+          setNews(result.data as Array<NewsItem & { status?: NewsStatus, is_server_wide?: boolean }>);
+        }
       } catch (error) {
         console.error("Error loading news:", error);
         toast({
@@ -142,9 +144,9 @@ const NewsManagement: React.FC = () => {
         });
         
         const updatedNews = [...news];
-        if (result.data && result.data[0]) {
+        if (result.data) {
           updatedNews.unshift({
-            ...result.data[0],
+            ...result.data,
             status,
             is_server_wide: isServerWide
           });
