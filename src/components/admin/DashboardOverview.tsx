@@ -5,7 +5,7 @@ import {
   Users, FileText, CheckCircle, ShieldCheck
 } from 'lucide-react';
 import ServerStats from '@/components/ServerStats';
-import { fetchApplications } from '@/lib/adminService';
+import { fetchApplications } from '@/lib/admin/applications';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from '@/components/ui/table';

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { getTeamSettings } from '@/lib/adminService';
+import { getTeamSettings } from '@/lib/admin/team';
 import { Calendar, Clock, Users, MessageSquare } from 'lucide-react';
 
 // Format meeting day in German

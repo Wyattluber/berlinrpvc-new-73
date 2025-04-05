@@ -12,7 +12,9 @@ import { Label } from "@/components/ui/label"
 import { SessionContext } from '../App';
 import { LoaderIcon, CheckCircle, Calendar, Bell, HelpCircle, AlertTriangle, Plus, Lock } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { getUserApplicationsHistory, checkIsAdmin } from '@/lib/admin';
+import { getUserApplicationsHistory } from '@/lib/admin/users';
+import { checkIsAdmin } from '@/lib/admin/auth';
+import { getTeamSettings } from '@/lib/admin/team';
 import ProfileImageUpload from '@/components/ProfileImageUpload';
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -22,7 +24,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { loadNewsIntoProfile } from '@/helpers/newsLoader';
 import AdminPanel from '@/pages/AdminPanel';
-import { getTeamSettings } from '@/lib/adminService';
 
 type Application = {
   id: string;

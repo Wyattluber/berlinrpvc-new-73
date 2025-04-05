@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { LoaderIcon, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { fetchApplications, updateApplicationStatus } from '@/lib/adminService';
+import { fetchApplications, updateApplicationStatus } from '@/lib/admin/applications';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ApplicationListDesktop from './applications/ApplicationListDesktop';
 import ApplicationListMobile from './applications/ApplicationListMobile';

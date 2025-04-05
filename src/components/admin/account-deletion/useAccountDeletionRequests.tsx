@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react';
+
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { AccountDeletionRequest } from './types';
+import { AccountDeletionRequest, AuthUser } from './types';
 
 export const useAccountDeletionRequests = () => {
   const [requests, setRequests] = useState<AccountDeletionRequest[]>([]);

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { LoaderIcon, Plus } from 'lucide-react';
-import { createApplicationSeason, getApplicationSeasons } from '@/lib/adminService';
+import { createApplicationSeason, getApplicationSeasons } from '@/lib/admin/applications';
 import { useQuery } from '@tanstack/react-query';
 
 const ApplicationSeasonManager = () => {
@@ -112,7 +112,7 @@ const ApplicationSeasonManager = () => {
           <div className="flex justify-center p-4">
             <LoaderIcon className="h-6 w-6 animate-spin text-gray-400" />
           </div>
-        ) : seasons && seasons.length > 0 ? (
+        ) : seasons && Array.isArray(seasons) && seasons.length > 0 ? (
           <div className="space-y-2 mt-4">
             <h3 className="text-sm font-medium">Bisherige Saisons</h3>
             <div className="border rounded-md divide-y">
