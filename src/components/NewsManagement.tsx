@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -182,10 +183,12 @@ const NewsManagement: React.FC = () => {
     
     setIsSubmitting(true);
     try {
+      // Fixed: Now using the correct number of arguments (4) for updateNewsItem
       const result = await updateNewsItem(
         activeNewsItem.id, 
         title, 
-        content
+        content,
+        status // Adding the missing status parameter
       );
       
       if (result.success) {
