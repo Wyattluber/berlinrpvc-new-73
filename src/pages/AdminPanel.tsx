@@ -3,7 +3,12 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { checkIsAdmin, checkIsModerator } from '@/lib/admin';
 import { toast } from '@/hooks/use-toast';
-import { fetchAdminUsers, getCachedUserCount, updateAdminUser, deleteAdminUser } from '@/lib/adminService';
+import { 
+  fetchAdminUsers, 
+  getCachedUserCount, 
+  updateAdminUser, 
+  deleteAdminUser 
+} from '@/lib/admin/users';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoaderIcon } from 'lucide-react';
 import { getAdminMenuItems } from '@/components/admin/AdminMenuItems';

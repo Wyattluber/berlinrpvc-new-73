@@ -1,8 +1,9 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { AccountDeletionRequest, AuthUser } from './types';
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
+import { AccountDeletionRequest } from './types';
 
 export const useAccountDeletionRequests = () => {
   const [requests, setRequests] = useState<AccountDeletionRequest[]>([]);
@@ -150,13 +151,7 @@ export const useAccountDeletionRequests = () => {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat('de-DE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
+    return format(date, 'dd.MM.yyyy HH:mm', { locale: de });
   };
 
   return {

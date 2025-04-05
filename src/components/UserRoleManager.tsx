@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { LoaderIcon, Search, UserPlus } from 'lucide-react';
-import { addAdminUserRole, findUserByEmailOrUsername } from '@/lib/adminService';
+import { addAdminUserRole, findUserByEmailOrUsername } from '@/lib/admin/users';
 import {
   Dialog,
   DialogContent,
