@@ -54,8 +54,13 @@ const ApplicationsList = () => {
     try {
       const data = await fetchApplications();
       console.log('Loaded applications:', data);
-      setApplications(data);
-      setFilteredApplications(data);
+      // Convert the data to the correct Application type
+      const typedApplications: Application[] = data.map((app: any) => ({
+        ...app,
+        status: app.status as 'pending' | 'approved' | 'rejected' | 'waitlist' | 'deleted'
+      }));
+      setApplications(typedApplications);
+      setFilteredApplications(typedApplications);
     } catch (error) {
       console.error('Error loading applications', error);
       toast({

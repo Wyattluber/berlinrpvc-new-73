@@ -100,6 +100,15 @@ const Step1BasicInfo = ({ onNext, userDiscordId, userRobloxId, userRobloxUsernam
     }
   };
 
+  const handleAgeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const ageValue = parseInt(e.target.value);
+    if (!isNaN(ageValue)) {
+      setAge(ageValue);
+    } else {
+      setAge(0); // Default to 0 if parsing fails
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -136,7 +145,7 @@ const Step1BasicInfo = ({ onNext, userDiscordId, userRobloxId, userRobloxUsernam
           type="number"
           placeholder="Dein Alter"
           value={age === undefined ? '' : age.toString()}
-          onChange={(e) => setAge(Number(e.target.value))}
+          onChange={handleAgeChange}
         />
       </div>
       <div>
