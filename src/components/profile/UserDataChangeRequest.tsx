@@ -28,8 +28,10 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
   });
 
   // Check for existing pending requests
-  React.useEffect(() => {
+  useEffect(() => {
     const checkPendingRequests = async () => {
+      if (!userId) return;
+      
       try {
         const { data, error } = await supabase
           .from('id_change_requests')

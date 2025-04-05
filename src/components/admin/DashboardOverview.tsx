@@ -2,13 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
-  Users, FileText, CheckCircle, ShieldCheck
+  Users, FileText, CheckCircle, ShieldCheck, Loader2
 } from 'lucide-react';
 import ServerStats from '@/components/ServerStats';
-import { fetchApplications } from '@/lib/adminService';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend 
 } from 'recharts';
@@ -32,20 +32,31 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ userCount, adminU
   useEffect(() => {
     const getStats = async () => {
       try {
-        const applicationsData = await fetchApplications();
-        setApplications(applicationsData || []);
+        setLoading(true);
         
-        const pendingCount = applicationsData?.filter(app => app.status === 'pending').length || 0;
-        const approvedCount = applicationsData?.filter(app => app.status === 'approved').length || 0;
-        const rejectedCount = applicationsData?.filter(app => app.status === 'rejected').length || 0;
+        // Get applications with status counts
+        const { data: applicationsData, error: applicationsError } = await supabase
+          .from('applications')
+          .select('*')
+          .order('created_at', { ascending: false });
         
-        setStats({
-          totalUsers: userCount,
-          adminUsers: adminUsers.length,
-          pendingApplications: pendingCount,
-          approvedApplications: approvedCount,
-          rejectedApplications: rejectedCount
-        });
+        if (applicationsError) throw applicationsError;
+        
+        if (applicationsData) {
+          setApplications(applicationsData);
+          
+          const pendingCount = applicationsData.filter(app => app.status === 'pending').length;
+          const approvedCount = applicationsData.filter(app => app.status === 'approved').length;
+          const rejectedCount = applicationsData.filter(app => app.status === 'rejected').length;
+          
+          setStats({
+            totalUsers: userCount,
+            adminUsers: adminUsers.length,
+            pendingApplications: pendingCount,
+            approvedApplications: approvedCount,
+            rejectedApplications: rejectedCount
+          });
+        }
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
       } finally {
@@ -63,6 +74,17 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ userCount, adminU
   ];
   
   const COLORS = ['#4ade80', '#f87171', '#60a5fa'];
+  
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold">Dashboard Übersicht</h2>
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6">
@@ -178,7 +200,7 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ userCount, adminU
                   <TableBody>
                     {applications.slice(0, 5).map((app) => (
                       <TableRow key={app.id}>
-                        <TableCell>{app.username || "Unbekannt"}</TableCell>
+                        <TableCell>{app.roblox_username || "Unbekannt"}</TableCell>
                         <TableCell>
                           {app.status === 'pending' && <span className="text-amber-500">Ausstehend</span>}
                           {app.status === 'approved' && <span className="text-green-500">Angenommen</span>}

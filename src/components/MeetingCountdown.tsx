@@ -1,110 +1,49 @@
 
 import React, { useState, useEffect } from 'react';
-import { getTeamSettings } from '@/lib/adminService';
-import { Calendar, Clock, Users, MessageSquare } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Calendar, Clock } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
-// Format meeting day in German
-const formatMeetingDay = (day: string) => {
-  const days: Record<string, string> = {
-    'monday': 'Montag',
-    'tuesday': 'Dienstag',
-    'wednesday': 'Mittwoch',
-    'thursday': 'Donnerstag',
-    'friday': 'Freitag',
-    'saturday': 'Samstag',
-    'sunday': 'Sonntag'
-  };
-  return days[day] || day;
-};
-
-// Get next meeting date based on settings
-const getNextMeetingDate = (dayOfWeek: string, timeString: string): Date | null => {
-  if (!dayOfWeek || !timeString) return null;
-  
-  const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-  const targetDay = days.indexOf(dayOfWeek.toLowerCase());
-  if (targetDay === -1) return null;
-  
-  const now = new Date();
-  const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-  
-  // Calculate days until next meeting
-  let daysUntil = targetDay - currentDay;
-  if (daysUntil < 0) daysUntil += 7; // Next week
-  
-  // If it's the same day, check if the meeting time has passed
-  if (daysUntil === 0) {
-    const [hours, minutes] = timeString.split(':').map(Number);
-    const meetingTimeToday = new Date();
-    meetingTimeToday.setHours(hours, minutes, 0, 0);
-    
-    if (now > meetingTimeToday) {
-      daysUntil = 7; // Next week
-    }
-  }
-  
-  // Calculate next meeting date
-  const nextMeeting = new Date();
-  nextMeeting.setDate(now.getDate() + daysUntil);
-  
-  // Set meeting time
-  const [hours, minutes] = timeString.split(':').map(Number);
-  nextMeeting.setHours(hours, minutes, 0, 0);
-  
-  return nextMeeting;
-};
-
-// Calculate time remaining until meeting
-const getTimeRemaining = (meetingDate: Date) => {
-  const now = new Date();
-  const diff = meetingDate.getTime() - now.getTime();
-  
-  if (diff <= 0) return null;
-  
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  
-  return { days, hours, minutes };
-};
-
-// Format the countdown text
-const formatCountdown = (timeRemaining: { days: number; hours: number; minutes: number } | null) => {
-  if (!timeRemaining) return 'Jetzt!';
-  
-  const { days, hours, minutes } = timeRemaining;
-  
-  if (days > 0) {
-    return `in ${days} Tag${days !== 1 ? 'en' : ''} und ${hours} Stunde${hours !== 1 ? 'n' : ''}`;
-  } else if (hours > 0) {
-    return `in ${hours} Stunde${hours !== 1 ? 'n' : ''} und ${minutes} Minute${minutes !== 1 ? 'n' : ''}`;
-  } else {
-    return `in ${minutes} Minute${minutes !== 1 ? 'n' : ''}`;
-  }
-};
-
-type MeetingCountdownProps = {
-  className?: string;
+interface TeamSettings {
+  meeting_day: string;
+  meeting_time: string;
+  meeting_frequency: string;
+  meeting_notes: string;
+  meeting_location: string;
 }
 
-const MeetingCountdown: React.FC<MeetingCountdownProps> = ({ className }) => {
-  const [teamSettings, setTeamSettings] = useState<any>(null);
+const MeetingCountdown = () => {
+  const [settings, setSettings] = useState<TeamSettings | null>(null);
+  const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [nextMeeting, setNextMeeting] = useState<Date | null>(null);
-  const [timeRemaining, setTimeRemaining] = useState<{ days: number; hours: number; minutes: number } | null>(null);
-  
-  // Fetch team settings
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      const { data: adminData } = await supabase
+        .from('admin_users')
+        .select('role')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id || '')
+        .maybeSingle();
+      
+      setIsAdmin(!!adminData);
+    };
+    
+    checkAdminStatus();
+  }, []);
+
   useEffect(() => {
     const fetchSettings = async () => {
-      setLoading(true);
       try {
-        const settings = await getTeamSettings();
-        setTeamSettings(settings);
+        const { data, error } = await supabase
+          .from('team_settings')
+          .select('*')
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
         
-        if (settings?.meeting_day && settings?.meeting_time) {
-          const meetingDate = getNextMeetingDate(settings.meeting_day, settings.meeting_time);
-          setNextMeeting(meetingDate);
-        }
+        if (error) throw error;
+        if (data) setSettings(data);
       } catch (error) {
         console.error('Error fetching team settings:', error);
       } finally {
@@ -114,83 +53,145 @@ const MeetingCountdown: React.FC<MeetingCountdownProps> = ({ className }) => {
     
     fetchSettings();
   }, []);
-  
-  // Update countdown timer
+
   useEffect(() => {
-    if (!nextMeeting) return;
+    if (!settings) return;
+    
+    const calculateNextMeeting = () => {
+      const weekdays = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+      const targetDay = weekdays.indexOf(settings.meeting_day);
+      
+      if (targetDay === -1) return null;
+      
+      const now = new Date();
+      const [hours, minutes] = settings.meeting_time.split(':').map(Number);
+      
+      // Calculate days until next meeting
+      let daysUntil = (targetDay + 7 - now.getDay()) % 7;
+      if (daysUntil === 0) {
+        // If it's the same day, check if the meeting time has already passed
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        
+        if (currentHour > hours || (currentHour === hours && currentMinute >= minutes)) {
+          // Meeting time today has passed, so next meeting is in 7 days
+          daysUntil = 7;
+        }
+      }
+      
+      // Create date for next meeting
+      const nextMeeting = new Date(now);
+      nextMeeting.setDate(now.getDate() + daysUntil);
+      nextMeeting.setHours(hours, minutes, 0, 0);
+      
+      return nextMeeting;
+    };
     
     const updateCountdown = () => {
-      const remaining = getTimeRemaining(nextMeeting);
-      setTimeRemaining(remaining);
+      const nextMeeting = calculateNextMeeting();
+      if (!nextMeeting) return;
+      
+      const now = new Date();
+      const timeDiff = nextMeeting.getTime() - now.getTime();
+      
+      if (timeDiff <= 0) {
+        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        return;
+      }
+      
+      const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+      
+      setCountdown({ days, hours, minutes, seconds });
     };
     
     // Initial update
     updateCountdown();
     
-    // Update every minute
-    const interval = setInterval(updateCountdown, 60000);
+    // Set up interval
+    const intervalId = setInterval(updateCountdown, 1000);
     
-    return () => clearInterval(interval);
-  }, [nextMeeting]);
-  
-  if (loading) {
-    return <div className="text-center p-2">Lade Teammeetings...</div>;
+    return () => clearInterval(intervalId);
+  }, [settings]);
+
+  if (!isAdmin) {
+    return null; // Only show to admins and moderators
   }
-  
-  if (!teamSettings || !teamSettings.meeting_day || !teamSettings.meeting_time) {
+
+  if (loading) {
     return (
-      <div className={`space-y-1 ${className}`}>
-        <p className="text-sm font-medium">Kein Teammeeting geplant</p>
-        <p className="text-xs text-gray-500">Teammeetings werden im Admin-Panel konfiguriert</p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Team-Meeting</CardTitle>
+          <CardDescription>Lädt...</CardDescription>
+        </CardHeader>
+      </Card>
     );
   }
-  
-  const formattedDate = nextMeeting ? nextMeeting.toLocaleDateString('de-DE', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  }) : '';
-  
-  const formattedTime = nextMeeting ? nextMeeting.toLocaleTimeString('de-DE', { 
-    hour: '2-digit', 
-    minute: '2-digit',
-    hour12: false
-  }) : '';
-  
+
+  if (!settings) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Team-Meeting</CardTitle>
+          <CardDescription>Keine Meeting-Einstellungen gefunden</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
   return (
-    <div className={`space-y-1 ${className}`}>
-      <p className="text-sm font-semibold">
-        Nächstes Meeting: {formattedDate}
-      </p>
-      <p className="text-sm">
-        <span className="font-medium">{formatCountdown(timeRemaining)}</span>
-      </p>
-      <div className="space-y-1 mt-2">
-        <p className="text-sm font-medium flex items-center">
-          <Calendar className="h-4 w-4 mr-2 text-blue-500" />
-          <span>{formatMeetingDay(teamSettings.meeting_day)}</span>
-        </p>
-        <p className="text-sm font-medium flex items-center">
-          <Clock className="h-4 w-4 mr-2 text-blue-500" />
-          <span>{teamSettings.meeting_time} Uhr</span>
-        </p>
-        <p className="text-sm font-medium flex items-center">
-          <Users className="h-4 w-4 mr-2 text-blue-500" />
-          <span>{teamSettings.meeting_frequency || 'Wöchentlich'}</span>
-        </p>
-        <p className="text-sm font-medium flex items-center">
-          <MessageSquare className="h-4 w-4 mr-2 text-blue-500" />
-          <span>{teamSettings.meeting_location || 'Discord'}</span>
-        </p>
-      </div>
-      {teamSettings.meeting_notes && (
-        <p className="text-xs text-gray-600 mt-1">
-          {teamSettings.meeting_notes}
-        </p>
-      )}
-    </div>
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg flex items-center">
+          <Calendar className="h-5 w-5 mr-2 text-blue-500" />
+          Team-Meeting
+        </CardTitle>
+        <CardDescription>
+          {settings.meeting_frequency}: {settings.meeting_day} um {settings.meeting_time} Uhr
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-2">
+          <div className="font-medium text-sm text-muted-foreground mb-1">Nächstes Meeting in:</div>
+          
+          {countdown ? (
+            <div className="grid grid-cols-4 gap-1 text-center">
+              <div className="bg-gray-100 rounded p-2">
+                <div className="text-lg font-semibold">{countdown.days}</div>
+                <div className="text-xs text-muted-foreground">Tage</div>
+              </div>
+              <div className="bg-gray-100 rounded p-2">
+                <div className="text-lg font-semibold">{countdown.hours}</div>
+                <div className="text-xs text-muted-foreground">Std</div>
+              </div>
+              <div className="bg-gray-100 rounded p-2">
+                <div className="text-lg font-semibold">{countdown.minutes}</div>
+                <div className="text-xs text-muted-foreground">Min</div>
+              </div>
+              <div className="bg-gray-100 rounded p-2">
+                <div className="text-lg font-semibold">{countdown.seconds}</div>
+                <div className="text-xs text-muted-foreground">Sek</div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm">Berechne...</div>
+          )}
+        </div>
+        
+        <div className="flex items-start mt-3 text-sm">
+          <Clock className="h-4 w-4 mr-2 mt-0.5 text-blue-500" />
+          <div>
+            <span className="font-medium">Ort:</span> {settings.meeting_location}
+            {settings.meeting_notes && (
+              <p className="mt-1 text-muted-foreground text-xs">{settings.meeting_notes}</p>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
