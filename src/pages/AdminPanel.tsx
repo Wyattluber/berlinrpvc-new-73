@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { checkIsAdmin, checkIsModerator } from '@/lib/admin';
@@ -140,7 +139,6 @@ const AdminPanel = () => {
     );
   }
 
-  // Only show moderator the relevant sections
   const menuItems = isAdmin ? [
     { title: "Dashboard", id: "dashboard", icon: LayoutDashboard },
     { title: "Benutzer", id: "users", icon: Users },
@@ -210,7 +208,6 @@ const AdminPanel = () => {
           return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
       }
     } else if (isModerator) {
-      // Moderator view
       switch (activeSection) {
         case 'dashboard':
           return (
@@ -233,7 +230,7 @@ const AdminPanel = () => {
           return (
             <div className="space-y-6">
               <h2 className="text-2xl font-bold">Bewerbungsverwaltung</h2>
-              <ApplicationsList isModerator={true} />
+              <ApplicationsList />
             </div>
           );
         case 'absence-form':
@@ -249,7 +246,6 @@ const AdminPanel = () => {
     }
   };
 
-  // Desktop sidebar
   const desktopSidebar = (
     <div className="hidden md:block md:w-64 bg-gray-50 border-r min-h-[calc(100vh-64px)]">
       <div className="px-4 py-6">
@@ -277,7 +273,6 @@ const AdminPanel = () => {
     </div>
   );
 
-  // Mobile header with menu toggle
   const mobileHeader = (
     <div className="md:hidden border-b py-3 px-4 flex items-center justify-between sticky top-0 bg-white z-10">
       <h1 className="text-xl font-semibold">
@@ -293,7 +288,6 @@ const AdminPanel = () => {
     </div>
   );
 
-  // Mobile sidebar (conditionally rendered when menu is open)
   const mobileSidebar = mobileMenuOpen && (
     <div className="md:hidden bg-white w-full border-b shadow-sm z-10">
       <nav className="py-2">
