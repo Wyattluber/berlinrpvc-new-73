@@ -3,7 +3,7 @@ import { useState, useEffect, useContext } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { SessionContext } from '../../App';
-import { checkIsAdmin } from '@/lib/admin';
+import { checkIsAdmin, checkIsModerator } from '@/lib/admin';
 import { toast } from '@/hooks/use-toast';
 
 export const useNavbarState = () => {
@@ -19,15 +19,8 @@ export const useNavbarState = () => {
         const adminStatus = await checkIsAdmin();
         setIsAdmin(adminStatus);
         
-        const { data: modData, error: modError } = await supabase
-          .from('admin_users')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .eq('role', 'moderator');
-          
-        if (!modError && modData && modData.length > 0) {
-          setIsModerator(true);
-        }
+        const moderatorStatus = await checkIsModerator();
+        setIsModerator(moderatorStatus);
       }
     };
     

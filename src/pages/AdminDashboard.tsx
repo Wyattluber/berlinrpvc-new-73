@@ -53,7 +53,7 @@ const AdminDashboard = () => {
     checkAccess();
   }, [navigate]);
   
-  // Zeige einen Ladeindikator während der Überprüfung mit Navbar für konsistentes Layout
+  // Show a loading indicator during verification with Navbar for consistent layout
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
