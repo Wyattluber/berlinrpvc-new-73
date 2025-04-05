@@ -12,7 +12,7 @@ const Index = () => {
     <div className="flex flex-col min-h-screen">
       <Navbar />
       
-      <main className="flex-grow mt-0">
+      <main className="flex-grow mt-0 z-10">
         {/* Hero Section */}
         <section className="bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 text-white py-16 md:py-24 relative overflow-hidden">
           <div className="absolute inset-0 opacity-20">

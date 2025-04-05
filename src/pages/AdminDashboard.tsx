@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { checkIsAdmin } from '@/lib/admin';
 import { toast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import Navbar from '@/components/Navbar';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -52,13 +53,16 @@ const AdminDashboard = () => {
     checkAccess();
   }, [navigate]);
   
-  // Zeige einen Ladeindikator während der Überprüfung
+  // Zeige einen Ladeindikator während der Überprüfung mit Navbar für konsistentes Layout
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="p-8 rounded-lg bg-white shadow-md flex flex-col items-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-4" />
-        <h2 className="text-xl font-semibold text-gray-800">Admin-Bereich wird geladen...</h2>
-        <p className="text-gray-500 mt-2">Du wirst automatisch weitergeleitet.</p>
+    <div className="flex flex-col min-h-screen">
+      <Navbar />
+      <div className="flex items-center justify-center flex-grow bg-gray-100">
+        <div className="p-8 rounded-lg bg-white shadow-md flex flex-col items-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mb-4" />
+          <h2 className="text-xl font-semibold text-gray-800">Admin-Bereich wird geladen...</h2>
+          <p className="text-gray-500 mt-2">Du wirst automatisch weitergeleitet.</p>
+        </div>
       </div>
     </div>
   );
