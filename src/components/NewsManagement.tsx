@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -157,7 +156,7 @@ const NewsManagement: React.FC = () => {
       } else {
         throw new Error(result.message);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error adding news:", error);
       toast({
         title: "Fehler",
@@ -183,12 +182,12 @@ const NewsManagement: React.FC = () => {
     
     setIsSubmitting(true);
     try {
-      // Fixed: Now using the correct number of arguments (4) for updateNewsItem
       const result = await updateNewsItem(
         activeNewsItem.id, 
         title, 
         content,
-        status // Adding the missing status parameter
+        status,
+        isServerWide
       );
       
       if (result.success) {
@@ -204,7 +203,7 @@ const NewsManagement: React.FC = () => {
                 title, 
                 content, 
                 status, 
-                is_server_wide: false,
+                is_server_wide: isServerWide,
                 updated_at: new Date().toISOString() 
               } 
             : item
