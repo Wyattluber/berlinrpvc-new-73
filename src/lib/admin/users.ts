@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 /**
@@ -162,13 +163,15 @@ export async function fetchAdminUsers() {
     if (error) throw error;
     
     // Format the data to flatten the profiles object
-    return (data || []).map(user => ({
+    const formattedData = (data || []).map(user => ({
       id: user.user_id,
       role: user.role,
       username: user.profiles?.username || 'Unknown User',
       email: user.profiles?.email || 'No Email',
       created_at: user.created_at
     }));
+    
+    return formattedData;
   } catch (error) {
     console.error('Error fetching admin users:', error);
     return [];
