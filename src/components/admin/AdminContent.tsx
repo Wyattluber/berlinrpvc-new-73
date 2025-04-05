@@ -41,11 +41,7 @@ const AdminContent: React.FC<AdminContentProps> = ({
       case 'users':
         if (!isAdmin) return <AccessDenied />;
         return (
-          <AdminUserTable
-            users={adminUsers}
-            onUpdateRole={handleUpdateRole}
-            onDeleteUser={handleDeleteUser}
-          />
+          <AdminUserTable />
         );
       case 'applications':
         return <ApplicationsList />;
