@@ -49,7 +49,10 @@ const MeetingCountdown = () => {
           .maybeSingle();
         
         if (error) throw error;
-        if (data) setSettings(data);
+        if (data) {
+          console.log("Fetched team settings:", data);
+          setSettings(data);
+        }
       } catch (error) {
         console.error('Error fetching team settings:', error);
       } finally {
@@ -63,14 +66,23 @@ const MeetingCountdown = () => {
   useEffect(() => {
     if (!settings) return;
     
+    console.log("Calculating next meeting with settings:", settings);
+    
     const calculateNextMeeting = () => {
       const weekdays = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
       const targetDay = weekdays.indexOf(settings.meeting_day);
       
-      if (targetDay === -1) return null;
+      console.log("Target day index:", targetDay, "from day name:", settings.meeting_day);
+      
+      if (targetDay === -1) {
+        console.error("Invalid meeting day:", settings.meeting_day);
+        return null;
+      }
       
       const now = new Date();
       const [hours, minutes] = settings.meeting_time.split(':').map(Number);
+      
+      console.log("Parsed meeting time:", hours, ":", minutes);
       
       // Calculate days until next meeting
       let daysUntil = (targetDay + 7 - now.getDay()) % 7;
@@ -85,10 +97,14 @@ const MeetingCountdown = () => {
         }
       }
       
+      console.log("Days until next meeting:", daysUntil);
+      
       // Create date for next meeting
       const nextMeeting = new Date(now);
       nextMeeting.setDate(now.getDate() + daysUntil);
       nextMeeting.setHours(hours, minutes, 0, 0);
+      
+      console.log("Next meeting date calculated:", nextMeeting);
       
       return nextMeeting;
     };
@@ -96,6 +112,7 @@ const MeetingCountdown = () => {
     const updateCountdown = () => {
       const nextMeeting = calculateNextMeeting();
       if (!nextMeeting) {
+        console.error("Could not calculate next meeting date");
         setCountdown(null);
         return;
       }

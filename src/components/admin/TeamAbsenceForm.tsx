@@ -17,17 +17,17 @@ interface TeamAbsenceFormProps {
 }
 
 const TeamAbsenceForm: React.FC<TeamAbsenceFormProps> = ({ userId, onSuccess }) => {
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [date, setDate] = useState<Date | undefined>(undefined);
   const [reason, setReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!endDate) {
+    if (!date) {
       toast({
         title: "Fehler",
-        description: "Bitte gib an, bis wann du abwesend sein wirst.",
+        description: "Bitte wähle ein Datum aus, an dem du abwesend sein wirst.",
         variant: "destructive"
       });
       return;
@@ -45,11 +45,14 @@ const TeamAbsenceForm: React.FC<TeamAbsenceFormProps> = ({ userId, onSuccess }) 
     setIsSubmitting(true);
     
     try {
+      // Format the date to ensure midnight in the user's local timezone
+      const formattedDate = new Date(date);
+      
       const { error } = await supabase
         .from('team_absences')
         .insert({
           user_id: userId,
-          end_date: endDate.toISOString(),
+          end_date: formattedDate.toISOString(),
           reason,
           status: 'pending'
         });
@@ -61,7 +64,7 @@ const TeamAbsenceForm: React.FC<TeamAbsenceFormProps> = ({ userId, onSuccess }) 
         description: "Deine Abmeldung wurde erfolgreich eingereicht."
       });
       
-      setEndDate(undefined);
+      setDate(undefined);
       setReason('');
       
       if (onSuccess) onSuccess();
@@ -80,28 +83,29 @@ const TeamAbsenceForm: React.FC<TeamAbsenceFormProps> = ({ userId, onSuccess }) 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <label className="text-sm font-medium">Abwesend bis:</label>
+        <label className="text-sm font-medium">Abwesend am:</label>
         <Popover>
           <PopoverTrigger asChild>
             <Button
               variant={"outline"}
               className={cn(
                 "w-full justify-start text-left font-normal",
-                !endDate && "text-muted-foreground"
+                !date && "text-muted-foreground"
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {endDate ? format(endDate, 'PPP', { locale: de }) : <span>Datum auswählen</span>}
+              {date ? format(date, 'PPP', { locale: de }) : <span>Datum auswählen</span>}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
             <Calendar
               mode="single"
-              selected={endDate}
-              onSelect={setEndDate}
+              selected={date}
+              onSelect={setDate}
               initialFocus
               disabled={(date) => date < new Date()}
               className={cn("p-3 pointer-events-auto")}
+              locale={de}
             />
           </PopoverContent>
         </Popover>
