@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -106,7 +107,7 @@ const TeamAbsenceForm: React.FC<TeamAbsenceFormProps> = ({ userId }) => {
                     locale={de}
                     selected={field.value}
                     onSelect={field.onChange}
-                    disabled={(date) => date < new Date()}
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                     initialFocus
                   />
                 </PopoverContent>
@@ -149,7 +150,7 @@ const TeamAbsenceForm: React.FC<TeamAbsenceFormProps> = ({ userId }) => {
                     locale={de}
                     selected={field.value}
                     onSelect={field.onChange}
-                    disabled={(date) => date < new Date()}
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                     initialFocus
                   />
                 </PopoverContent>

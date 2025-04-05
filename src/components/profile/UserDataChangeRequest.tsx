@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, MessageSquareWarning } from 'lucide-react';
+import { requestIdChange } from '@/lib/admin/users';
 
 interface UserDataChangeRequestProps {
   currentDiscordId: string | null;
@@ -82,18 +83,9 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
     try {
       setIsSubmitting(true);
       
-      const { error } = await supabase
-        .from('id_change_requests')
-        .insert([
-          { 
-            user_id: userId,
-            field_name: fieldName,
-            new_value: newValue,
-            status: 'pending'
-          }
-        ]);
+      const result = await requestIdChange(userId, fieldName, newValue);
       
-      if (error) throw error;
+      if (!result.success) throw new Error(result.message);
       
       toast({
         title: 'Änderungsantrag gesendet',
@@ -108,11 +100,11 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
         setNewRobloxId('');
         setPendingRequests(prev => ({ ...prev, roblox: true }));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error submitting ${fieldName} change request:`, error);
       toast({
         title: 'Fehler',
-        description: 'Beim Senden deines Antrags ist ein Fehler aufgetreten. Bitte versuche es später erneut.',
+        description: error.message || 'Beim Senden deines Antrags ist ein Fehler aufgetreten. Bitte versuche es später erneut.',
         variant: 'destructive',
       });
     } finally {
@@ -143,6 +135,8 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
             <Button 
               onClick={() => handleSubmit('discord_id', newDiscordId)}
               disabled={isSubmitting || pendingRequests.discord || !newDiscordId.trim()}
+              size="sm"
+              variant="outline"
             >
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Beantragen"}
             </Button>
@@ -169,6 +163,8 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
             <Button 
               onClick={() => handleSubmit('roblox_id', newRobloxId)}
               disabled={isSubmitting || pendingRequests.roblox || !newRobloxId.trim()}
+              size="sm"
+              variant="outline"
             >
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Beantragen"}
             </Button>

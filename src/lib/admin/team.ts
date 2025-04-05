@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export const getTeamSettings = async () => {
@@ -73,62 +74,23 @@ export const fetchTeamAbsences = async (): Promise<any[]> => {
         end_date, 
         reason, 
         status, 
-        created_at
+        created_at,
+        profiles:user_id (username)
       `)
       .order('end_date', { ascending: false });
     
     if (error) throw error;
     
-    if (data && data.length > 0) {
-      const userIds = [...new Set(data.map(absence => absence.user_id))];
-      
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, username')
-        .in('id', userIds);
-        
-      if (profilesError) {
-        console.error("Error fetching profiles for absences:", profilesError);
-        throw profilesError;
-      }
-
-      return data.map(absence => {
-        const profile = profiles?.find(p => p.id === absence.user_id);
-        return {
-          ...absence,
-          username: profile?.username || 'Unknown User'
-        };
-      });
-    }
+    // Transform data to include username from the joined profiles table
+    const transformedData = data ? data.map(absence => ({
+      ...absence,
+      username: absence.profiles?.username || 'Unknown User'
+    })) : [];
     
-    return data || [];
+    return transformedData;
   } catch (error) {
     console.error('Error fetching team absences:', error);
     return [];
-  }
-};
-
-export const createTeamAbsence = async (
-  userId: string,
-  endDate: string,
-  reason: string
-): Promise<{ success: boolean; message?: string; data?: any }> => {
-  try {
-    const { data, error } = await supabase
-      .from('team_absences')
-      .insert([{
-        user_id: userId,
-        end_date: endDate,
-        reason
-      }])
-      .select();
-    
-    if (error) throw error;
-    
-    return { success: true, data };
-  } catch (error: any) {
-    console.error('Error creating team absence:', error);
-    return { success: false, message: error.message };
   }
 };
 
@@ -139,12 +101,16 @@ export const submitTeamAbsence = async (
   reason: string
 ): Promise<{ success: boolean; message?: string }> => {
   try {
+    // Format dates correctly for the database
+    const formattedStartDate = startDate.toISOString();
+    const formattedEndDate = endDate.toISOString();
+    
     const { data, error } = await supabase
       .from('team_absences')
       .insert([{
         user_id: userId,
-        start_date: startDate.toISOString(),
-        end_date: endDate.toISOString(),
+        start_date: formattedStartDate,
+        end_date: formattedEndDate,
         reason
       }])
       .select();
@@ -154,6 +120,32 @@ export const submitTeamAbsence = async (
     return { success: true, message: "Abwesenheit erfolgreich eingereicht" };
   } catch (error: any) {
     console.error('Error submitting team absence:', error);
+    return { success: false, message: error.message };
+  }
+};
+
+export const createTeamAbsence = async (
+  userId: string,
+  startDate: string,
+  endDate: string,
+  reason: string
+): Promise<{ success: boolean; message?: string; data?: any }> => {
+  try {
+    const { data, error } = await supabase
+      .from('team_absences')
+      .insert([{
+        user_id: userId,
+        start_date: startDate,
+        end_date: endDate,
+        reason
+      }])
+      .select();
+    
+    if (error) throw error;
+    
+    return { success: true, data };
+  } catch (error: any) {
+    console.error('Error creating team absence:', error);
     return { success: false, message: error.message };
   }
 };

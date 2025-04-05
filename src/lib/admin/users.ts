@@ -163,13 +163,13 @@ export async function fetchAdminUsers() {
     if (error) throw error;
     
     // Format the data to flatten the profiles object
-    const formattedData = (data || []).map(user => ({
+    const formattedData = data ? data.map(user => ({
       id: user.user_id,
       role: user.role,
       username: user.profiles?.username || 'Unknown User',
       email: user.profiles?.email || 'No Email',
       created_at: user.created_at
-    }));
+    })) : [];
     
     return formattedData;
   } catch (error) {
@@ -310,5 +310,66 @@ export async function getUserApplicationsHistory(userId: string) {
   } catch (error) {
     console.error('Error getting user applications history:', error);
     return [];
+  }
+}
+
+/**
+ * Request ID change for user
+ */
+export async function requestIdChange(userId: string, fieldName: 'discord_id' | 'roblox_id', newValue: string) {
+  try {
+    const { data, error } = await supabase
+      .from('id_change_requests')
+      .insert([{
+        user_id: userId,
+        field_name: fieldName,
+        new_value: newValue,
+        status: 'pending'
+      }])
+      .select();
+    
+    if (error) throw error;
+    
+    return {
+      success: true,
+      data,
+      message: 'ID change request submitted successfully'
+    };
+  } catch (error: any) {
+    console.error('Error submitting ID change request:', error);
+    return {
+      success: false,
+      message: error.message || 'Error submitting ID change request'
+    };
+  }
+}
+
+/**
+ * Request account deletion for user
+ */
+export async function requestAccountDeletion(userId: string, reason: string) {
+  try {
+    const { data, error } = await supabase
+      .from('account_deletion_requests')
+      .insert([{
+        user_id: userId,
+        reason,
+        status: 'pending'
+      }])
+      .select();
+    
+    if (error) throw error;
+    
+    return {
+      success: true,
+      data,
+      message: 'Account deletion request submitted successfully'
+    };
+  } catch (error: any) {
+    console.error('Error submitting account deletion request:', error);
+    return {
+      success: false,
+      message: error.message || 'Error submitting account deletion request'
+    };
   }
 }

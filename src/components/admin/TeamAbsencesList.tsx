@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { fetchTeamAbsences } from '@/lib/admin/team';
 
 interface TeamAbsence {
   id: string;
@@ -34,30 +35,14 @@ const TeamAbsencesList = () => {
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchAbsences();
+    loadAbsences();
   }, []);
 
-  const fetchAbsences = async () => {
+  const loadAbsences = async () => {
     setLoading(true);
     try {
-      // Get absences with profile information
-      const { data, error } = await supabase
-        .from('team_absences')
-        .select('*, profiles:user_id(username)')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Transform data to include username
-      const transformedData = data.map((absence: any) => {
-        const profileData = absence.profiles;
-        return {
-          ...absence,
-          username: profileData?.username || 'Unbekannter Benutzer'
-        };
-      });
-
-      setAbsences(transformedData);
+      const absences = await fetchTeamAbsences();
+      setAbsences(absences);
     } catch (error) {
       console.error('Error fetching absences:', error);
       toast({
@@ -136,7 +121,8 @@ const TeamAbsencesList = () => {
         <TableHeader>
           <TableRow>
             <TableHead>Teammitglied</TableHead>
-            <TableHead>Abwesend am</TableHead>
+            <TableHead>Abwesend vom</TableHead>
+            <TableHead>bis zum</TableHead>
             <TableHead>Grund</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Aktionen</TableHead>
@@ -146,8 +132,9 @@ const TeamAbsencesList = () => {
           {absences.map((absence) => (
             <TableRow key={absence.id}>
               <TableCell className="font-medium">{absence.username}</TableCell>
+              <TableCell>{format(new Date(absence.start_date), 'dd.MM.yyyy', { locale: de })}</TableCell>
               <TableCell>{format(new Date(absence.end_date), 'dd.MM.yyyy', { locale: de })}</TableCell>
-              <TableCell className="max-w-[250px] truncate">{absence.reason}</TableCell>
+              <TableCell className="max-w-[200px] truncate">{absence.reason}</TableCell>
               <TableCell>{getStatusBadge(absence.status)}</TableCell>
               <TableCell>
                 {absence.status === 'pending' ? (
@@ -195,7 +182,10 @@ const TeamAbsencesList = () => {
           </CardHeader>
           <CardContent className="pb-3 pt-0 space-y-2">
             <div className="text-sm">
-              <span className="text-gray-500">Abwesend am:</span> {format(new Date(absence.end_date), 'dd.MM.yyyy', { locale: de })}
+              <span className="text-gray-500">Abwesend vom:</span> {format(new Date(absence.start_date), 'dd.MM.yyyy', { locale: de })}
+            </div>
+            <div className="text-sm">
+              <span className="text-gray-500">bis zum:</span> {format(new Date(absence.end_date), 'dd.MM.yyyy', { locale: de })}
             </div>
             <div className="text-sm">
               <span className="text-gray-500">Grund:</span> {absence.reason}

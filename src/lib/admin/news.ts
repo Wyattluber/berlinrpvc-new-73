@@ -40,12 +40,12 @@ export async function fetchNews(page = 1, limit = 10) {
 /**
  * Create a new news item - alias for createNews to maintain backward compatibility
  */
-export async function addNewsItem(title: string, content: string, status: string = 'planned', isServerWide: boolean = false) {
+export async function addNewsItem(title: string, content: string, status: string = 'planned') {
   return createNews({
     title,
     content,
     status,
-    is_server_wide: isServerWide
+    is_server_wide: false // Default to false to disable email sending
   });
 }
 
@@ -54,9 +54,15 @@ export async function addNewsItem(title: string, content: string, status: string
  */
 export async function createNews(newsData: Partial<NewsItem>) {
   try {
+    // Ensure is_server_wide is always false to disable email sending
+    const safeNewsData = {
+      ...newsData,
+      is_server_wide: false
+    };
+    
     const { data, error } = await supabase
       .from('news')
-      .insert([newsData])
+      .insert([safeNewsData])
       .select()
       .single();
     
@@ -72,12 +78,12 @@ export async function createNews(newsData: Partial<NewsItem>) {
 /**
  * Update an existing news item - alias for updateNews to maintain backward compatibility
  */
-export async function updateNewsItem(id: string, title: string, content: string, status: string, isServerWide: boolean) {
+export async function updateNewsItem(id: string, title: string, content: string, status: string) {
   return updateNews(id, {
     title,
     content,
     status,
-    is_server_wide: isServerWide
+    is_server_wide: false // Always set to false to disable email sending
   });
 }
 
@@ -86,9 +92,15 @@ export async function updateNewsItem(id: string, title: string, content: string,
  */
 export async function updateNews(id: string, newsData: Partial<NewsItem>) {
   try {
+    // Ensure is_server_wide is always false to disable email sending
+    const safeNewsData = {
+      ...newsData,
+      is_server_wide: false
+    };
+    
     const { data, error } = await supabase
       .from('news')
-      .update(newsData)
+      .update(safeNewsData)
       .eq('id', id)
       .select()
       .single();

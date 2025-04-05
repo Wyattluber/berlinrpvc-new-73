@@ -1,118 +1,71 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-/**
- * Helper to load news into the profile page
- */
-export async function loadNewsIntoProfile() {
+export const loadNewsIntoProfile = async () => {
+  const newsFeedContainer = document.getElementById('profile-news-feed');
+  if (!newsFeedContainer) return;
+  
   try {
-    // Get the news container element
-    const newsContainer = document.getElementById('profile-news-feed');
-    if (!newsContainer) {
-      console.error('News container element not found');
-      return;
-    }
-    
-    // Show loading state
-    newsContainer.innerHTML = `
-      <div class="text-center py-4">
-        <div class="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent mx-auto mb-2"></div>
-        <p class="text-sm text-gray-500">Lade Neuigkeiten...</p>
-      </div>
-    `;
-    
-    // Fetch news items from Supabase
-    const { data: newsItems, error } = await supabase
+    // Get latest news
+    const { data: news, error } = await supabase
       .from('news')
       .select('*')
-      .order('created_at', { ascending: false });
+      .eq('status', 'published')
+      .order('created_at', { ascending: false })
+      .limit(5);
     
-    if (error) {
-      console.error('Error fetching news:', error);
-      throw error;
+    if (error) throw error;
+    
+    if (!news || news.length === 0) {
+      newsFeedContainer.innerHTML = `
+        <div class="text-center py-6">
+          <p class="text-gray-500">Keine Neuigkeiten vorhanden.</p>
+        </div>
+      `;
+      return;
     }
     
     // Clear loading indicator
-    newsContainer.innerHTML = '';
+    newsFeedContainer.innerHTML = '';
     
-    // If no news items, show a message
-    if (!newsItems || newsItems.length === 0) {
-      newsContainer.innerHTML = `
-        <div class="text-center py-4">
-          <p class="text-sm text-gray-500">Keine Neuigkeiten vorhanden.</p>
-        </div>
-      `;
-      return;
-    }
-    
-    // Create HTML for each news item
-    newsItems.slice(0, 3).forEach(item => {
-      const newsElement = document.createElement('div');
-      newsElement.className = 'p-3 bg-gray-50 rounded-md mb-2';
+    // Add news items
+    news.forEach(item => {
+      const date = new Date(item.created_at).toLocaleDateString('de-DE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
       
-      const createdDate = new Date(item.created_at);
-      const formattedDate = createdDate.toLocaleDateString('de-DE');
-      
-      newsElement.innerHTML = `
-        <div class="flex justify-between items-center mb-1">
-          <h3 class="font-medium">${item.title}</h3>
-          <span class="text-xs text-gray-500">${formattedDate}</span>
+      const newsItem = document.createElement('div');
+      newsItem.className = 'p-4 border rounded-md mb-4 bg-white shadow-sm';
+      newsItem.innerHTML = `
+        <div class="flex justify-between items-start mb-2">
+          <h3 class="font-semibold">${item.title}</h3>
+          <span class="text-xs text-gray-500">${date}</span>
         </div>
-        <p class="text-sm text-gray-600">${item.content}</p>
+        <p class="text-sm text-gray-700">${item.content}</p>
       `;
       
-      newsContainer.appendChild(newsElement);
+      newsFeedContainer.appendChild(newsItem);
     });
-    
-    // If there are more news items, add a "show all" link
-    if (newsItems.length > 3) {
-      const showMoreElement = document.createElement('div');
-      showMoreElement.className = 'text-center mt-2';
-      showMoreElement.innerHTML = `
-        <button class="text-sm text-blue-600 hover:text-blue-800">
-          Alle ${newsItems.length} Neuigkeiten anzeigen
-        </button>
-      `;
-      
-      // Add click event to navigate to news section
-      showMoreElement.querySelector('button')?.addEventListener('click', () => {
-        // This assumes a news page will be created in the future
-        window.location.href = '/profile?tab=news';
-      });
-      
-      newsContainer.appendChild(showMoreElement);
-    }
-    
-    console.log('News loaded successfully:', newsItems.length, 'items');
   } catch (error) {
-    console.error('Error loading news into profile:', error);
+    console.error('Error loading news:', error);
     
-    // Show error message
-    const newsContainer = document.getElementById('profile-news-feed');
-    if (newsContainer) {
-      newsContainer.innerHTML = `
+    if (newsFeedContainer) {
+      newsFeedContainer.innerHTML = `
         <div class="text-center py-4">
-          <p class="text-sm text-red-500">Fehler beim Laden der Neuigkeiten.</p>
-          <button id="retry-news-load" class="text-sm text-blue-600 mt-2">Erneut versuchen</button>
+          <p class="text-red-500">Fehler beim Laden der Neuigkeiten.</p>
+          <button 
+            class="mt-2 text-sm text-blue-600 hover:underline"
+            onclick="window.loadNewsIntoProfile()"
+          >
+            Erneut versuchen
+          </button>
         </div>
       `;
-      
-      // Add retry button functionality
-      document.getElementById('retry-news-load')?.addEventListener('click', () => {
-        loadNewsIntoProfile();
-      });
     }
   }
-}
+};
 
-// Auto-load news when script is imported on profile page
-if (typeof document !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', () => {
-    if (window.location.pathname === '/profile') {
-      // Give a slight delay to ensure the container is rendered
-      setTimeout(() => {
-        loadNewsIntoProfile();
-      }, 300);
-    }
-  });
-}
+// Make function available globally for reload button
+window.loadNewsIntoProfile = loadNewsIntoProfile;

@@ -34,7 +34,6 @@ const ModeratorAbsencePanel = () => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {/* Pass userId as a prop only if it's expected by the TeamAbsenceForm component */}
         <TeamAbsenceForm userId={session.user.id} />
       </CardContent>
     </Card>
