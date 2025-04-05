@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Check, Loader2, X } from 'lucide-react';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -20,6 +20,22 @@ const Login = () => {
   const [loginLoading, setLoginLoading] = useState(false);
   const [signupLoading, setSignupLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Password validation state
+  const [passwordRequirements, setPasswordRequirements] = useState({
+    minLength: false,
+    hasLetter: false,
+    hasNumber: false
+  });
+
+  // Update password requirements whenever password changes
+  useEffect(() => {
+    setPasswordRequirements({
+      minLength: password.length >= 8,
+      hasLetter: /[a-zA-Z]/.test(password),
+      hasNumber: /\d/.test(password)
+    });
+  }, [password]);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +72,13 @@ const Login = () => {
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    
+    // Validate password before submission
+    if (!passwordRequirements.minLength || !passwordRequirements.hasLetter || !passwordRequirements.hasNumber) {
+      setError('Bitte erfülle alle Passwortanforderungen.');
+      return;
+    }
+    
     setSignupLoading(true);
 
     try {
@@ -85,31 +108,43 @@ const Login = () => {
     }
   };
 
+  // Future Discord login implementation
+  const handleDiscordLogin = () => {
+    toast({
+      title: "Discord Login",
+      description: "Discord Login wird in Kürze verfügbar sein.",
+    });
+  };
+
+  const isPasswordValid = passwordRequirements.minLength && 
+                         passwordRequirements.hasLetter && 
+                         passwordRequirements.hasNumber;
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
       
-      <main className="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-50 to-white">
+      <main className="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-gray-50 to-white mt-16">
         <div className="w-full max-w-md">
-          <Card>
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl font-bold text-center">Willkommen zurück</CardTitle>
-              <CardDescription className="text-center">
+          <Card className="shadow-lg border-blue-100">
+            <CardHeader className="space-y-1 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg">
+              <CardTitle className="text-2xl font-bold text-center text-blue-900">Willkommen zurück</CardTitle>
+              <CardDescription className="text-center text-blue-700">
                 Melde dich an oder registriere dich
               </CardDescription>
             </CardHeader>
             
-            <CardContent>
+            <CardContent className="pt-6">
               <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="login">Anmelden</TabsTrigger>
-                  <TabsTrigger value="signup">Registrieren</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="login" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">Anmelden</TabsTrigger>
+                  <TabsTrigger value="signup" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">Registrieren</TabsTrigger>
                 </TabsList>
                 
                 {error && (
-                  <Alert variant="destructive" className="mt-4">
+                  <Alert variant="destructive" className="my-4 bg-red-50 text-red-800 border-red-200">
                     <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Fehler</AlertTitle>
+                    <AlertTitle className="font-medium">Fehler</AlertTitle>
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
@@ -128,6 +163,7 @@ const Login = () => {
                         placeholder="beispiel@provider.de"
                         autoComplete="email"
                         required
+                        className="border-blue-200 focus:border-blue-400 focus:ring-blue-400"
                       />
                     </div>
                     
@@ -143,10 +179,15 @@ const Login = () => {
                         placeholder="Dein Passwort"
                         autoComplete="current-password"
                         required
+                        className="border-blue-200 focus:border-blue-400 focus:ring-blue-400"
                       />
                     </div>
                     
-                    <Button type="submit" className="w-full" disabled={loginLoading}>
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-blue-600 hover:bg-blue-700" 
+                      disabled={loginLoading}
+                    >
                       {loginLoading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -155,6 +196,28 @@ const Login = () => {
                       ) : (
                         "Anmelden"
                       )}
+                    </Button>
+                    
+                    <div className="relative my-4">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-300"></div>
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-white text-gray-500">oder</span>
+                      </div>
+                    </div>
+                    
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="w-full border-blue-300"
+                      onClick={handleDiscordLogin}
+                    >
+                      <img src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png" 
+                        alt="Discord Logo" 
+                        className="w-5 h-4 mr-2" 
+                      />
+                      Mit Discord anmelden (bald verfügbar)
                     </Button>
                   </form>
                 </TabsContent>
@@ -173,11 +236,12 @@ const Login = () => {
                         placeholder="beispiel@provider.de"
                         autoComplete="email"
                         required
+                        className="border-blue-200 focus:border-blue-400 focus:ring-blue-400"
                       />
                     </div>
                     
                     <div className="space-y-2">
-                      <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" htmlFor="password-signup">
+                      <label className="text-sm font-medium leading-none" htmlFor="password-signup">
                         Passwort
                       </label>
                       <Input
@@ -188,10 +252,52 @@ const Login = () => {
                         placeholder="Sicheres Passwort erstellen"
                         autoComplete="new-password"
                         required
+                        className={`border-blue-200 focus:border-blue-400 focus:ring-blue-400 ${
+                          password && !isPasswordValid ? 'border-red-300' : ''
+                        }`}
                       />
+                      
+                      {/* Password requirements */}
+                      <div className="mt-2 text-sm space-y-1">
+                        <p className="font-medium text-gray-700">Passwort muss enthalten:</p>
+                        <div className="flex items-center">
+                          {passwordRequirements.minLength ? (
+                            <Check className="h-4 w-4 text-green-500 mr-2" />
+                          ) : (
+                            <X className="h-4 w-4 text-red-500 mr-2" />
+                          )}
+                          <span className={passwordRequirements.minLength ? "text-green-600" : "text-gray-600"}>
+                            Mindestens 8 Zeichen
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          {passwordRequirements.hasLetter ? (
+                            <Check className="h-4 w-4 text-green-500 mr-2" />
+                          ) : (
+                            <X className="h-4 w-4 text-red-500 mr-2" />
+                          )}
+                          <span className={passwordRequirements.hasLetter ? "text-green-600" : "text-gray-600"}>
+                            Mindestens ein Buchstabe
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          {passwordRequirements.hasNumber ? (
+                            <Check className="h-4 w-4 text-green-500 mr-2" />
+                          ) : (
+                            <X className="h-4 w-4 text-red-500 mr-2" />
+                          )}
+                          <span className={passwordRequirements.hasNumber ? "text-green-600" : "text-gray-600"}>
+                            Mindestens eine Zahl
+                          </span>
+                        </div>
+                      </div>
                     </div>
                     
-                    <Button type="submit" className="w-full" disabled={signupLoading}>
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-blue-600 hover:bg-blue-700" 
+                      disabled={signupLoading || !isPasswordValid}
+                    >
                       {signupLoading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -201,14 +307,36 @@ const Login = () => {
                         "Registrieren"
                       )}
                     </Button>
+                    
+                    <div className="relative my-4">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-300"></div>
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-white text-gray-500">oder</span>
+                      </div>
+                    </div>
+                    
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="w-full border-blue-300"
+                      onClick={handleDiscordLogin}
+                    >
+                      <img src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png" 
+                        alt="Discord Logo" 
+                        className="w-5 h-4 mr-2" 
+                      />
+                      Mit Discord registrieren (bald verfügbar)
+                    </Button>
                   </form>
                 </TabsContent>
               </Tabs>
             </CardContent>
             
-            <CardFooter className="flex flex-col">
-              <p className="mt-2 text-xs text-center text-gray-500">
-                Durch die Anmeldung akzeptierst du unsere Nutzungsbedingungen.
+            <CardFooter className="flex flex-col bg-gradient-to-r from-blue-50 to-indigo-50 rounded-b-lg">
+              <p className="mt-2 text-xs text-center text-gray-600">
+                Durch die Anmeldung akzeptierst du unsere <a href="/datenschutz" className="text-blue-600 hover:underline">Datenschutzbedingungen</a>.
               </p>
             </CardFooter>
           </Card>
