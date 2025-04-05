@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 // Cache for user count to prevent too many requests
@@ -180,10 +181,10 @@ export async function deleteAdminUser(userId: string): Promise<{ success: boolea
 /**
  * Find user by email or username
  */
-export async function findUserByEmailOrUsername(query: string): Promise<any[]> {
+export async function findUserByEmailOrUsername(query: string): Promise<{ success: boolean; data: any[]; message?: string }> {
   try {
     if (!query || query.trim().length < 3) {
-      return [];
+      return { success: true, data: [] };
     }
     
     // Check if query looks like an email
@@ -197,10 +198,10 @@ export async function findUserByEmailOrUsername(query: string): Promise<any[]> {
       
       if (error) {
         console.error('Error searching users by email:', error);
-        return [];
+        return { success: false, data: [], message: error.message };
       }
       
-      return data || [];
+      return { success: true, data: data || [] };
     } else {
       // Search by username in profiles
       const { data, error } = await supabase
@@ -211,14 +212,14 @@ export async function findUserByEmailOrUsername(query: string): Promise<any[]> {
       
       if (error) {
         console.error('Error searching users by username:', error);
-        return [];
+        return { success: false, data: [], message: error.message };
       }
       
-      return data || [];
+      return { success: true, data: data || [] };
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error finding user:', error);
-    return [];
+    return { success: false, data: [], message: error.message };
   }
 }
 

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,7 +50,7 @@ const UserRoleManager = () => {
       } else {
         toast({
           title: 'Fehler',
-          description: result.message,
+          description: result.message || 'Fehler bei der Benutzersuche',
           variant: 'destructive',
         });
       }
@@ -88,7 +87,7 @@ const UserRoleManager = () => {
       if (result.success) {
         toast({
           title: 'Erfolgreich',
-          description: result.message,
+          description: result.message || 'Benutzerrolle erfolgreich zugewiesen',
         });
         setShowDialog(false);
         setUserQuery('');
@@ -97,7 +96,7 @@ const UserRoleManager = () => {
       } else {
         toast({
           title: 'Fehler',
-          description: result.message,
+          description: result.message || 'Fehler beim Hinzufügen der Benutzerrolle',
           variant: 'destructive',
         });
       }
