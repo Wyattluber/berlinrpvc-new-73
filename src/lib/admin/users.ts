@@ -294,6 +294,14 @@ export async function getUserApplicationsHistory(userId: string) {
  * Get user profile information
  */
 export async function getUserProfile(userId: string) {
+  interface ProfileData {
+    id: string;
+    username: string;
+    avatar_url: string;
+    discord_id: string;
+    roblox_id: string;
+  }
+  
   try {
     const { data, error } = await supabase
       .from('profiles')
@@ -304,11 +312,23 @@ export async function getUserProfile(userId: string) {
     if (error) throw error;
     
     // Return the data or a default object with the expected properties
-    return data || { id: userId, username: '', avatar_url: '', discord_id: '', roblox_id: '' };
+    return data as ProfileData || { 
+      id: userId, 
+      username: '', 
+      avatar_url: '', 
+      discord_id: '', 
+      roblox_id: '' 
+    };
   } catch (error) {
     console.error('Error fetching user profile:', error);
     // Return a default object with the expected properties
-    return { id: userId, username: '', avatar_url: '', discord_id: '', roblox_id: '' };
+    return { 
+      id: userId, 
+      username: '', 
+      avatar_url: '', 
+      discord_id: '', 
+      roblox_id: '' 
+    };
   }
 }
 
