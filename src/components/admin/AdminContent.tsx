@@ -11,6 +11,9 @@ import TeamSettingsForm from '@/components/admin/TeamSettingsForm';
 import TeamAbsencesList from '@/components/admin/TeamAbsencesList';
 import ModeratorAbsencePanel from '@/components/admin/ModeratorAbsencePanel';
 import ServerStats from '@/components/ServerStats';
+import IdChangeRequestManager from '@/components/admin/IdChangeRequestManager';
+import AccountDeletionRequestManager from '@/components/admin/AccountDeletionRequestManager';
+import DiscordLinkManager from '@/components/admin/DiscordLinkManager';
 
 interface AdminContentProps {
   isAdmin: boolean;
@@ -31,6 +34,20 @@ const AdminContent: React.FC<AdminContentProps> = ({
   handleUpdateRole,
   handleDeleteUser
 }) => {
+  // Only moderators and admins should see team-related content
+  if (!isModerator && !isAdmin) {
+    return (
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>Zugriff verweigert</CardTitle>
+          <CardDescription>
+            Du benötigst Administrator- oder Moderator-Berechtigungen, um auf diesen Inhalt zuzugreifen.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
   if (isAdmin) {
     switch (activeSection) {
       case 'dashboard':
@@ -50,6 +67,27 @@ const AdminContent: React.FC<AdminContentProps> = ({
         return <PartnerServersManagement />;
       case 'sub_servers':
         return <SubServersManagement />;
+      case 'change-requests':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Änderungsanträge</h2>
+            <IdChangeRequestManager />
+          </div>
+        );
+      case 'discord-link':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Discord-Link verwalten</h2>
+            <DiscordLinkManager />
+          </div>
+        );
+      case 'deletion-requests':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Kontolöschungsanträge</h2>
+            <AccountDeletionRequestManager />
+          </div>
+        );
       case 'team-settings':
         return (
           <div className="space-y-6">

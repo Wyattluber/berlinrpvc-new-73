@@ -57,6 +57,33 @@ export function validateUsername(username: string): { valid: boolean; reason?: s
 }
 
 /**
+ * Checks if a username is already taken
+ * @param username Username to check
+ * @returns Promise with result of check
+ */
+export async function isUsernameTaken(username: string): Promise<boolean> {
+  try {
+    const { supabase } = await import('@/integrations/supabase/client');
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .ilike('username', username)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('Error checking username:', error);
+      throw new Error('Fehler beim Überprüfen des Benutzernamens');
+    }
+    
+    return !!data;
+  } catch (error) {
+    console.error('Error checking username:', error);
+    throw new Error('Fehler beim Überprüfen des Benutzernamens');
+  }
+}
+
+/**
  * Checks if enough time has passed since last username change
  * @param lastChanged Date of last username change
  * @returns Object with information about cooldown
@@ -103,5 +130,20 @@ export function getTimeBasedGreeting(): string {
     return "Guten Abend";
   } else {
     return "Gute Nacht";
+  }
+}
+
+/**
+ * Check if the user can set admin username
+ * @param userId User ID to check
+ * @returns Promise with result of check
+ */
+export async function canUseAdminUsername(userId: string): Promise<boolean> {
+  try {
+    const { checkIsAdmin } = await import('@/lib/admin');
+    return await checkIsAdmin();
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return false;
   }
 }
