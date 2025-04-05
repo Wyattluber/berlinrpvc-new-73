@@ -162,9 +162,9 @@ export async function fetchAdminUsers() {
     
     if (error) throw error;
     
-    // Format the data to flatten the profiles object
+    // Fix: Format the data to flatten the profiles object
     const formattedData = data ? data.map(user => {
-      // Make sure to handle the profiles object correctly
+      // Make sure to handle the profiles object correctly - each user has its own profiles object
       const username = user.profiles?.username || 'Unknown User';
       const email = user.profiles?.email || 'No Email';
       

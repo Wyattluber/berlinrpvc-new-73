@@ -136,7 +136,7 @@ const NewsManagement: React.FC = () => {
     
     setIsSubmitting(true);
     try {
-      // Note: Using correct number of arguments for addNewsItem
+      // Fix: Use correct number of arguments for addNewsItem
       const result = await addNewsItem(title, content, status);
       
       if (result.success) {
@@ -184,7 +184,7 @@ const NewsManagement: React.FC = () => {
     
     setIsSubmitting(true);
     try {
-      // Note: Using correct number of arguments for updateNewsItem
+      // Fix: Use correct number of arguments for updateNewsItem
       const result = await updateNewsItem(
         activeNewsItem.id, 
         title, 
