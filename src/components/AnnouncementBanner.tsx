@@ -2,13 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, X, ChevronRight } from 'lucide-react';
 import { getUnreadServerWideAnnouncements, markAnnouncementAsRead, Announcement } from '@/lib/announcementService';
-import { useNavigate } from 'react-router-dom';
 
+// This component is designed to work outside of Router context
 const AnnouncementBanner = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchAnnouncements = async () => {
@@ -50,8 +49,14 @@ const AnnouncementBanner = () => {
   };
 
   const handleViewDetails = () => {
-    navigate(`/profile?tab=announcements&id=${currentAnnouncement.id}`);
-    handleDismiss();
+    // Use regular window.location instead of useNavigate since this component 
+    // might be used outside of Router context
+    const profileUrl = `/profile?tab=announcements&id=${currentAnnouncement.id}`;
+    
+    // Mark as read before navigating
+    handleDismiss().then(() => {
+      window.location.href = profileUrl;
+    });
   };
 
   return (

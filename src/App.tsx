@@ -175,7 +175,10 @@ const App = () => {
               </div>
             </div>
           )}
+          
+          {/* AnnouncementBanner is now out of Router context, but will handle navigation appropriately */}
           {session && <AnnouncementBanner />}
+          
           <ErrorFallback>
             <BrowserRouter>
               <Routes>

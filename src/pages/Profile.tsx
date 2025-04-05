@@ -21,6 +21,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  PopoverClose,
 } from "@/components/ui/popover"
 import { CalendarIcon, CheckCircle, User, Mail, MessageSquare, ShieldCheck, AlertTriangle, Trash2, Loader2, BadgeCheck, Copy, ClipboardList, FileText, UserCog, UserX } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -29,7 +30,6 @@ import { DateRangePicker } from "@/components/ui/date-range-picker"
 import { useNavigate } from 'react-router-dom';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut } from "@/components/ui/command"
-import { PopoverClose, PopoverOpen } from '@radix-ui/react-popover';
 import {
   Dialog,
   DialogContent,
@@ -418,35 +418,26 @@ const Profile = () => {
         throw new Error('User not authenticated');
       }
 
-      // Invalidate session
-      const { error: invalidateError } = await supabase.auth.admin.invalidateUserAuth(user.id);
-
-      if (invalidateError) {
-        console.error('Error invalidating session:', invalidateError);
-        throw invalidateError;
+      // Since invalidateUserAuth is not available, we'll just sign out
+      // In a real production app, you would need to implement proper account deletion with an Edge Function
+      const { error: signOutError } = await supabase.auth.signOut();
+      
+      if (signOutError) {
+        throw signOutError;
       }
 
       setIsSessionInvalidated(true);
-
-      // Delete user
-      const { error: deleteError } = await supabase.auth.admin.deleteUser(user.id);
-
-      if (deleteError) {
-        console.error('Error deleting user:', deleteError);
-        throw deleteError;
-      }
-
       toast({
         title: "Erfolg",
-        description: "Konto erfolgreich gelöscht",
+        description: "Konto erfolgreich abgemeldet. Bitte wenden Sie sich an einen Administrator für die vollständige Kontolöschung.",
       });
 
-      navigate('/register');
+      navigate('/login');
     } catch (error: any) {
-      console.error('Error deleting account:', error);
+      console.error('Error during account action:', error);
       toast({
         title: "Fehler",
-        description: error.message || "Konto konnte nicht gelöscht werden",
+        description: error.message || "Aktion konnte nicht ausgeführt werden",
         variant: "destructive"
       });
     } finally {

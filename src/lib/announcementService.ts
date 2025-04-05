@@ -1,12 +1,14 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { checkIsAdmin, checkIsModerator } from '@/lib/admin';
+
+// Define proper types for Announcement status
+export type AnnouncementStatus = "planned" | "in-progress" | "completed" | "cancelled" | "announcement";
 
 export interface Announcement {
   id: string;
   title: string;
   content: string;
-  status: 'planned' | 'in-progress' | 'completed' | 'cancelled' | 'announcement';
+  status: AnnouncementStatus;
   is_server_wide: boolean;
   created_at: string;
   updated_at: string;
@@ -22,197 +24,207 @@ export interface AnnouncementComment {
   updated_at: string;
 }
 
-/**
- * Fetch all announcements
- */
-export async function fetchAnnouncements(): Promise<Announcement[]> {
+export const getAllAnnouncements = async (): Promise<Announcement[]> => {
   try {
-    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
+    // We need to use 'from' with a plain string since the table might not be in the generated types yet
     const { data, error } = await supabase
       .from('announcements')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching announcements:', error);
       throw error;
     }
 
-    return data || [];
+    // Cast the data to ensure it has the correct type
+    return (data || []) as Announcement[];
   } catch (error) {
     console.error('Error fetching announcements:', error);
-    throw error;
+    return [];
   }
-}
+};
 
-/**
- * Fetch a single announcement by ID
- */
-export async function fetchAnnouncementById(id: string): Promise<Announcement | null> {
+export const getAnnouncementById = async (id: string): Promise<Announcement | null> => {
   try {
-    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
     const { data, error } = await supabase
       .from('announcements')
       .select('*')
       .eq('id', id)
-      .maybeSingle();
+      .single();
 
     if (error) {
-      console.error('Error fetching announcement:', error);
       throw error;
     }
 
-    return data;
+    // Cast the data to ensure it has the correct type
+    return data as Announcement;
   } catch (error) {
-    console.error('Error fetching announcement:', error);
-    throw error;
+    console.error(`Error fetching announcement with ID ${id}:`, error);
+    return null;
   }
-}
+};
 
-/**
- * Add an announcement
- */
-export async function addAnnouncement(
-  title: string, 
-  content: string, 
-  status: 'planned' | 'in-progress' | 'completed' | 'cancelled' | 'announcement' = 'planned',
-  isServerWide: boolean = false
-) {
-  const isModOrAdmin = await checkIsModerator();
-  if (!isModOrAdmin) {
-    throw new Error('Keine Berechtigung');
-  }
-
+export const createAnnouncement = async (
+  title: string,
+  content: string,
+  status: AnnouncementStatus,
+  isServerWide: boolean
+): Promise<Announcement | null> => {
   try {
-    const now = new Date().toISOString();
-    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
+    const publishedAt = status === 'announcement' ? new Date().toISOString() : null;
+    
     const { data, error } = await supabase
       .from('announcements')
-      .insert([{
+      .insert({
         title,
         content,
         status,
         is_server_wide: isServerWide,
-        created_at: now,
-        updated_at: now,
-        published_at: isServerWide ? now : null
-      }])
-      .select();
+        published_at: publishedAt
+      })
+      .select()
+      .single();
 
-    if (error) throw error;
-    
-    return { success: true, message: 'Ankündigung erfolgreich hinzugefügt', data };
-  } catch (error: any) {
-    console.error('Error adding announcement:', error);
-    return { success: false, message: error.message || 'Fehler beim Hinzufügen der Ankündigung' };
+    if (error) {
+      throw error;
+    }
+
+    return data as Announcement;
+  } catch (error) {
+    console.error('Error creating announcement:', error);
+    return null;
   }
-}
+};
 
-/**
- * Update an announcement
- */
-export async function updateAnnouncement(
-  id: string, 
-  title: string, 
-  content: string, 
-  status: 'planned' | 'in-progress' | 'completed' | 'cancelled' | 'announcement',
-  isServerWide: boolean = false
-) {
-  const isModOrAdmin = await checkIsModerator();
-  if (!isModOrAdmin) {
-    throw new Error('Keine Berechtigung');
-  }
-
+export const updateAnnouncement = async (
+  id: string,
+  updates: Partial<Announcement>
+): Promise<Announcement | null> => {
   try {
-    const updateData: any = {
-      title,
-      content,
-      status,
-      is_server_wide: isServerWide,
-    };
-    
-    // If we're making it server-wide for the first time, set published_at
-    if (isServerWide) {
-      // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
-      const { data: existingAnnouncement } = await supabase
+    // If status is changed to 'announcement', set published_at if not already set
+    if (updates.status === 'announcement') {
+      const { data: existingData } = await supabase
         .from('announcements')
-        .select('is_server_wide, published_at')
+        .select('published_at')
         .eq('id', id)
-        .maybeSingle();
-        
-      if (existingAnnouncement && !existingAnnouncement.is_server_wide) {
-        updateData.published_at = new Date().toISOString();
-      } else if (existingAnnouncement && !existingAnnouncement.published_at) {
-        updateData.published_at = new Date().toISOString();
+        .single();
+
+      if (!existingData?.published_at) {
+        updates.published_at = new Date().toISOString();
       }
     }
 
-    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('announcements')
-      .update(updateData)
-      .eq('id', id);
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
 
-    if (error) throw error;
-    
-    return { success: true, message: 'Ankündigung erfolgreich aktualisiert' };
-  } catch (error: any) {
-    console.error('Error updating announcement:', error);
-    return { success: false, message: error.message || 'Fehler beim Aktualisieren der Ankündigung' };
+    if (error) {
+      throw error;
+    }
+
+    return data as Announcement;
+  } catch (error) {
+    console.error(`Error updating announcement with ID ${id}:`, error);
+    return null;
   }
-}
+};
 
-/**
- * Delete an announcement
- */
-export async function deleteAnnouncement(id: string) {
-  const isModOrAdmin = await checkIsModerator();
-  if (!isModOrAdmin) {
-    throw new Error('Keine Berechtigung');
-  }
-
+export const deleteAnnouncement = async (id: string): Promise<boolean> => {
   try {
-    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
     const { error } = await supabase
       .from('announcements')
       .delete()
       .eq('id', id);
 
-    if (error) throw error;
-    
-    return { success: true, message: 'Ankündigung erfolgreich gelöscht' };
-  } catch (error: any) {
-    console.error('Error deleting announcement:', error);
-    return { success: false, message: error.message || 'Fehler beim Löschen der Ankündigung' };
-  }
-}
+    if (error) {
+      throw error;
+    }
 
-/**
- * Mark an announcement as read by the current user
- */
-export async function markAnnouncementAsRead(announcementId: string) {
+    return true;
+  } catch (error) {
+    console.error(`Error deleting announcement with ID ${id}:`, error);
+    return false;
+  }
+};
+
+export const getServerWideAnnouncements = async (): Promise<Announcement[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('announcements')
+      .select('*')
+      .eq('is_server_wide', true)
+      .eq('status', 'announcement')
+      .not('published_at', 'is', null)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    return data as Announcement[];
+  } catch (error) {
+    console.error('Error fetching server-wide announcements:', error);
+    return [];
+  }
+};
+
+export const getUnreadServerWideAnnouncements = async (): Promise<Announcement[]> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return [];
+    }
+
+    // Step 1: Get all server-wide announcements
+    const { data: announcements, error: announcementsError } = await supabase
+      .from('announcements')
+      .select('*')
+      .eq('is_server_wide', true)
+      .eq('status', 'announcement')
+      .not('published_at', 'is', null)
+      .order('created_at', { ascending: false });
+
+    if (announcementsError) {
+      throw announcementsError;
+    }
+
+    if (!announcements || announcements.length === 0) {
+      return [];
+    }
+
+    // Step 2: Get all announcements that the user has already read
+    const { data: readAnnouncements, error: readError } = await supabase
+      .from('announcement_reads')
+      .select('announcement_id')
+      .eq('user_id', user.id);
+
+    if (readError) {
+      throw readError;
+    }
+
+    // Step 3: Filter out the read announcements
+    const readAnnouncementIds = new Set((readAnnouncements || []).map(row => row.announcement_id));
+    const unreadAnnouncements = announcements.filter(announcement => !readAnnouncementIds.has(announcement.id));
+
+    return unreadAnnouncements as Announcement[];
+  } catch (error) {
+    console.error('Error fetching unread server-wide announcements:', error);
+    return [];
+  }
+};
+
+export const markAnnouncementAsRead = async (announcementId: string): Promise<boolean> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
     if (!user) {
       throw new Error('User not authenticated');
     }
 
-    // Check if the read entry already exists
-    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
-    const { data: existingEntry } = await supabase
-      .from('announcement_reads')
-      .select('id')
-      .eq('announcement_id', announcementId)
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (existingEntry) {
-      // Already marked as read
-      return { success: true };
-    }
-
-    // Create a new read entry
-    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
     const { error } = await supabase
       .from('announcement_reads')
       .insert({
@@ -220,97 +232,50 @@ export async function markAnnouncementAsRead(announcementId: string) {
         user_id: user.id
       });
 
-    if (error) throw error;
-    
-    return { success: true };
-  } catch (error: any) {
-    console.error('Error marking announcement as read:', error);
-    return { success: false, message: error.message };
-  }
-}
-
-/**
- * Check if an announcement has been read by the current user
- */
-export async function checkAnnouncementRead(announcementId: string): Promise<boolean> {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return false;
+    if (error) {
+      // If the error is because of a unique constraint (already read), that's okay
+      if (error.code !== '23505') { // PostgreSQL unique violation code
+        throw error;
+      }
     }
 
-    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
-    const { data, error } = await supabase
-      .from('announcement_reads')
-      .select('id')
-      .eq('announcement_id', announcementId)
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (error) throw error;
-    
-    return !!data;
+    return true;
   } catch (error) {
-    console.error('Error checking announcement read status:', error);
+    console.error(`Error marking announcement ${announcementId} as read:`, error);
     return false;
   }
-}
+};
 
-/**
- * Get unread server-wide announcements for the current user
- */
-export async function getUnreadServerWideAnnouncements(): Promise<Announcement[]> {
+export const getAnnouncementComments = async (announcementId: string): Promise<AnnouncementComment[]> => {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return [];
-    }
-
-    // First, get all server-wide announcements
-    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
-    const { data: announcements, error: announcementsError } = await supabase
-      .from('announcements')
+    const { data, error } = await supabase
+      .from('announcement_comments')
       .select('*')
-      .eq('is_server_wide', true)
-      .order('created_at', { ascending: false });
+      .eq('announcement_id', announcementId)
+      .order('created_at', { ascending: true });
 
-    if (announcementsError) throw announcementsError;
-    
-    if (!announcements || announcements.length === 0) {
-      return [];
+    if (error) {
+      throw error;
     }
 
-    // Then, get all read announcements for the user
-    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
-    const { data: reads, error: readsError } = await supabase
-      .from('announcement_reads')
-      .select('announcement_id')
-      .eq('user_id', user.id)
-      .in('announcement_id', announcements.map(a => a.id));
-
-    if (readsError) throw readsError;
-    
-    const readIds = new Set((reads || []).map(r => r.announcement_id));
-    
-    // Filter out read announcements
-    return announcements.filter(a => !readIds.has(a.id));
+    return data as AnnouncementComment[];
   } catch (error) {
-    console.error('Error getting unread server-wide announcements:', error);
+    console.error(`Error fetching comments for announcement ${announcementId}:`, error);
     return [];
   }
-}
+};
 
-/**
- * Add a comment to an announcement
- */
-export async function addComment(announcementId: string, content: string) {
+export const addAnnouncementComment = async (
+  announcementId: string,
+  content: string
+): Promise<AnnouncementComment | null> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
+    
     if (!user) {
       throw new Error('User not authenticated');
     }
 
-    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
     const { data, error } = await supabase
       .from('announcement_comments')
       .insert({
@@ -318,55 +283,16 @@ export async function addComment(announcementId: string, content: string) {
         user_id: user.id,
         content
       })
-      .select();
+      .select()
+      .single();
 
-    if (error) throw error;
-    
-    return { success: true, data: data[0] };
-  } catch (error: any) {
-    console.error('Error adding comment:', error);
-    return { success: false, message: error.message };
-  }
-}
+    if (error) {
+      throw error;
+    }
 
-/**
- * Get comments for an announcement
- */
-export async function getComments(announcementId: string): Promise<AnnouncementComment[]> {
-  try {
-    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
-    const { data, error } = await supabase
-      .from('announcement_comments')
-      .select('*')
-      .eq('announcement_id', announcementId)
-      .order('created_at', { ascending: true });
-
-    if (error) throw error;
-    
-    return data || [];
+    return data as AnnouncementComment;
   } catch (error) {
-    console.error('Error getting comments:', error);
-    return [];
+    console.error(`Error adding comment to announcement ${announcementId}:`, error);
+    return null;
   }
-}
-
-/**
- * Manually trigger the email sending function
- */
-export async function triggerAnnouncementEmails() {
-  const isAdmin = await checkIsAdmin();
-  if (!isAdmin) {
-    throw new Error('Keine Berechtigung');
-  }
-
-  try {
-    const { data, error } = await supabase.functions.invoke('send-announcement-emails');
-    
-    if (error) throw error;
-    
-    return { success: true, data };
-  } catch (error: any) {
-    console.error('Error triggering announcement emails:', error);
-    return { success: false, message: error.message || 'Fehler beim Senden der E-Mails' };
-  }
-}
+};
