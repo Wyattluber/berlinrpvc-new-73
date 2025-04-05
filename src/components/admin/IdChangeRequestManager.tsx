@@ -231,6 +231,7 @@ export const IdChangeRequestManager = () => {
                           className="h-8 w-8 p-0"
                           onClick={() => {
                             setSelectedRequest(request);
+                            setIsApproving(true);
                             setDialogOpen(true);
                           }}
                         >
@@ -243,8 +244,8 @@ export const IdChangeRequestManager = () => {
                           className="h-8 w-8 p-0"
                           onClick={() => {
                             setSelectedRequest(request);
-                            setDialogOpen(true);
                             setIsApproving(false);
+                            setDialogOpen(true);
                           }}
                         >
                           <X className="h-4 w-4 text-red-500" />

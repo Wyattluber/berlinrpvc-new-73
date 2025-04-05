@@ -37,7 +37,6 @@ type ProfileLocks = {
   roblox_locked: boolean;
 };
 
-// Helper function to check if profile IDs are locked
 const checkProfileIdsLocked = async (userId: string): Promise<ProfileLocks> => {
   try {
     const { data, error } = await supabase
@@ -51,7 +50,6 @@ const checkProfileIdsLocked = async (userId: string): Promise<ProfileLocks> => {
       return { discord_locked: false, roblox_locked: false };
     }
     
-    // If the IDs exist and are not empty, they are locked
     return {
       discord_locked: !!data?.discord_id,
       roblox_locked: !!data?.roblox_id
@@ -62,10 +60,8 @@ const checkProfileIdsLocked = async (userId: string): Promise<ProfileLocks> => {
   }
 };
 
-// Helper function to update user profile
 const updateUserProfile = async (userId: string, profileData: { discord_id?: string, roblox_id?: string }) => {
   try {
-    // Check if values are valid
     if (profileData.discord_id && !/^\d+$/.test(profileData.discord_id)) {
       return { success: false, message: 'Discord ID muss nur aus Zahlen bestehen.' };
     }
@@ -74,7 +70,6 @@ const updateUserProfile = async (userId: string, profileData: { discord_id?: str
       return { success: false, message: 'Roblox ID muss nur aus Zahlen bestehen.' };
     }
     
-    // Get current profile data
     const { data: existingProfile, error: profileError } = await supabase
       .from('profiles')
       .select('discord_id, roblox_id')
@@ -86,7 +81,6 @@ const updateUserProfile = async (userId: string, profileData: { discord_id?: str
       return { success: false, message: 'Fehler beim Abrufen des Profils.' };
     }
     
-    // Don't update if ID is already set (locked)
     const updatedData: any = {};
     
     if (profileData.discord_id && !existingProfile?.discord_id) {
@@ -97,7 +91,6 @@ const updateUserProfile = async (userId: string, profileData: { discord_id?: str
       updatedData.roblox_id = profileData.roblox_id;
     }
     
-    // Only update if there's something to update
     if (Object.keys(updatedData).length > 0) {
       const { error: updateError } = await supabase
         .from('profiles')
@@ -577,19 +570,21 @@ const Profile = () => {
                 
                 <TabsContent value="dashboard" className="p-6 space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between items-center">
-                          <CardTitle className="text-lg font-medium text-blue-800">Teammeetings</CardTitle>
-                          <Calendar className="h-5 w-5 text-blue-500" />
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <React.Suspense fallback={<div>Lade...</div>}>
-                          <MeetingCountdown />
-                        </React.Suspense>
-                      </CardContent>
-                    </Card>
+                    {isAdminOrModerator() && (
+                      <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                        <CardHeader className="pb-2">
+                          <div className="flex justify-between items-center">
+                            <CardTitle className="text-lg font-medium text-blue-800">Teammeetings</CardTitle>
+                            <Calendar className="h-5 w-5 text-blue-500" />
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <React.Suspense fallback={<div>Lade...</div>}>
+                            <MeetingCountdown />
+                          </React.Suspense>
+                        </CardContent>
+                      </Card>
+                    )}
 
                     {!isAdminOrModerator() && (
                       <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">

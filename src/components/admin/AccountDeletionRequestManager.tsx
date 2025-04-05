@@ -32,6 +32,11 @@ interface AccountDeletionRequest {
   email?: string;
 }
 
+interface AuthUser {
+  id: string;
+  email: string;
+}
+
 export const AccountDeletionRequestManager = () => {
   const [requests, setRequests] = useState<AccountDeletionRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,19 +81,23 @@ export const AccountDeletionRequestManager = () => {
       if (profilesError) throw profilesError;
       
       // Get auth users for emails (admin only function)
-      const { data: authData, error: authError } = await supabase.rpc('get_users_by_ids', {
-        user_ids: userIds
+      const { data: authUsersData, error: authError } = await supabase.functions.invoke<AuthUser[]>('get_users_by_ids', {
+        body: { user_ids: userIds }
       });
+      
+      let authUsers: AuthUser[] = [];
       
       if (authError) {
         console.error('Error fetching user auth data:', authError);
         // Continue without email data
+      } else {
+        authUsers = authUsersData || [];
       }
       
       // Merge the data
       const enrichedRequests = data.map(request => {
         const userProfile = profiles?.find(profile => profile.id === request.user_id);
-        const authUser = authData?.find((user: any) => user.id === request.user_id);
+        const authUser = authUsers.find(user => user.id === request.user_id);
         
         return {
           ...request,
