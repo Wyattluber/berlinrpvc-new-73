@@ -12,14 +12,12 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { submitTeamAbsence } from '@/lib/admin';
+import { submitTeamAbsence } from '@/lib/admin/team';
 
-// Define the props interface for the TeamAbsenceForm component
 interface TeamAbsenceFormProps {
   userId: string;
 }
 
-// Create a schema for the form validation
 const formSchema = z.object({
   startDate: z.date({
     required_error: "Ein Startdatum ist erforderlich.",
