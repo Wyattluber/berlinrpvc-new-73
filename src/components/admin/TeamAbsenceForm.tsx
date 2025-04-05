@@ -10,6 +10,8 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { CalendarIcon, Loader2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 interface TeamAbsenceFormProps {
   userId: string;
@@ -17,17 +19,18 @@ interface TeamAbsenceFormProps {
 }
 
 const TeamAbsenceForm: React.FC<TeamAbsenceFormProps> = ({ userId, onSuccess }) => {
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [absenceDate, setAbsenceDate] = useState<Date | undefined>(undefined);
   const [reason, setReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFutureAbsence, setIsFutureAbsence] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!endDate) {
+    if (!absenceDate) {
       toast({
         title: "Fehler",
-        description: "Bitte gib an, bis wann du abwesend sein wirst.",
+        description: "Bitte wähle ein Datum für deine Abwesenheit.",
         variant: "destructive"
       });
       return;
@@ -49,7 +52,7 @@ const TeamAbsenceForm: React.FC<TeamAbsenceFormProps> = ({ userId, onSuccess }) 
         .from('team_absences')
         .insert({
           user_id: userId,
-          end_date: endDate.toISOString(),
+          end_date: absenceDate.toISOString(),
           reason,
           status: 'pending'
         });
@@ -61,8 +64,9 @@ const TeamAbsenceForm: React.FC<TeamAbsenceFormProps> = ({ userId, onSuccess }) 
         description: "Deine Abmeldung wurde erfolgreich eingereicht."
       });
       
-      setEndDate(undefined);
+      setAbsenceDate(undefined);
       setReason('');
+      setIsFutureAbsence(false);
       
       if (onSuccess) onSuccess();
     } catch (error: any) {
@@ -76,31 +80,49 @@ const TeamAbsenceForm: React.FC<TeamAbsenceFormProps> = ({ userId, onSuccess }) 
       setIsSubmitting(false);
     }
   };
+
+  // Bestimme das Mindestdatum basierend auf isFutureAbsence
+  const getMinDate = () => {
+    const today = new Date();
+    if (!isFutureAbsence) {
+      return undefined; // Keine Einschränkung für vergangene Abwesenheiten
+    }
+    return today;
+  };
   
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="flex items-center space-x-2">
+        <Switch
+          id="future-absence"
+          checked={isFutureAbsence}
+          onCheckedChange={setIsFutureAbsence}
+        />
+        <Label htmlFor="future-absence">Zukünftige Abwesenheit</Label>
+      </div>
+
       <div className="space-y-2">
-        <label className="text-sm font-medium">Abwesend bis:</label>
+        <label className="text-sm font-medium">Abwesenheit am:</label>
         <Popover>
           <PopoverTrigger asChild>
             <Button
               variant={"outline"}
               className={cn(
                 "w-full justify-start text-left font-normal",
-                !endDate && "text-muted-foreground"
+                !absenceDate && "text-muted-foreground"
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {endDate ? format(endDate, 'PPP', { locale: de }) : <span>Datum auswählen</span>}
+              {absenceDate ? format(absenceDate, 'PPP', { locale: de }) : <span>Datum auswählen</span>}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
             <Calendar
               mode="single"
-              selected={endDate}
-              onSelect={setEndDate}
+              selected={absenceDate}
+              onSelect={setAbsenceDate}
               initialFocus
-              disabled={(date) => date < new Date()}
+              fromDate={getMinDate()}
               className={cn("p-3 pointer-events-auto")}
             />
           </PopoverContent>

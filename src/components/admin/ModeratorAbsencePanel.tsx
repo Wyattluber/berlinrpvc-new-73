@@ -4,6 +4,7 @@ import { useContext } from 'react';
 import { SessionContext } from '../../App'; 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import TeamAbsenceForm from './TeamAbsenceForm';
+import { AlertCircle } from 'lucide-react';
 
 const ModeratorAbsencePanel = () => {
   const session = useContext(SessionContext);
@@ -24,7 +25,10 @@ const ModeratorAbsencePanel = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Vom Team-Meeting abmelden</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <AlertCircle className="h-5 w-5 text-yellow-500" />
+          Vom Team-Meeting abmelden
+        </CardTitle>
         <CardDescription>
           Teile mit, wenn du bei einem kommenden Team-Meeting nicht dabei sein kannst
         </CardDescription>

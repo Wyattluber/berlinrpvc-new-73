@@ -11,6 +11,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { toast } from '@/hooks/use-toast';
 import { PlusCircle, Edit, Trash2, AlertTriangle, LoaderIcon, Info } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const formatRelativeTime = (dateString: string) => {
   const date = new Date(dateString);
@@ -37,15 +39,49 @@ const formatRelativeTime = (dateString: string) => {
   }
 };
 
+type NewsStatus = 'planned' | 'in_progress' | 'completed' | 'cancelled';
+
+const getStatusBadgeClass = (status: NewsStatus) => {
+  switch (status) {
+    case 'planned':
+      return 'bg-blue-100 text-blue-800';
+    case 'in_progress':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'completed':
+      return 'bg-green-100 text-green-800';
+    case 'cancelled':
+      return 'bg-red-100 text-red-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
+
+const getStatusLabel = (status: NewsStatus) => {
+  switch (status) {
+    case 'planned':
+      return 'In Planung';
+    case 'in_progress':
+      return 'In Umsetzung';
+    case 'completed':
+      return 'Umgesetzt';
+    case 'cancelled':
+      return 'Abgebrochen';
+    default:
+      return 'Unbekannt';
+  }
+};
+
 const NewsManagement: React.FC = () => {
-  const [news, setNews] = useState<NewsItem[]>([]);
+  const [news, setNews] = useState<Array<NewsItem & { status?: NewsStatus, is_server_wide?: boolean }>>([]);
   const [loading, setLoading] = useState(true);
   const [newDialogOpen, setNewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [activeNewsItem, setActiveNewsItem] = useState<NewsItem | null>(null);
+  const [activeNewsItem, setActiveNewsItem] = useState<(NewsItem & { status?: NewsStatus, is_server_wide?: boolean }) | null>(null);
   
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [status, setStatus] = useState<NewsStatus>('planned');
+  const [isServerWide, setIsServerWide] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
@@ -72,13 +108,17 @@ const NewsManagement: React.FC = () => {
   const handleNewDialog = () => {
     setTitle('');
     setContent('');
+    setStatus('planned');
+    setIsServerWide(false);
     setNewDialogOpen(true);
   };
   
-  const handleEditDialog = (newsItem: NewsItem) => {
+  const handleEditDialog = (newsItem: NewsItem & { status?: NewsStatus, is_server_wide?: boolean }) => {
     setActiveNewsItem(newsItem);
     setTitle(newsItem.title);
     setContent(newsItem.content);
+    setStatus(newsItem.status || 'planned');
+    setIsServerWide(newsItem.is_server_wide || false);
     setEditDialogOpen(true);
   };
   
@@ -94,7 +134,7 @@ const NewsManagement: React.FC = () => {
     
     setIsSubmitting(true);
     try {
-      const result = await addNewsItem(title, content);
+      const result = await addNewsItem(title, content, status, isServerWide);
       
       if (result.success) {
         toast({
@@ -104,7 +144,11 @@ const NewsManagement: React.FC = () => {
         
         const updatedNews = [...news];
         if (result.data && result.data[0]) {
-          updatedNews.unshift(result.data[0]);
+          updatedNews.unshift({
+            ...result.data[0],
+            status,
+            is_server_wide: isServerWide
+          });
         }
         setNews(updatedNews);
         setNewDialogOpen(false);
@@ -137,7 +181,13 @@ const NewsManagement: React.FC = () => {
     
     setIsSubmitting(true);
     try {
-      const result = await updateNewsItem(activeNewsItem.id, title, content);
+      const result = await updateNewsItem(
+        activeNewsItem.id, 
+        title, 
+        content, 
+        status, 
+        isServerWide
+      );
       
       if (result.success) {
         toast({
@@ -147,7 +197,14 @@ const NewsManagement: React.FC = () => {
         
         const updatedNews = news.map(item => 
           item.id === activeNewsItem.id 
-            ? { ...item, title, content, updated_at: new Date().toISOString() } 
+            ? { 
+                ...item, 
+                title, 
+                content, 
+                status, 
+                is_server_wide: isServerWide,
+                updated_at: new Date().toISOString() 
+              } 
             : item
         );
         setNews(updatedNews);
@@ -228,7 +285,17 @@ const NewsManagement: React.FC = () => {
                 <div key={item.id} className="border rounded-md p-4 hover:bg-gray-50">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-semibold text-lg">{item.title}</h3>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-lg">{item.title}</h3>
+                        {item.is_server_wide && (
+                          <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full text-xs">
+                            Serverweit
+                          </span>
+                        )}
+                        <span className={`px-2 py-0.5 rounded-full text-xs ${getStatusBadgeClass(item.status || 'planned')}`}>
+                          {getStatusLabel(item.status || 'planned')}
+                        </span>
+                      </div>
                       <p className="text-sm text-gray-500">
                         {formatRelativeTime(item.created_at)}
                         {item.updated_at && item.updated_at !== item.created_at && 
@@ -299,6 +366,30 @@ const NewsManagement: React.FC = () => {
                 rows={5}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <Select value={status} onValueChange={(value) => setStatus(value as NewsStatus)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Status auswählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="planned">In Planung</SelectItem>
+                  <SelectItem value="in_progress">In Umsetzung</SelectItem>
+                  <SelectItem value="completed">Umgesetzt</SelectItem>
+                  <SelectItem value="cancelled">Abgebrochen</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="server-wide"
+                checked={isServerWide}
+                onCheckedChange={setIsServerWide}
+              />
+              <Label htmlFor="server-wide">
+                Serverweit (löst E-Mail-Benachrichtigung aus)
+              </Label>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNewDialogOpen(false)}>
@@ -345,6 +436,30 @@ const NewsManagement: React.FC = () => {
                 placeholder="Inhalt der Meldung"
                 rows={5}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-status">Status</Label>
+              <Select value={status} onValueChange={(value) => setStatus(value as NewsStatus)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Status auswählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="planned">In Planung</SelectItem>
+                  <SelectItem value="in_progress">In Umsetzung</SelectItem>
+                  <SelectItem value="completed">Umgesetzt</SelectItem>
+                  <SelectItem value="cancelled">Abgebrochen</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="edit-server-wide"
+                checked={isServerWide}
+                onCheckedChange={setIsServerWide}
+              />
+              <Label htmlFor="edit-server-wide">
+                Serverweit (löst E-Mail-Benachrichtigung aus)
+              </Label>
             </div>
           </div>
           <DialogFooter>

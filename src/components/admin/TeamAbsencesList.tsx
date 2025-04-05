@@ -136,7 +136,7 @@ const TeamAbsencesList = () => {
         <TableHeader>
           <TableRow>
             <TableHead>Teammitglied</TableHead>
-            <TableHead>Abwesend bis</TableHead>
+            <TableHead>Abwesend am</TableHead>
             <TableHead>Grund</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Aktionen</TableHead>
@@ -195,7 +195,7 @@ const TeamAbsencesList = () => {
           </CardHeader>
           <CardContent className="pb-3 pt-0 space-y-2">
             <div className="text-sm">
-              <span className="text-gray-500">Abwesend bis:</span> {format(new Date(absence.end_date), 'dd.MM.yyyy', { locale: de })}
+              <span className="text-gray-500">Abwesend am:</span> {format(new Date(absence.end_date), 'dd.MM.yyyy', { locale: de })}
             </div>
             <div className="text-sm">
               <span className="text-gray-500">Grund:</span> {absence.reason}
