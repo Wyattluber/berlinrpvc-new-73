@@ -163,13 +163,19 @@ export async function fetchAdminUsers() {
     if (error) throw error;
     
     // Format the data to flatten the profiles object
-    const formattedData = data ? data.map(user => ({
-      id: user.user_id,
-      role: user.role,
-      username: user.profiles?.username || 'Unknown User',
-      email: user.profiles?.email || 'No Email',
-      created_at: user.created_at
-    })) : [];
+    const formattedData = data ? data.map(user => {
+      // Make sure to handle the profiles object correctly
+      const username = user.profiles?.username || 'Unknown User';
+      const email = user.profiles?.email || 'No Email';
+      
+      return {
+        id: user.user_id,
+        role: user.role,
+        username,
+        email,
+        created_at: user.created_at
+      };
+    }) : [];
     
     return formattedData;
   } catch (error) {

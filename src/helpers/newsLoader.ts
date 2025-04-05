@@ -1,6 +1,13 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
+// Extend the Window interface to include our global function
+declare global {
+  interface Window {
+    loadNewsIntoProfile: () => Promise<void>;
+  }
+}
+
 export const loadNewsIntoProfile = async () => {
   const newsFeedContainer = document.getElementById('profile-news-feed');
   if (!newsFeedContainer) return;

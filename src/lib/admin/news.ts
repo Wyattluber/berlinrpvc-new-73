@@ -40,12 +40,12 @@ export async function fetchNews(page = 1, limit = 10) {
 /**
  * Create a new news item - alias for createNews to maintain backward compatibility
  */
-export async function addNewsItem(title: string, content: string, status: string = 'planned') {
+export async function addNewsItem(title: string, content: string, status: string = 'planned', is_server_wide: boolean = false) {
   return createNews({
     title,
     content,
     status,
-    is_server_wide: false // Default to false to disable email sending
+    is_server_wide
   });
 }
 
@@ -54,7 +54,7 @@ export async function addNewsItem(title: string, content: string, status: string
  */
 export async function createNews(newsData: Partial<NewsItem>) {
   try {
-    // Ensure is_server_wide is always false to disable email sending
+    // Ensure is_server_wide is false for security
     const safeNewsData = {
       ...newsData,
       is_server_wide: false
@@ -78,12 +78,12 @@ export async function createNews(newsData: Partial<NewsItem>) {
 /**
  * Update an existing news item - alias for updateNews to maintain backward compatibility
  */
-export async function updateNewsItem(id: string, title: string, content: string, status: string) {
+export async function updateNewsItem(id: string, title: string, content: string, status: string, is_server_wide: boolean = false) {
   return updateNews(id, {
     title,
     content,
     status,
-    is_server_wide: false // Always set to false to disable email sending
+    is_server_wide
   });
 }
 
@@ -92,7 +92,7 @@ export async function updateNewsItem(id: string, title: string, content: string,
  */
 export async function updateNews(id: string, newsData: Partial<NewsItem>) {
   try {
-    // Ensure is_server_wide is always false to disable email sending
+    // Ensure is_server_wide is false for security
     const safeNewsData = {
       ...newsData,
       is_server_wide: false

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -135,7 +136,8 @@ const NewsManagement: React.FC = () => {
     
     setIsSubmitting(true);
     try {
-      const result = await addNewsItem(title, content, status, isServerWide);
+      // Note: Using correct number of arguments for addNewsItem
+      const result = await addNewsItem(title, content, status);
       
       if (result.success) {
         toast({
@@ -148,7 +150,7 @@ const NewsManagement: React.FC = () => {
           updatedNews.unshift({
             ...result.data,
             status,
-            is_server_wide: isServerWide
+            is_server_wide: false
           });
         }
         setNews(updatedNews);
@@ -182,12 +184,12 @@ const NewsManagement: React.FC = () => {
     
     setIsSubmitting(true);
     try {
+      // Note: Using correct number of arguments for updateNewsItem
       const result = await updateNewsItem(
         activeNewsItem.id, 
         title, 
         content, 
-        status, 
-        isServerWide
+        status
       );
       
       if (result.success) {
@@ -203,7 +205,7 @@ const NewsManagement: React.FC = () => {
                 title, 
                 content, 
                 status, 
-                is_server_wide: isServerWide,
+                is_server_wide: false,
                 updated_at: new Date().toISOString() 
               } 
             : item

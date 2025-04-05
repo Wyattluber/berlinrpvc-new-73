@@ -82,10 +82,17 @@ export const fetchTeamAbsences = async (): Promise<any[]> => {
     if (error) throw error;
     
     // Transform data to include username from the joined profiles table
-    const transformedData = data ? data.map(absence => ({
-      ...absence,
-      username: absence.profiles?.username || 'Unknown User'
-    })) : [];
+    const transformedData = data ? data.map(absence => {
+      // Handle the profiles object correctly
+      let username = 'Unknown User';
+      if (absence.profiles && typeof absence.profiles === 'object') {
+        username = absence.profiles.username || 'Unknown User';
+      }
+      return {
+        ...absence,
+        username
+      };
+    }) : [];
     
     return transformedData;
   } catch (error) {
