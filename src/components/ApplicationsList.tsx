@@ -85,7 +85,7 @@ const ApplicationsList = () => {
 
     setUpdatingStatus(true);
     try {
-      let newStatus: string;
+      let newStatus: 'approved' | 'rejected' | 'waitlist' | 'deleted';
       switch (statusAction) {
         case 'approve':
           newStatus = 'approved';
@@ -100,7 +100,7 @@ const ApplicationsList = () => {
           newStatus = 'deleted';
           break;
         default:
-          newStatus = statusAction;
+          throw new Error('Invalid status action');
       }
       
       await updateApplicationStatus(selectedApplication.id, newStatus, statusNotes);

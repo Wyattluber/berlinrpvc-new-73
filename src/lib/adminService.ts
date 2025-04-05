@@ -78,7 +78,11 @@ export async function fetchApplications() {
 /**
  * Update application status
  */
-export async function updateApplicationStatus(applicationId: string, status: 'approved' | 'rejected', notes: string | null = null) {
+export async function updateApplicationStatus(
+  applicationId: string, 
+  status: 'approved' | 'rejected' | 'waitlist' | 'deleted', 
+  notes: string | null = null
+) {
   const isAdmin = await checkIsAdmin();
   if (!isAdmin) {
     throw new Error('Keine Berechtigung');

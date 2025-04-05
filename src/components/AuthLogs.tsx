@@ -29,9 +29,13 @@ const AuthLogs = () => {
           return;
         }
 
-        const { data, error } = await supabase.rpc('get_recent_auth_logs', {
-          user_id_param: user.id
-        });
+        // Use the built-in function from the migration to get recent logs
+        const { data, error } = await supabase
+          .from('auth_logs')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(5);
 
         if (error) throw error;
         setLogs(data || []);
