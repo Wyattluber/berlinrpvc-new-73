@@ -1,104 +1,29 @@
 
-import React from 'react';
-import { LayoutDashboard, Users, FileText, Settings, Bell, Newspaper, CalendarDays, UserCheck, FileQuestion, UserX, CalendarRange, Bus, Handshake, UserMinus } from 'lucide-react';
+import { 
+  LayoutDashboard, Users, FileText, Settings, BellRing, 
+  Share, Server, UserCog, Link as LinkIcon, UserX 
+} from 'lucide-react';
 
-export interface MenuItem {
-  id: string;
-  icon: React.ReactNode;
-  label: string;
-  title: string; 
-  admin?: boolean;
-}
-
-export const getAdminMenuItems = (isAdmin: boolean): MenuItem[] => {
-  const allItems: MenuItem[] = [
-    {
-      id: 'dashboard',
-      icon: <LayoutDashboard className="h-5 w-5" />,
-      label: 'Dashboard',
-      title: 'Dashboard',
-    },
-    {
-      id: 'users',
-      icon: <Users className="h-5 w-5" />,
-      label: 'Benutzerverwaltung',
-      title: 'Benutzerverwaltung',
-      admin: true,
-    },
-    {
-      id: 'applications',
-      icon: <FileText className="h-5 w-5" />,
-      label: 'Bewerbungen',
-      title: 'Bewerbungen',
-    },
-    {
-      id: 'announcements',
-      icon: <Bell className="h-5 w-5" />,
-      label: 'Ankündigungen',
-      title: 'Ankündigungen',
-    },
-    {
-      id: 'news',
-      icon: <Newspaper className="h-5 w-5" />,
-      label: 'Neuigkeiten',
-      title: 'Neuigkeiten',
-    },
-    {
-      id: 'team-settings',
-      icon: <Settings className="h-5 w-5" />,
-      label: 'Team-Einstellungen',
-      title: 'Team-Einstellungen',
-      admin: true,
-    },
-    {
-      id: 'team-absences',
-      icon: <CalendarDays className="h-5 w-5" />,
-      label: 'Team-Abwesenheiten',
-      title: 'Team-Abwesenheiten',
-    },
-    {
-      id: 'my-absences',
-      icon: <UserMinus className="h-5 w-5" />,
-      label: 'Meine Abwesenheiten',
-      title: 'Meine Abwesenheiten',
-    },
-    {
-      id: 'change-requests',
-      icon: <UserCheck className="h-5 w-5" />,
-      label: 'Änderungsanträge',
-      title: 'Änderungsanträge',
-      admin: true,
-    },
-    {
-      id: 'delete-requests',
-      icon: <FileQuestion className="h-5 w-5" />,
-      label: 'Löschanträge',
-      title: 'Löschanträge',
-      admin: true,
-    },
-    {
-      id: 'seasons',
-      icon: <CalendarRange className="h-5 w-5" />,
-      label: 'Bewerbungssaisons',
-      title: 'Bewerbungssaisons',
-      admin: true,
-    },
-    {
-      id: 'subservers',
-      icon: <Bus className="h-5 w-5" />,
-      label: 'Subserver',
-      title: 'Subserver',
-      admin: true,
-    },
-    {
-      id: 'partners',
-      icon: <Handshake className="h-5 w-5" />,
-      label: 'Partner',
-      title: 'Partner',
-      admin: true,
-    },
-  ];
-
-  // Filter admin-only items if the user is not an admin
-  return allItems.filter(item => !item.admin || isAdmin);
+export const getAdminMenuItems = (isAdmin: boolean) => {
+  if (isAdmin) {
+    return [
+      { title: "Dashboard", id: "dashboard", icon: LayoutDashboard },
+      { title: "Benutzer", id: "users", icon: Users },
+      { title: "Bewerbungen", id: "applications", icon: FileText },
+      { title: "Neuigkeiten", id: "news", icon: BellRing },
+      { title: "Partner", id: "partners", icon: Share },
+      { title: "Unterserver", id: "sub_servers", icon: Server },
+      { title: "Änderungsanträge", id: "change-requests", icon: UserCog },
+      { title: "Discord-Link", id: "discord-link", icon: LinkIcon },
+      { title: "Löschungsanträge", id: "deletion-requests", icon: UserX },
+      { title: "Teameinstellungen", id: "team-settings", icon: Settings },
+      { title: "Abmeldungen", id: "absences", icon: UserCog }
+    ];
+  } else {
+    return [
+      { title: "Dashboard", id: "dashboard", icon: LayoutDashboard },
+      { title: "Bewerbungen", id: "applications", icon: FileText },
+      { title: "Vom Meeting abmelden", id: "absence-form", icon: UserCog },
+    ];
+  }
 };

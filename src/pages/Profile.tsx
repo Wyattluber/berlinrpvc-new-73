@@ -1,815 +1,1084 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { format, parseISO } from 'date-fns';
-import { de } from 'date-fns/locale';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { SessionContext } from '../App';
+import { LoaderIcon, CheckCircle, Calendar, Bell, HelpCircle, AlertTriangle, Plus, Lock } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { getUserApplicationsHistory, checkIsAdmin } from '@/lib/admin';
+import ProfileImageUpload from '@/components/ProfileImageUpload';
 import { Separator } from "@/components/ui/separator"
-import { Calendar } from "@/components/ui/calendar"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { CalendarIcon, CheckCircle, User, Mail, MessageSquare, ShieldCheck, AlertTriangle, Trash2, Loader2, BadgeCheck, Copy, ClipboardList, FileText, UserCog, UserX } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { DateRange } from "react-day-picker"
-import { DateRangePicker } from "@/components/ui/date-range-picker"
-import { useNavigate } from 'react-router-dom';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut } from "@/components/ui/command"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { Announcement } from '@/lib/announcementService';
-import AnnouncementsList from '@/components/AnnouncementsList';
-import { fetchApplications } from '@/lib/adminService';
-import { Badge } from '@/components/ui/badge';
-import { getApplicationSeasons } from '@/lib/adminService';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import MeetingCountdown from '@/components/MeetingCountdown';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { loadNewsIntoProfile } from '@/helpers/newsLoader';
+import AdminPanel from '@/pages/AdminPanel';
+import { getTeamSettings } from '@/lib/adminService';
 
-interface ProfileData {
+type Application = {
   id: string;
-  username: string | null;
-  avatar_url: string | null;
-  roblox_id: string | null;
-  discord_id: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-  username_changed_at: string | null;
-}
-
-interface AuthLog {
-  id: string;
-  created_at: string;
-  event_type: string;
-  ip_address: string | null;
-  user_agent: string | null;
-  metadata: any | null;
-}
-
-interface IdChangeRequest {
-  id: string;
-  user_id: string;
-  field_name: string;
-  new_value: string;
   status: string;
-  created_at: string;
-  processed_at: string | null;
-}
-
-interface AccountDeletionRequest {
-  id: string;
-  user_id: string;
-  reason: string;
-  status: string;
-  created_at: string;
-  processed_at: string | null;
-}
-
-interface Application {
-  id: string;
-  user_id: string;
-  roblox_username: string;
-  roblox_id: string;
-  discord_id: string;
-  age: number;
-  activity_level: number;
-  admin_experience: string | null;
-  other_servers: string | null;
-  situation_handling: string;
-  vdm_understanding: string;
-  frp_understanding: string;
-  bodycam_understanding: string;
-  taschen_rp_understanding: string;
-  server_age_understanding: string;
-  friend_rule_violation: string;
   created_at: string;
   updated_at: string;
-  status: string;
-  notes: string | null;
-}
+  season_id?: string | null;
+};
 
-interface ApplicationSeason {
-  id: string;
-  name: string;
-  is_active: boolean;
-  created_at: string;
-}
+type ProfileLocks = {
+  discord_locked: boolean;
+  roblox_locked: boolean;
+};
+
+const checkProfileIdsLocked = async (userId: string): Promise<ProfileLocks> => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('discord_id, roblox_id')
+      .eq('id', userId)
+      .single();
+    
+    if (error) {
+      console.error('Error checking profile locks:', error);
+      return { discord_locked: false, roblox_locked: false };
+    }
+    
+    return {
+      discord_locked: !!data?.discord_id,
+      roblox_locked: !!data?.roblox_id
+    };
+  } catch (error) {
+    console.error('Error checking profile locks:', error);
+    return { discord_locked: false, roblox_locked: false };
+  }
+};
+
+const updateUserProfile = async (userId: string, profileData: { discord_id?: string, roblox_id?: string }) => {
+  try {
+    if (profileData.discord_id && !/^\d+$/.test(profileData.discord_id)) {
+      return { success: false, message: 'Discord ID muss nur aus Zahlen bestehen.' };
+    }
+    
+    if (profileData.roblox_id && !/^\d+$/.test(profileData.roblox_id)) {
+      return { success: false, message: 'Roblox ID muss nur aus Zahlen bestehen.' };
+    }
+    
+    const { data: existingProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('discord_id, roblox_id')
+      .eq('id', userId)
+      .single();
+    
+    if (profileError && profileError.code !== 'PGRST116') {
+      console.error('Error fetching profile:', profileError);
+      return { success: false, message: 'Fehler beim Abrufen des Profils.' };
+    }
+    
+    const updatedData: any = {};
+    
+    if (profileData.discord_id && !existingProfile?.discord_id) {
+      updatedData.discord_id = profileData.discord_id;
+    }
+    
+    if (profileData.roblox_id && !existingProfile?.roblox_id) {
+      updatedData.roblox_id = profileData.roblox_id;
+    }
+    
+    if (Object.keys(updatedData).length > 0) {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update(updatedData)
+        .eq('id', userId);
+      
+      if (updateError) {
+        console.error('Error updating profile:', updateError);
+        return { success: false, message: 'Fehler beim Aktualisieren des Profils.' };
+      }
+    }
+    
+    return { success: true, message: 'Profil erfolgreich aktualisiert.' };
+  } catch (error) {
+    console.error('Error in updateUserProfile:', error);
+    return { success: false, message: 'Ein unerwarteter Fehler ist aufgetreten.' };
+  }
+};
 
 const Profile = () => {
-  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const [applications, setApplications] = useState<Application[]>([]);
   const [username, setUsername] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState('');
-  const [robloxId, setRobloxId] = useState('');
+  const [userAvatar, setUserAvatar] = useState('');
   const [discordId, setDiscordId] = useState('');
-  const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [authLogs, setAuthLogs] = useState<AuthLog[]>([]);
-  const [idChangeRequests, setIdChangeRequests] = useState<IdChangeRequest[]>([]);
-  const [accountDeletionRequest, setAccountDeletionRequest] = useState<AccountDeletionRequest | null>(null);
-  const [isSubmittingDeletionRequest, setIsSubmittingDeletionRequest] = useState(false);
-  const [deletionReason, setDeletionReason] = useState('');
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
-  const [isSessionInvalidated, setIsSessionInvalidated] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  const [isDateRangePickerOpen, setIsDateRangePickerOpen] = useState(false);
-  const [applicationsData, setApplicationsData] = useState<Application[] | null>(null);
-  const [applicationSeasons, setApplicationSeasons] = useState<ApplicationSeason[]>([]);
-  const [selectedAnnouncementId, setSelectedAnnouncementId] = useState<string | null>(null);
+  const [robloxId, setRobloxId] = useState('');
+  const [profileLocks, setProfileLocks] = useState<ProfileLocks>({ discord_locked: false, roblox_locked: false });
+  const [isUsernameAvailable, setIsUsernameAvailable] = useState({ valid: true, reason: '' });
+  const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
+  const [isUpdatingProfiles, setIsUpdatingProfiles] = useState(false);
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [emailUpdateMessage, setEmailUpdateMessage] = useState('');
+  const [emailUpdateSuccess, setEmailUpdateSuccess] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isModerator, setIsModerator] = useState(false);
+  const [activeSeasonApplications, setActiveSeasonApplications] = useState<Application[]>([]);
+  const [previousSeasonApplications, setPreviousSeasonApplications] = useState<Application[]>([]);
+  const [teamSettings, setTeamSettings] = useState<any>(null);
+  const [showUserRoleDialog, setShowUserRoleDialog] = useState(false);
+  const [roleUserEmail, setRoleUserEmail] = useState('');
+  const [roleUserSelection, setRoleUserSelection] = useState('');
+  const [roleType, setRoleType] = useState<'admin' | 'moderator'>('moderator');
+  const [greeting, setGreeting] = useState('');
   const navigate = useNavigate();
+  const session = useContext(SessionContext);
+  const activeTab = searchParams.get('tab') || 'dashboard';
+
+  const { 
+    isLoading: isApplicationsLoading, 
+    error: applicationsError, 
+    data: applicationsData,
+    refetch: refetchApplications 
+  } = useQuery({
+    queryKey: ['userApplications', session?.user?.id], 
+    queryFn: () => getUserApplicationsHistory(session?.user?.id || ''),
+    enabled: !!session?.user?.id,
+  });
+
+  useEffect(() => {
+    if (applicationsData) {
+      const allApplications = applicationsData as Application[];
+      setApplications(allApplications);
+      
+      setActiveSeasonApplications(allApplications);
+      setPreviousSeasonApplications([]);
+    }
+  }, [applicationsData]);
+
+  useEffect(() => {
+    const fetchTeamSettings = async () => {
+      try {
+        const settings = await getTeamSettings();
+        setTeamSettings(settings);
+      } catch (error) {
+        console.error("Error fetching team settings:", error);
+      }
+    };
+    
+    fetchTeamSettings();
+  }, []);
 
   useEffect(() => {
     const fetchProfile = async () => {
       setLoading(true);
+      
+      if (!session?.user) {
+        setLoading(false);
+        return;
+      }
+      
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (user) {
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-
-          if (profileError) {
-            throw profileError;
-          }
-
-          setProfile(profileData);
-          setUsername(profileData?.username || '');
-          setAvatarUrl(profileData?.avatar_url || '');
-          setRobloxId(profileData?.roblox_id || '');
-          setDiscordId(profileData?.discord_id || '');
-
-          const { data: authLogsData, error: authLogsError } = await supabase
-            .from('auth_logs')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(5);
-
-          if (authLogsError) {
-            console.error('Error fetching auth logs:', authLogsError);
-          } else {
-            setAuthLogs(authLogsData || []);
-          }
-
-          const { data: idChangeRequestsData, error: idChangeRequestsError } = await supabase
-            .from('id_change_requests')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(5);
-
-          if (idChangeRequestsError) {
-            console.error('Error fetching ID change requests:', idChangeRequestsError);
-          } else {
-            setIdChangeRequests(idChangeRequestsData || []);
-          }
-
-          const { data: accountDeletionRequestData, error: accountDeletionRequestError } = await supabase
-            .from('account_deletion_requests')
-            .select('*')
-            .eq('user_id', user.id)
-            .single();
-
-          if (accountDeletionRequestError && accountDeletionRequestError.code !== 'PGRST116') {
-            console.error('Error fetching account deletion request:', accountDeletionRequestError);
-          } else {
-            setAccountDeletionRequest(accountDeletionRequestData || null);
-          }
-
-          const applications = await fetchApplications();
-          if (applications) {
-            const userApplications = applications.filter(app => app.user_id === user.id);
-            setApplicationsData(userApplications);
-          }
-
-          const seasons = await getApplicationSeasons();
-          setApplicationSeasons(seasons);
+        const { data: userDetails, error: userError } = await supabase.auth.getUser();
+        
+        if (userError) throw userError;
+        
+        setUser(userDetails?.user || null);
+        setUsername(userDetails?.user?.user_metadata?.name || '');
+        setUserAvatar(userDetails?.user?.user_metadata?.avatar_url || '');
+        
+        const locks = await checkProfileIdsLocked(session.user.id);
+        setProfileLocks(locks);
+        
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('discord_id, roblox_id')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profileError) {
+          console.error("Error fetching profile data:", profileError);
+        } else if (profileData) {
+          setDiscordId(profileData.discord_id || '');
+          setRobloxId(profileData.roblox_id || '');
         }
+        
+        const adminStatus = await checkIsAdmin();
+        setIsAdmin(adminStatus);
+        
+        const { data: modData, error: modError } = await supabase
+          .from('admin_users')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .eq('role', 'moderator');
+          
+        if (!modError && modData && modData.length > 0) {
+          setIsModerator(true);
+        }
+        
+        refetchApplications();
       } catch (error: any) {
-        console.error('Error fetching profile:', error);
+        console.error("Error fetching profile:", error);
         toast({
           title: "Fehler",
-          description: error.message || "Profil konnte nicht geladen werden",
+          description: error.message || "Es gab ein Problem beim Laden deines Profils.",
           variant: "destructive"
         });
       } finally {
         setLoading(false);
       }
     };
-
+    
     fetchProfile();
+  }, [session, refetchApplications]);
+
+  useEffect(() => {
+    const getTimeBasedGreeting = () => {
+      const hour = new Date().getHours();
+      let greetingText = '';
+      
+      if (hour >= 5 && hour < 12) {
+        greetingText = 'Guten Morgen';
+      } else if (hour >= 12 && hour < 18) {
+        greetingText = 'Guten Tag';
+      } else if (hour >= 18 && hour < 22) {
+        greetingText = 'Guten Abend';
+      } else {
+        greetingText = 'Gute Nacht';
+      }
+      
+      setGreeting(greetingText);
+    };
+    
+    getTimeBasedGreeting();
+    
+    const intervalId = setInterval(getTimeBasedGreeting, 3600000);
+    
+    return () => clearInterval(intervalId);
   }, []);
 
-  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newUsername = e.target.value;
-    setUsername(newUsername);
-    setIsUsernameAvailable(null); // Reset availability status when the username changes
+  useEffect(() => {
+    if (activeTab === 'dashboard') {
+      setTimeout(() => {
+        loadNewsIntoProfile();
+      }, 500);
+    }
+  }, [activeTab]);
 
-    // Basic validation: check if the username is at least 3 characters long
-    if (newUsername.length < 3) {
-      setIsUsernameAvailable(false);
+  const handleTabChange = (value: string) => {
+    setSearchParams({ tab: value });
+  };
+
+  const handleAvatarChange = (url: string) => {
+    setUserAvatar(url);
+    setUser(prevUser => ({
+      ...prevUser,
+      user_metadata: {
+        ...prevUser.user_metadata,
+        avatar_url: url
+      }
+    }));
+  };
+
+  const checkUsernameAvailability = async (name: string) => {
+    if (!name || name.length < 3) {
+      setIsUsernameAvailable({ valid: false, reason: 'Benutzername muss mindestens 3 Zeichen lang sein.' });
       return;
     }
-
-    // Debounce the username availability check
-    const timerId = setTimeout(async () => {
-      if (newUsername.trim() !== '') {
-        const isAvailable = await checkUsernameAvailability(newUsername);
-        setIsUsernameAvailable(isAvailable);
-      }
-    }, 500); // Wait for 500ms
-
-    return () => clearTimeout(timerId); // Clear the timeout if the input changes
-  };
-
-  const checkUsernameAvailability = async (username: string): Promise<boolean> => {
+    
+    if (name === user?.user_metadata?.name) {
+      setIsUsernameAvailable({ valid: true, reason: '' });
+      return;
+    }
+    
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('username', username);
-
-      if (error) {
-        console.error('Error checking username availability:', error);
-        return false;
-      }
-
-      // If there are any rows with the given username, it's not available
-      return data.length === 0 || profile?.username === username;
+      const response = await fetch(`/api/checkUsername?username=${name}`);
+      const data = await response.json();
+      setIsUsernameAvailable(data);
     } catch (error) {
-      console.error('Error checking username availability:', error);
-      return false;
+      console.error("Error checking username availability:", error);
+      setIsUsernameAvailable({ valid: false, reason: 'Fehler beim Überprüfen der Verfügbarkeit des Benutzernamens.' });
     }
   };
 
-  const handleAvatarUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAvatarUrl(e.target.value);
-  };
-
-  const handleRobloxIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setRobloxId(e.target.value);
-  };
-
-  const handleDiscordIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setDiscordId(e.target.value);
-  };
-
-  const handleSaveProfile = async () => {
-    setIsSaving(true);
-    try {
-      if (!profile) {
-        throw new Error('No profile found');
-      }
-
-      if (isUsernameAvailable === false) {
-        toast({
-          title: "Fehler",
-          description: "Benutzername ist nicht verfügbar",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const updates = {
-        id: profile.id,
-        username: username,
-        avatar_url: avatarUrl,
-        roblox_id: robloxId,
-        discord_id: discordId,
-        updated_at: new Date().toISOString(),
-      };
-
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', profile.id);
-
-      if (error) {
-        throw error;
-      }
-
-      setProfile({ ...profile, ...updates });
-      toast({
-        title: "Erfolg",
-        description: "Profil erfolgreich aktualisiert"
-      });
-    } catch (error: any) {
-      console.error('Error updating the data!', error);
+  const updateUsername = async () => {
+    setIsUpdatingUsername(true);
+    
+    if (!username || username.length < 3) {
       toast({
         title: "Fehler",
-        description: error.message || "Profil konnte nicht aktualisiert werden",
+        description: "Benutzername muss mindestens 3 Zeichen lang sein.",
         variant: "destructive"
       });
-    } finally {
-      setIsSaving(false);
+      setIsUpdatingUsername(false);
+      return;
     }
-  };
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Unbekannt';
-    return format(parseISO(dateString), 'dd.MM.yyyy HH:mm', { locale: de });
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await supabase.auth.signOut();
-      navigate('/login');
-    } catch (error) {
-      console.error('Error signing out:', error);
+    
+    if (!isUsernameAvailable.valid) {
       toast({
         title: "Fehler",
-        description: "Abmeldung fehlgeschlagen",
+        description: isUsernameAvailable.reason || "Benutzername ist nicht verfügbar.",
         variant: "destructive"
       });
+      setIsUpdatingUsername(false);
+      return;
     }
-  };
-
-  const handleSubmitDeletionRequest = async () => {
-    setIsSubmittingDeletionRequest(true);
+    
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
-      const { error } = await supabase
-        .from('account_deletion_requests')
-        .insert({
-          user_id: user.id,
-          reason: deletionReason,
-          status: 'pending',
-        });
-
-      if (error) {
-        throw error;
-      }
-
-      setAccountDeletionRequest({
-        id: 'temp',
-        user_id: user.id,
-        reason: deletionReason,
-        status: 'pending',
-        created_at: new Date().toISOString(),
-        processed_at: null,
+      const { error } = await supabase.auth.updateUser({
+        data: { 
+          name: username
+        }
       });
-      toast({
-        title: "Erfolg",
-        description: "Löschantrag erfolgreich eingereicht",
-      });
-    } catch (error: any) {
-      console.error('Error submitting deletion request:', error);
-      toast({
-        title: "Fehler",
-        description: error.message || "Löschantrag konnte nicht eingereicht werden",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSubmittingDeletionRequest(false);
-    }
-  };
-
-  const handleDeleteAccount = useCallback(async () => {
-    setIsDeletingAccount(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
-      // Since invalidateUserAuth is not available, we'll just sign out
-      // In a real production app, you would need to implement proper account deletion with an Edge Function
-      const { error: signOutError } = await supabase.auth.signOut();
       
-      if (signOutError) {
-        throw signOutError;
-      }
-
-      setIsSessionInvalidated(true);
+      if (error) throw error;
+      
+      setUser(prevUser => ({
+        ...prevUser,
+        user_metadata: {
+          ...prevUser.user_metadata,
+          name: username,
+          username_changed_at: new Date().toISOString()
+        }
+      }));
+      
       toast({
-        title: "Erfolg",
-        description: "Konto erfolgreich abgemeldet. Bitte wenden Sie sich an einen Administrator für die vollständige Kontolöschung.",
+        title: "Benutzername aktualisiert",
+        description: "Dein Benutzername wurde erfolgreich aktualisiert.",
       });
-
-      navigate('/login');
     } catch (error: any) {
-      console.error('Error during account action:', error);
+      console.error("Error updating username:", error);
       toast({
         title: "Fehler",
-        description: error.message || "Aktion konnte nicht ausgeführt werden",
+        description: error.message || "Es gab ein Problem beim Aktualisieren deines Benutzernamens.",
         variant: "destructive"
       });
     } finally {
-      setIsDeletingAccount(false);
-    }
-  }, [navigate]);
-
-  const handleCopyUserId = () => {
-    if (profile?.id) {
-      navigator.clipboard.writeText(profile.id)
-        .then(() => {
-          toast({
-            title: "Erfolg",
-            description: "Benutzer-ID in die Zwischenablage kopiert",
-          });
-        })
-        .catch(err => {
-          console.error("Failed to copy user ID: ", err);
-          toast({
-            title: "Fehler",
-            description: "Benutzer-ID konnte nicht in die Zwischenablage kopiert werden",
-            variant: "destructive"
-          });
-        });
+      setIsUpdatingUsername(false);
     }
   };
 
-  const applicationSchema = z.object({
-    reason: z.string().min(10, {
-      message: "Die Begründung muss mindestens 10 Zeichen lang sein.",
-    }),
-  })
+  const updateProfileData = async () => {
+    setIsUpdatingProfiles(true);
+    
+    try {
+      const result = await updateUserProfile(session?.user?.id || '', {
+        discord_id: discordId,
+        roblox_id: robloxId
+      });
+      
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+      
+      const locks = await checkProfileIdsLocked(session?.user?.id || '');
+      setProfileLocks(locks);
+      
+      toast({
+        title: "Profil aktualisiert",
+        description: "Deine Profildaten wurden erfolgreich aktualisiert.",
+      });
+    } catch (error: any) {
+      console.error("Error updating profile data:", error);
+      toast({
+        title: "Fehler",
+        description: error.message || "Es gab ein Problem beim Aktualisieren deiner Profildaten.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpdatingProfiles(false);
+    }
+  };
 
-  const form = useForm<z.infer<typeof applicationSchema>>({
-    resolver: zodResolver(applicationSchema),
-    defaultValues: {
-      reason: "",
-    },
-  })
+  const updateEmail = async () => {
+    setIsUpdatingEmail(true);
+    setEmailUpdateMessage('');
+    setEmailUpdateSuccess(false);
+    
+    if (!newEmail || !/^\S+@\S+\.\S+$/.test(newEmail)) {
+      toast({
+        title: "Fehler",
+        description: "Bitte gib eine gültige E-Mail-Adresse ein.",
+        variant: "destructive"
+      });
+      setIsUpdatingEmail(false);
+      return;
+    }
+    
+    try {
+      const { error } = await supabase.auth.updateUser({
+        email: newEmail
+      });
+      
+      if (error) throw error;
+      
+      setEmailUpdateSuccess(true);
+      setEmailUpdateMessage('E-Mail Aktualisierungsanfrage gesendet. Bitte überprüfe dein E-Mail-Postfach, um die Änderung zu bestätigen.');
+      toast({
+        title: "E-Mail Aktualisierung",
+        description: "E-Mail Aktualisierungsanfrage gesendet. Bitte überprüfe dein E-Mail-Postfach, um die Änderung zu bestätigen.",
+      });
+    } catch (error: any) {
+      console.error("Error updating email:", error);
+      setEmailUpdateSuccess(false);
+      setEmailUpdateMessage(error.message || 'Fehler beim Aktualisieren der E-Mail');
+      toast({
+        title: "Fehler",
+        description: error.message || "Es gab ein Problem beim Aktualisieren deiner E-Mail.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpdatingEmail(false);
+    }
+  };
+
+  const requestPasswordReset = async () => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        user?.email || '',
+        {
+          redirectTo: window.location.origin + '/reset-password',
+        }
+      );
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Passwort-Reset",
+        description: "Eine E-Mail zum Zurücksetzen deines Passworts wurde versendet. Bitte überprüfe dein E-Mail-Postfach.",
+      });
+    } catch (error: any) {
+      console.error("Error requesting password reset:", error);
+      toast({
+        title: "Fehler",
+        description: error.message || "Es gab ein Problem beim Senden des Passwort-Reset-Links.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const formatMeetingDay = (day: string) => {
+    const days: Record<string, string> = {
+      'monday': 'Montag',
+      'tuesday': 'Dienstag',
+      'wednesday': 'Mittwoch',
+      'thursday': 'Donnerstag',
+      'friday': 'Freitag',
+      'saturday': 'Samstag',
+      'sunday': 'Sonntag'
+    };
+    return days[day] || day;
+  };
+
+  const isAdminOrModerator = () => {
+    return isAdmin || isModerator;
+  };
+  
+  const handleAddUserRole = async () => {
+    if (!roleUserEmail || !roleType) {
+      toast({
+        title: "Fehler",
+        description: "Bitte fülle alle Felder aus.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    toast({
+      title: "Rolle vergeben",
+      description: `${roleType === 'admin' ? 'Admin' : 'Moderator'}-Rolle an ${roleUserEmail} vergeben.`,
+    });
+    
+    setShowUserRoleDialog(false);
+    setRoleUserEmail('');
+    setRoleType('moderator');
+  };
+
+  const showApplicationsTab = !isAdminOrModerator();
+
+  if (loading) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Navbar />
+        <div className="flex-grow flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-blue-500 border-t-transparent"></div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!session) {
+    navigate('/login');
+    return null;
+  }
+
+  const lastChanged = user?.user_metadata?.username_changed_at
+  ? new Date(user.user_metadata.username_changed_at)
+  : null;
 
   return (
-    <div className="container mx-auto py-10">
-      {loading ? (
-        <div className="flex items-center justify-center p-8 w-full">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : (
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl">Profil</CardTitle>
-              <CardDescription>
-                Verwalte deine persönlichen Informationen und Einstellungen.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-4">
-                <Avatar>
-                  <AvatarImage src={avatarUrl} alt={username || 'Profile'} />
-                  <AvatarFallback>{username ? username[0].toUpperCase() : 'U'}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="text-lg font-semibold">{username || 'Unbekannter Benutzer'}</h3>
-                  <p className="text-sm text-gray-500">
-                    Konto erstellt: {formatDate(profile?.created_at)}
-                  </p>
-                  <Button variant="ghost" size="sm" onClick={handleCopyUserId}>
-                    <Copy className="h-4 w-4 mr-2" />
-                    Benutzer-ID kopieren
-                  </Button>
-                  {profile?.id && (
-                    <p className="text-sm text-gray-500">
-                      <BadgeCheck className="h-3.5 w-3.5 mr-1 inline-block" />
-                      ID: {profile.id}
-                    </p>
+    <div className="flex flex-col min-h-screen">
+      <Navbar />
+      
+      <main className="flex-grow py-10 bg-gradient-to-b from-gray-50 to-white">
+        <div className="container mx-auto px-4 max-w-5xl">
+          <Card className="shadow-lg">
+            <CardHeader className="text-center border-b pb-4">
+              <div className="flex justify-center mb-4">
+                <Avatar className="h-20 w-20">
+                  {userAvatar ? (
+                    <AvatarImage src={userAvatar} />
+                  ) : (
+                    <AvatarFallback className="bg-blue-100 text-blue-600 text-xl">
+                      {username ? username.charAt(0).toUpperCase() : 'U'}
+                    </AvatarFallback>
                   )}
-                </div>
+                </Avatar>
               </div>
-              <Separator />
-              <div className="grid gap-2">
-                <Label htmlFor="username">Benutzername</Label>
-                <Input
-                  type="text"
-                  id="username"
-                  value={username}
-                  onChange={handleUsernameChange}
-                  placeholder="Benutzernamen eingeben"
-                />
-                {isUsernameAvailable === false && (
-                  <p className="text-red-500 text-sm">Benutzername ist nicht verfügbar.</p>
-                )}
-                {isUsernameAvailable === true && username !== profile?.username && (
-                  <p className="text-green-500 text-sm">Benutzername ist verfügbar!</p>
-                )}
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="avatarUrl">Avatar-URL</Label>
-                <Input
-                  type="text"
-                  id="avatarUrl"
-                  value={avatarUrl}
-                  onChange={handleAvatarUrlChange}
-                  placeholder="Avatar-URL eingeben"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="robloxId">Roblox-ID</Label>
-                <Input
-                  type="text"
-                  id="robloxId"
-                  value={robloxId}
-                  onChange={handleRobloxIdChange}
-                  placeholder="Roblox-ID eingeben"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="discordId">Discord-ID</Label>
-                <Input
-                  type="text"
-                  id="discordId"
-                  value={discordId}
-                  onChange={handleDiscordIdChange}
-                  placeholder="Discord-ID eingeben"
-                />
-              </div>
-              <Button onClick={handleSaveProfile} disabled={isSaving}>
-                {isSaving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Speichern...
-                  </>
-                ) : (
-                  'Profil speichern'
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">Sitzungsverlauf</CardTitle>
+              <CardTitle className="text-2xl font-bold">
+                {greeting}, {username || 'Benutzer'}!
+              </CardTitle>
               <CardDescription>
-                Die letzten 5 Anmeldungen in deinem Konto.
+                {user?.email || 'Keine E-Mail-Adresse'}
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              {authLogs.length === 0 ? (
-                <p className="text-gray-500">Keine Anmeldeaktivitäten gefunden.</p>
-              ) : (
-                <div className="space-y-3">
-                  {authLogs.map((log) => (
-                    <div key={log.id} className="border rounded-md p-3">
-                      <p className="text-sm font-medium">
-                        {log.event_type === 'SIGNED_IN' ? 'Angemeldet' : 'Abgemeldet'}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Datum: {formatDate(log.created_at)}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        IP-Adresse: {log.ip_address || 'Unbekannt'}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        User-Agent: {log.user_agent || 'Unbekannt'}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            <CardContent className="p-0">
+              <Tabs 
+                defaultValue={activeTab} 
+                value={activeTab}
+                onValueChange={handleTabChange}
+                className="w-full"
+              >
+                <TabsList className="w-full rounded-none border-b">
+                  <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+                  <TabsTrigger value="account">Konto</TabsTrigger>
+                  {showApplicationsTab && (
+                    <TabsTrigger value="applications">Bewerbungen</TabsTrigger>
+                  )}
+                  <TabsTrigger value="security">Sicherheit</TabsTrigger>
+                  {(isAdmin || isModerator) && (
+                    <TabsTrigger value="admin">Admin Dashboard</TabsTrigger>
+                  )}
+                </TabsList>
+                
+                <TabsContent value="dashboard" className="p-6 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {isAdminOrModerator() && (
+                      <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                        <CardHeader className="pb-2">
+                          <div className="flex justify-between items-center">
+                            <CardTitle className="text-lg font-medium text-blue-800">Teammeetings</CardTitle>
+                            <Calendar className="h-5 w-5 text-blue-500" />
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <React.Suspense fallback={<div>Lade...</div>}>
+                            <MeetingCountdown />
+                          </React.Suspense>
+                        </CardContent>
+                      </Card>
+                    )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">ID Änderungsanträge</CardTitle>
-              <CardDescription>
-                Deine letzten 5 Anträge zur Änderung deiner Benutzerdaten.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {idChangeRequests.length === 0 ? (
-                <p className="text-gray-500">Keine ID Änderungsanträge gefunden.</p>
-              ) : (
-                <div className="space-y-3">
-                  {idChangeRequests.map((request) => (
-                    <div key={request.id} className="border rounded-md p-3">
-                      <p className="text-sm font-medium">
-                        Feld: {request.field_name}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Neuer Wert: {request.new_value}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Status: {request.status}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Erstellt: {formatDate(request.created_at)}
-                      </p>
-                      {request.processed_at && (
-                        <p className="text-xs text-gray-500">
-                          Verarbeitet: {formatDate(request.processed_at)}
+                    {!isAdminOrModerator() && (
+                      <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                        <CardHeader className="pb-2">
+                          <div className="flex justify-between items-center">
+                            <CardTitle className="text-lg font-medium text-purple-800">Deine Bewerbungen</CardTitle>
+                            <Bell className="h-5 w-5 text-purple-500" />
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          {isApplicationsLoading ? (
+                            <div className="text-sm text-gray-600">Lade Bewerbungen...</div>
+                          ) : applications.length > 0 ? (
+                            <div className="space-y-2">
+                              <div className="text-sm mb-2">
+                                <span className="font-medium">Anzahl: </span> 
+                                {applications.length}
+                              </div>
+                              {applications.slice(0, 3).map((app) => (
+                                <div key={app.id} className="text-sm p-2 bg-white rounded-md border border-purple-200 shadow-sm">
+                                  <p className="font-medium">Status: {app.status}</p>
+                                  <p className="text-xs text-gray-500">
+                                    {new Date(app.created_at).toLocaleDateString('de-DE')}
+                                  </p>
+                                </div>
+                              ))}
+                              {applications.length > 3 && (
+                                <Button 
+                                  variant="link" 
+                                  className="text-purple-600 p-0 h-auto text-sm"
+                                  onClick={() => handleTabChange('applications')}
+                                >
+                                  Alle {applications.length} Bewerbungen anzeigen
+                                </Button>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-sm text-gray-600">
+                              Du hast noch keine Bewerbungen eingereicht.
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    <Card className={`bg-gradient-to-br from-green-50 to-green-100 border-green-200 ${isAdminOrModerator() ? "md:col-span-2" : ""}`}>
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-center">
+                          <CardTitle className="text-lg font-medium text-green-800">Account Status</CardTitle>
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm">E-Mail verifiziert</span>
+                            <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                              ✓ Verifiziert
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm">Profilvollständigkeit</span>
+                            <span className={`text-xs px-2 py-1 rounded-full ${discordId && robloxId ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                              {discordId && robloxId ? '100%' : '80%'}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm">Mitglied seit</span>
+                            <span className="text-sm">
+                              {user?.created_at ? new Date(user.created_at).toLocaleDateString('de-DE') : 'Unbekannt'}
+                            </span>
+                          </div>
+                          {isAdmin && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm">Rolle</span>
+                              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                                Administrator
+                              </span>
+                            </div>
+                          )}
+                          {isModerator && !isAdmin && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm">Rolle</span>
+                              <span className="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full">
+                                Moderator
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Neuigkeiten & Ankündigungen</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div id="profile-news-feed" className="space-y-4">
+                        <div className="text-center py-4">
+                          <LoaderIcon className="h-8 w-8 mx-auto animate-spin text-gray-300 mb-2" />
+                          <p className="text-sm text-gray-500">Neuigkeiten werden geladen...</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="account" className="p-6 space-y-4">
+                  <div className="flex flex-col items-center gap-4">
+                    <ProfileImageUpload
+                      userId={session?.user?.id || ''}
+                      existingImageUrl={userAvatar}
+                      onImageUploaded={handleAvatarChange}
+                    />
+                    <p className="text-sm text-gray-500">Profilbild ändern</p>
+                  </div>
+                  <Separator />
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Benutzername</Label>
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          id="name"
+                          placeholder="Benutzername"
+                          value={username}
+                          onChange={(e) => {
+                            setUsername(e.target.value);
+                            checkUsernameAvailability(e.target.value);
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={isUpdatingUsername || !isUsernameAvailable.valid}
+                          onClick={updateUsername}
+                        >
+                          {isUpdatingUsername ? (
+                            <>
+                              <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
+                              Aktualisieren...
+                            </>
+                          ) : (
+                            "Aktualisieren"
+                          )}
+                        </Button>
+                      </div>
+                      {!isUsernameAvailable.valid && (
+                        <p className="text-sm text-red-500">{isUsernameAvailable.reason}</p>
+                      )}
+                      {lastChanged && (
+                        <p className="text-sm text-gray-500">
+                          Zuletzt geändert: {lastChanged.toLocaleDateString()}
                         </p>
                       )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">Konto löschen</CardTitle>
-              <CardDescription>
-                Hier kannst du dein Konto löschen. Bitte beachte, dass diese Aktion unwiderruflich ist.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {accountDeletionRequest ? (
-                <>
-                  <div className="border rounded-md p-3">
-                    <p className="text-sm font-medium">
-                      Status: {accountDeletionRequest.status}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Begründung: {accountDeletionRequest.reason}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Erstellt: {formatDate(accountDeletionRequest.created_at)}
-                    </p>
-                    {accountDeletionRequest.processed_at && (
-                      <p className="text-xs text-gray-500">
-                        Verarbeitet: {formatDate(accountDeletionRequest.processed_at)}
-                      </p>
-                    )}
-                  </div>
-                  {accountDeletionRequest.status === 'pending' && (
-                    <p className="text-yellow-500">
-                      <AlertTriangle className="inline-block h-4 w-4 mr-1" />
-                      Dein Löschantrag ist noch in Bearbeitung.
-                    </p>
-                  )}
-                </>
-              ) : (
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(handleSubmitDeletionRequest)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="reason"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Begründung für die Löschung</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Warum möchtest du dein Konto löschen?"
-                              className="resize-none"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Bitte gib eine kurze Begründung an, warum du dein Konto löschen möchtest.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="discord_id">Discord ID</Label>
+                        {profileLocks.discord_locked && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Lock className="h-4 w-4 text-gray-400" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Diese ID kann nicht mehr geändert werden.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {!profileLocks.discord_locked && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs p-4">
+                              <p>Deine Discord ID findest du in Discord, indem du:<br/>
+                              1. Einstellungen öffnest<br/>
+                              2. "Erweitert" unter "App-Einstellungen" auswählst<br/>
+                              3. "Entwicklermodus" aktivierst<br/>
+                              4. Dann kannst du mit Rechtsklick auf deinen Namen "ID kopieren" auswählen</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          id="discord_id"
+                          placeholder="Deine Discord ID"
+                          value={discordId}
+                          onChange={(e) => setDiscordId(e.target.value)}
+                          readOnly={profileLocks.discord_locked}
+                          className={profileLocks.discord_locked ? "bg-gray-100" : ""}
+                        />
+                      </div>
+                      {profileLocks.discord_locked && (
+                        <p className="text-xs text-gray-500">Die Discord ID kann nach dem Speichern nicht mehr geändert werden.</p>
                       )}
-                    />
-                    <Button type="submit" disabled={isSubmittingDeletionRequest}>
-                      {isSubmittingDeletionRequest ? (
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="roblox_id">Roblox ID</Label>
+                        {profileLocks.roblox_locked && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Lock className="h-4 w-4 text-gray-400" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Diese ID kann nicht mehr geändert werden.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {!profileLocks.roblox_locked && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs p-4">
+                              <p>Deine Roblox ID findest du in deinem Roblox-Profil. Gehe zu deinem Profil, und die ID ist die Nummer in der URL (z.B. https://www.roblox.com/users/<strong>12345678</strong>/profile).</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          id="roblox_id"
+                          placeholder="Deine Roblox ID"
+                          value={robloxId}
+                          onChange={(e) => setRobloxId(e.target.value)}
+                          readOnly={profileLocks.roblox_locked}
+                          className={profileLocks.roblox_locked ? "bg-gray-100" : ""}
+                        />
+                      </div>
+                      {profileLocks.roblox_locked && (
+                        <p className="text-xs text-gray-500">Die Roblox ID kann nach dem Speichern nicht mehr geändert werden.</p>
+                      )}
+                    </div>
+                    
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={isUpdatingProfiles || (profileLocks.discord_locked && profileLocks.roblox_locked)}
+                      onClick={updateProfileData}
+                      className="mt-2"
+                    >
+                      {isUpdatingProfiles ? (
                         <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Antrag einreichen...
+                          <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
+                          Speichern...
                         </>
                       ) : (
-                        'Löschantrag einreichen'
+                        "Profildaten speichern"
                       )}
                     </Button>
-                  </form>
-                </Form>
-              )}
-              <Separator />
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" disabled={isDeletingAccount}>
-                    Konto endgültig löschen
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Konto löschen</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Bist du sicher, dass du dein Konto endgültig löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteAccount} disabled={isDeletingAccount} className="bg-red-500 hover:bg-red-600">
-                      {isDeletingAccount ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Löschen...
-                        </>
-                      ) : (
-                        'Konto löschen'
-                      )}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-              {isSessionInvalidated && (
-                <p className="text-green-500">
-                  <CheckCircle className="inline-block h-4 w-4 mr-1" />
-                  Die Sitzung wurde erfolgreich invalidiert.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">Einstellungen</CardTitle>
-              <CardDescription>
-                Weitere Einstellungen für dein Konto.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button variant="outline" onClick={handleSignOut}>
-                Abmelden
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">Ankündigungen</CardTitle>
-              <CardDescription>
-                Hier findest du aktuelle Ankündigungen und Updates.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AnnouncementsList selectedId={selectedAnnouncementId} />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">Bewerbungen</CardTitle>
-              <CardDescription>
-                Hier kannst du deine Bewerbungen einsehen.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {applicationsData ? true : false ? (
-                <div className="space-y-3">
-                  {applicationsData.map((application) => (
-                    <div key={application.id} className="border rounded-md p-3">
-                      <p className="text-sm font-medium">
-                        Bewerbung vom: {formatDate(application.created_at)}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Status: {application.status}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Roblox-Benutzername: {application.roblox_username}
-                      </p>
+                    {(profileLocks.discord_locked && profileLocks.roblox_locked) && (
+                      <p className="text-xs text-gray-500 text-center">Alle IDs wurden bereits gesetzt und können nicht mehr geändert werden.</p>
+                    )}
+                  </div>
+                </TabsContent>
+                
+                {showApplicationsTab && (
+                  <TabsContent value="applications" className="p-6 space-y-4">
+                    <CardTitle>Deine Bewerbungen</CardTitle>
+                    <CardDescription>Hier findest du eine Übersicht deiner bisherigen Bewerbungen.</CardDescription>
+                    
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold">Aktuelle Bewerbungen</h3>
+                        <p className="text-sm text-gray-500">
+                          Anzahl Bewerbungen: {applications.length}
+                        </p>
+                      </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500">Keine Bewerbungen gefunden.</p>
-              )}
+                    
+                    {isApplicationsLoading ? (
+                      <div className="flex items-center justify-center p-8">
+                        <LoaderIcon className="mr-2 h-6 w-6 animate-spin text-blue-500" />
+                        <span>Lade Bewerbungen...</span>
+                      </div>
+                    ) : applicationsError ? (
+                      <div className="p-8 text-center">
+                        <AlertTriangle className="h-10 w-10 text-yellow-500 mx-auto mb-2" />
+                        <p className="text-red-500">Fehler beim Laden der Bewerbungen.</p>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="mt-2"
+                          onClick={() => refetchApplications()}
+                        >
+                          Erneut versuchen
+                        </Button>
+                      </div>
+                    ) : applications.length === 0 ? (
+                      <div className="p-8 text-center bg-gray-50 rounded-md">
+                        <p>Du hast noch keine Bewerbungen eingereicht.</p>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="mt-2"
+                          onClick={() => navigate('/apply')}
+                        >
+                          Neue Bewerbung starten
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="border rounded-md overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Datum</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Letzte Aktualisierung</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {applications.map((app) => (
+                              <TableRow key={app.id}>
+                                <TableCell>{new Date(app.created_at).toLocaleDateString('de-DE')}</TableCell>
+                                <TableCell>
+                                  <span className={`px-2 py-1 rounded-full text-xs ${
+                                    app.status === 'accepted' ? 'bg-green-100 text-green-800' : 
+                                    app.status === 'rejected' ? 'bg-red-100 text-red-800' : 
+                                    app.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                    'bg-blue-100 text-blue-800'
+                                  }`}>
+                                    {app.status}
+                                  </span>
+                                </TableCell>
+                                <TableCell>{new Date(app.updated_at).toLocaleDateString('de-DE')}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </TabsContent>
+                )}
+                
+                <TabsContent value="security" className="p-6 space-y-4">
+                  <CardTitle>Sicherheitseinstellungen</CardTitle>
+                  <CardDescription>Ändere dein Passwort oder deine E-Mail-Adresse.</CardDescription>
+                  
+                  <Card className="border border-blue-100">
+                    <CardHeader className="bg-blue-50">
+                      <CardTitle className="text-lg">E-Mail-Adresse ändern</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4 pt-4">
+                      <p className="text-sm">
+                        Deine aktuelle E-Mail-Adresse: <strong>{user?.email}</strong>
+                      </p>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Neue E-Mail-Adresse</Label>
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            id="email"
+                            placeholder="Neue E-Mail-Adresse"
+                            type="email"
+                            value={newEmail}
+                            onChange={(e) => setNewEmail(e.target.value)}
+                          />
+                          <Button
+                            type="button"
+                            disabled={isUpdatingEmail || !newEmail}
+                            onClick={updateEmail}
+                          >
+                            {isUpdatingEmail ? (
+                              <>
+                                <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
+                                Aktualisieren...
+                              </>
+                            ) : (
+                              "Aktualisieren"
+                            )}
+                          </Button>
+                        </div>
+                        {emailUpdateMessage && (
+                          <div className={`flex items-center space-x-2 p-2 rounded ${emailUpdateSuccess ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                            {emailUpdateSuccess ? (
+                              <CheckCircle className="h-4 w-4" />
+                            ) : (
+                              <AlertTriangle className="h-4 w-4" />
+                            )}
+                            <p className="text-sm">{emailUpdateMessage}</p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="border border-blue-100">
+                    <CardHeader className="bg-blue-50">
+                      <CardTitle className="text-lg">Passwort ändern</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4 pt-4">
+                      <p className="text-sm">
+                        Du kannst dein Passwort ändern, indem du einen Reset-Link an deine E-Mail-Adresse sendest.
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        onClick={requestPasswordReset}
+                      >
+                        Passwort-Reset-Link senden
+                      </Button>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="border border-amber-100">
+                    <CardHeader className="bg-amber-50">
+                      <CardTitle className="text-lg">Sicherheitshinweise</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2 pt-4">
+                      <div className="flex items-start space-x-2">
+                        <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                        <p className="text-sm">Verwende ein starkes, einzigartiges Passwort für deinen Account.</p>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                        <p className="text-sm">Teile deine Anmeldedaten niemals mit anderen Personen.</p>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                        <p className="text-sm">Überprüfe regelmäßig deine Account-Aktivitäten auf verdächtige Vorgänge.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                {(isAdmin || isModerator) && (
+                  <TabsContent value="admin" className="h-auto overflow-hidden rounded-md border">
+                    <div className="p-4 bg-blue-50 flex justify-between items-center">
+                      <h3 className="text-lg font-semibold">Admin-Funktionen</h3>
+                      <Dialog open={showUserRoleDialog} onOpenChange={setShowUserRoleDialog}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" variant="outline" className="flex items-center gap-1">
+                            <Plus className="h-4 w-4" />
+                            Neue Benutzerrolle
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Benutzerrolle vergeben</DialogTitle>
+                            <DialogDescription>
+                              Gib die E-Mail-Adresse des Benutzers ein, dem du eine Rolle zuweisen möchtest.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="user-email">E-Mail des Benutzers</Label>
+                              <Input 
+                                id="user-email" 
+                                placeholder="beispiel@email.com" 
+                                value={roleUserEmail}
+                                onChange={(e) => setRoleUserEmail(e.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Rolle</Label>
+                              <div className="flex space-x-2">
+                                <Button 
+                                  type="button"
+                                  variant={roleType === 'moderator' ? 'default' : 'outline'}
+                                  className="flex-1"
+                                  onClick={() => setRoleType('moderator')}
+                                >
+                                  Moderator
+                                </Button>
+                                <Button 
+                                  type="button"
+                                  variant={roleType === 'admin' ? 'default' : 'outline'}
+                                  className="flex-1"
+                                  onClick={() => setRoleType('admin')}
+                                >
+                                  Administrator
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button onClick={handleAddUserRole}>Rolle zuweisen</Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                    <AdminPanel />
+                  </TabsContent>
+                )}
+              </Tabs>
             </CardContent>
           </Card>
         </div>
-      )}
+      </main>
+      
+      <Footer hideApplyButton={isAdminOrModerator()} />
     </div>
   );
 };

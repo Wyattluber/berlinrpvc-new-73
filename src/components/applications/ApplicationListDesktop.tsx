@@ -5,7 +5,7 @@ import {
   TableHeader, TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Eye, Check, X, AlertTriangle, Trash2 } from 'lucide-react';
+import { RefreshCw, Eye, Check, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Application {
@@ -15,7 +15,7 @@ interface Application {
   discord_username?: string;
   roblox_id: string;
   roblox_username: string;
-  status: 'pending' | 'approved' | 'rejected' | 'waitlist' | 'deleted';
+  status: 'pending' | 'approved' | 'rejected';
   created_at: string;
   updated_at: string;
   notes: string | null;
@@ -29,7 +29,7 @@ interface ApplicationListDesktopProps {
   setStatusFilter: (status: string) => void;
   loadApplications: () => Promise<void>;
   handleViewApplication: (application: Application) => void;
-  handleStatusAction: (application: Application, action: 'approve' | 'reject' | 'waitlist' | 'delete') => void;
+  handleStatusAction: (application: Application, action: 'approve' | 'reject') => void;
   getStatusBadge: (status: string) => JSX.Element;
   formatDate: (dateString: string) => string;
 }
@@ -57,8 +57,6 @@ const ApplicationListDesktop: React.FC<ApplicationListDesktopProps> = ({
               <SelectItem value="pending">Ausstehend</SelectItem>
               <SelectItem value="approved">Angenommen</SelectItem>
               <SelectItem value="rejected">Abgelehnt</SelectItem>
-              <SelectItem value="waitlist">Warteliste</SelectItem>
-              <SelectItem value="deleted">Gelöscht</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -126,21 +124,6 @@ const ApplicationListDesktop: React.FC<ApplicationListDesktopProps> = ({
                             onClick={() => handleStatusAction(application, 'reject')}
                           >
                             <X className="h-4 w-4 mr-1" /> Ablehnen
-                          </Button>
-                          <Button 
-                            variant="default" 
-                            size="sm"
-                            className="bg-blue-600 hover:bg-blue-700"
-                            onClick={() => handleStatusAction(application, 'waitlist')}
-                          >
-                            <AlertTriangle className="h-4 w-4 mr-1" /> Warteliste
-                          </Button>
-                          <Button 
-                            variant="secondary" 
-                            size="sm"
-                            onClick={() => handleStatusAction(application, 'delete')}
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" /> Löschen
                           </Button>
                         </>
                       )}

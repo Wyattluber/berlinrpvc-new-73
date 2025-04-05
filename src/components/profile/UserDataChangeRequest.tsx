@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -28,10 +28,8 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
   });
 
   // Check for existing pending requests
-  useEffect(() => {
+  React.useEffect(() => {
     const checkPendingRequests = async () => {
-      if (!userId) return;
-      
       try {
         const { data, error } = await supabase
           .from('id_change_requests')
@@ -141,13 +139,10 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
               value={newDiscordId}
               onChange={(e) => setNewDiscordId(e.target.value)}
               disabled={isSubmitting || pendingRequests.discord}
-              className="flex-grow"
             />
             <Button 
               onClick={() => handleSubmit('discord_id', newDiscordId)}
               disabled={isSubmitting || pendingRequests.discord || !newDiscordId.trim()}
-              size="sm"
-              className="shrink-0"
             >
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Beantragen"}
             </Button>
@@ -170,13 +165,10 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
               value={newRobloxId}
               onChange={(e) => setNewRobloxId(e.target.value)}
               disabled={isSubmitting || pendingRequests.roblox}
-              className="flex-grow"
             />
             <Button 
               onClick={() => handleSubmit('roblox_id', newRobloxId)}
               disabled={isSubmitting || pendingRequests.roblox || !newRobloxId.trim()}
-              size="sm"
-              className="shrink-0"
             >
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Beantragen"}
             </Button>

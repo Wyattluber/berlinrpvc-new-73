@@ -6,7 +6,7 @@ import { toast } from '@/hooks/use-toast';
 import { fetchAdminUsers, getCachedUserCount, updateAdminUser, deleteAdminUser } from '@/lib/adminService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoaderIcon } from 'lucide-react';
-import { getAdminMenuItems, MenuItem } from '@/components/admin/AdminMenuItems';
+import { getAdminMenuItems } from '@/components/admin/AdminMenuItems';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { AdminMobileHeader, AdminMobileSidebar } from '@/components/admin/AdminMobileNav';
 import AdminContent from '@/components/admin/AdminContent';
@@ -140,7 +140,7 @@ const AdminPanel = () => {
     <div className="flex flex-col md:flex-row min-h-screen bg-gray-100">
       <AdminSidebar 
         isAdmin={isAdmin!} 
-        menuItems={menuItems as any} 
+        menuItems={menuItems} 
         activeSection={activeSection} 
         handleMenuClick={handleMenuClick} 
       />
@@ -152,7 +152,7 @@ const AdminPanel = () => {
         />
         {mobileMenuOpen && (
           <AdminMobileSidebar 
-            menuItems={menuItems as any} 
+            menuItems={menuItems} 
             activeSection={activeSection} 
             handleMenuClick={handleMenuClick} 
           />

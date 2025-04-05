@@ -32,6 +32,11 @@ interface AccountDeletionRequest {
   email?: string;
 }
 
+interface AuthUser {
+  id: string;
+  email: string;
+}
+
 export const AccountDeletionRequestManager = () => {
   const [requests, setRequests] = useState<AccountDeletionRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,7 +50,7 @@ export const AccountDeletionRequestManager = () => {
       setIsLoading(true);
       
       // Get all pending account deletion requests
-      const { data: requestsData, error } = await supabase
+      const { data, error } = await supabase
         .from('account_deletion_requests')
         .select(`
           id,
@@ -59,14 +64,13 @@ export const AccountDeletionRequestManager = () => {
       
       if (error) throw error;
       
-      if (!requestsData || requestsData.length === 0) {
+      if (!data || data.length === 0) {
         setRequests([]);
-        setIsLoading(false);
         return;
       }
       
       // Get usernames and emails for all users in the requests
-      const userIds = [...new Set(requestsData.map(request => request.user_id))];
+      const userIds = [...new Set(data.map(request => request.user_id))];
       
       // Get profiles for usernames
       const { data: profiles, error: profilesError } = await supabase
@@ -77,32 +81,23 @@ export const AccountDeletionRequestManager = () => {
       if (profilesError) throw profilesError;
       
       // Get auth users for emails (admin only function)
-      const { data: authUsersData, error: authError } = await supabase.functions.invoke('get_users_by_ids', {
+      const { data: authUsersData, error: authError } = await supabase.functions.invoke<AuthUser[]>('get_users_by_ids', {
         body: { user_ids: userIds }
       });
       
+      let authUsers: AuthUser[] = [];
+      
       if (authError) {
         console.error('Error fetching user auth data:', authError);
-        // Continue without email data, but still show what we have
-        const enrichedRequests = requestsData.map(request => {
-          const userProfile = profiles?.find(profile => profile.id === request.user_id);
-          
-          return {
-            ...request,
-            username: userProfile?.username || 'Unbekannter Benutzer',
-            email: 'Keine E-Mail verfügbar'
-          };
-        });
-        
-        setRequests(enrichedRequests);
-        setIsLoading(false);
-        return;
+        // Continue without email data
+      } else {
+        authUsers = authUsersData || [];
       }
       
       // Merge the data
-      const enrichedRequests = requestsData.map(request => {
+      const enrichedRequests = data.map(request => {
         const userProfile = profiles?.find(profile => profile.id === request.user_id);
-        const authUser = authUsersData?.find((user: any) => user.id === request.user_id);
+        const authUser = authUsers.find(user => user.id === request.user_id);
         
         return {
           ...request,

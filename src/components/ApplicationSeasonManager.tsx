@@ -8,13 +8,6 @@ import { LoaderIcon, Plus } from 'lucide-react';
 import { createApplicationSeason, getApplicationSeasons } from '@/lib/adminService';
 import { useQuery } from '@tanstack/react-query';
 
-interface ApplicationSeason {
-  id: string;
-  name: string;
-  is_active: boolean;
-  created_at: string;
-}
-
 const ApplicationSeasonManager = () => {
   const [newSeasonName, setNewSeasonName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -23,7 +16,7 @@ const ApplicationSeasonManager = () => {
     data: seasons,
     isLoading,
     refetch
-  } = useQuery<ApplicationSeason[]>({
+  } = useQuery({
     queryKey: ['applicationSeasons'],
     queryFn: getApplicationSeasons,
     meta: {
@@ -123,7 +116,7 @@ const ApplicationSeasonManager = () => {
           <div className="space-y-2 mt-4">
             <h3 className="text-sm font-medium">Bisherige Saisons</h3>
             <div className="border rounded-md divide-y">
-              {seasons.map((season) => (
+              {seasons.map((season: any) => (
                 <div key={season.id} className="p-3 flex justify-between items-center">
                   <div>
                     <p className="font-medium">{season.name}</p>

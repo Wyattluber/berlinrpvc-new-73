@@ -45,7 +45,7 @@ export function setupAuthEventListeners() {
       if (event === 'SIGNED_IN') {
         // Log sign in events
         if (session?.user) {
-          logAuthEvent('login', session.user.id, {
+          logAuthEvent('SIGNED_IN', session.user.id, {
             ip: 'client-side',
             userAgent: navigator.userAgent,
             timestamp: new Date().toISOString()
@@ -54,7 +54,7 @@ export function setupAuthEventListeners() {
       } else if (event === 'SIGNED_OUT') {
         // Log sign out events
         if (session?.user) {
-          logAuthEvent('logout', session.user.id, {
+          logAuthEvent('SIGNED_OUT', session.user.id, {
             ip: 'client-side',
             userAgent: navigator.userAgent,
             timestamp: new Date().toISOString()

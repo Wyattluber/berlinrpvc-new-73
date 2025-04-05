@@ -2,7 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { RefreshCw, Eye, Check, X, AlertTriangle, Trash2 } from 'lucide-react';
+import { RefreshCw, Eye, Check, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Application {
@@ -12,7 +12,7 @@ interface Application {
   discord_username?: string;
   roblox_id: string;
   roblox_username: string;
-  status: 'pending' | 'approved' | 'rejected' | 'waitlist' | 'deleted';
+  status: 'pending' | 'approved' | 'rejected';
   created_at: string;
   updated_at: string;
   notes: string | null;
@@ -26,7 +26,7 @@ interface ApplicationListMobileProps {
   setStatusFilter: (status: string) => void;
   loadApplications: () => Promise<void>;
   handleViewApplication: (application: Application) => void;
-  handleStatusAction: (application: Application, action: 'approve' | 'reject' | 'waitlist' | 'delete') => void;
+  handleStatusAction: (application: Application, action: 'approve' | 'reject') => void;
   getStatusBadge: (status: string) => JSX.Element;
   formatDate: (dateString: string) => string;
 }
@@ -54,8 +54,6 @@ const ApplicationListMobile: React.FC<ApplicationListMobileProps> = ({
               <SelectItem value="pending">Ausstehend</SelectItem>
               <SelectItem value="approved">Angenommen</SelectItem>
               <SelectItem value="rejected">Abgelehnt</SelectItem>
-              <SelectItem value="waitlist">Warteliste</SelectItem>
-              <SelectItem value="deleted">Gelöscht</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -110,11 +108,11 @@ const ApplicationListMobile: React.FC<ApplicationListMobileProps> = ({
                 </Button>
                 
                 {application.status === 'pending' && (
-                  <div className="grid grid-cols-2 gap-2 w-full">
+                  <div className="flex gap-2 w-full">
                     <Button 
                       variant="default" 
                       size="sm"
-                      className="bg-green-600 hover:bg-green-700"
+                      className="bg-green-600 hover:bg-green-700 w-1/2"
                       onClick={() => handleStatusAction(application, 'approve')}
                     >
                       <Check className="h-4 w-4" />
@@ -122,24 +120,10 @@ const ApplicationListMobile: React.FC<ApplicationListMobileProps> = ({
                     <Button 
                       variant="destructive" 
                       size="sm"
+                      className="w-1/2"
                       onClick={() => handleStatusAction(application, 'reject')}
                     >
                       <X className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="default" 
-                      size="sm"
-                      className="bg-blue-600 hover:bg-blue-700"
-                      onClick={() => handleStatusAction(application, 'waitlist')}
-                    >
-                      <AlertTriangle className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="secondary" 
-                      size="sm"
-                      onClick={() => handleStatusAction(application, 'delete')}
-                    >
-                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 )}

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -18,7 +17,6 @@ import SubServers from "./pages/SubServers";
 import Impressum from "./pages/Impressum";
 import Datenschutz from "./pages/Datenschutz";
 import { ApplicationProvider } from "@/contexts/ApplicationContext";
-import AnnouncementBanner from "./components/AnnouncementBanner";
 
 // Create context for session
 export const SessionContext = createContext<any>(null);
@@ -175,10 +173,6 @@ const App = () => {
               </div>
             </div>
           )}
-          
-          {/* AnnouncementBanner is now out of Router context, but will handle navigation appropriately */}
-          {session && <AnnouncementBanner />}
-          
           <ErrorFallback>
             <BrowserRouter>
               <Routes>
