@@ -23,6 +23,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { loadNewsIntoProfile } from '@/helpers/newsLoader';
 import AdminPanel from '@/pages/AdminPanel';
 import { getTeamSettings } from '@/lib/adminService';
+import UserDataChangeRequest from '@/components/profile/UserDataChangeRequest';
+import AccountDeletionRequest from '@/components/profile/AccountDeletionRequest';
 
 type Application = {
   id: string;
@@ -742,86 +744,58 @@ const Profile = () => {
                       )}
                     </div>
                     
+                    <UserDataChangeRequest 
+                      currentDiscordId={discordId} 
+                      currentRobloxId={robloxId} 
+                      userId={session?.user?.id || ''}
+                    />
+                    
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <Label htmlFor="discord_id">Discord ID</Label>
+                        <Label htmlFor="current-discord-id">Aktuelle Discord ID</Label>
                         {profileLocks.discord_locked && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Lock className="h-4 w-4 text-gray-400" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Diese ID kann nicht mehr geändert werden.</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                        {!profileLocks.discord_locked && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs p-4">
-                              <p>Deine Discord ID findest du in Discord, indem du:<br/>
-                              1. Einstellungen öffnest<br/>
-                              2. "Erweitert" unter "App-Einstellungen" auswählst<br/>
-                              3. "Entwicklermodus" aktivierst<br/>
-                              4. Dann kannst du mit Rechtsklick auf deinen Namen "ID kopieren" auswählen</p>
-                            </TooltipContent>
-                          </Tooltip>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Lock className="h-4 w-4 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Diese ID kann nur über einen Änderungsantrag geändert werden.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         )}
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Input
-                          id="discord_id"
-                          placeholder="Deine Discord ID"
-                          value={discordId}
-                          onChange={(e) => setDiscordId(e.target.value)}
-                          readOnly={profileLocks.discord_locked}
-                          className={profileLocks.discord_locked ? "bg-gray-100" : ""}
-                        />
-                      </div>
-                      {profileLocks.discord_locked && (
-                        <p className="text-xs text-gray-500">Die Discord ID kann nach dem Speichern nicht mehr geändert werden.</p>
-                      )}
+                      <Input
+                        id="current-discord-id"
+                        value={discordId || "Nicht gesetzt"}
+                        readOnly
+                        className="bg-gray-100"
+                      />
                     </div>
                     
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <Label htmlFor="roblox_id">Roblox ID</Label>
+                        <Label htmlFor="current-roblox-id">Aktuelle Roblox ID</Label>
                         {profileLocks.roblox_locked && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Lock className="h-4 w-4 text-gray-400" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Diese ID kann nicht mehr geändert werden.</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                        {!profileLocks.roblox_locked && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs p-4">
-                              <p>Deine Roblox ID findest du in deinem Roblox-Profil. Gehe zu deinem Profil, und die ID ist die Nummer in der URL (z.B. https://www.roblox.com/users/<strong>12345678</strong>/profile).</p>
-                            </TooltipContent>
-                          </Tooltip>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Lock className="h-4 w-4 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Diese ID kann nur über einen Änderungsantrag geändert werden.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         )}
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Input
-                          id="roblox_id"
-                          placeholder="Deine Roblox ID"
-                          value={robloxId}
-                          onChange={(e) => setRobloxId(e.target.value)}
-                          readOnly={profileLocks.roblox_locked}
-                          className={profileLocks.roblox_locked ? "bg-gray-100" : ""}
-                        />
-                      </div>
-                      {profileLocks.roblox_locked && (
-                        <p className="text-xs text-gray-500">Die Roblox ID kann nach dem Speichern nicht mehr geändert werden.</p>
-                      )}
+                      <Input
+                        id="current-roblox-id"
+                        value={robloxId || "Nicht gesetzt"}
+                        readOnly
+                        className="bg-gray-100"
+                      />
                     </div>
                     
                     <Button
@@ -991,6 +965,8 @@ const Profile = () => {
                       </Button>
                     </CardContent>
                   </Card>
+                  
+                  <AccountDeletionRequest />
                   
                   <Card className="border border-amber-100">
                     <CardHeader className="bg-amber-50">
