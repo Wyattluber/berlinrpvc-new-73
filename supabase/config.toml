@@ -42,3 +42,7 @@ verify_jwt = true
 
 [functions.send_announcement_email]
 verify_jwt = true
+
+[functions.find_users_by_email]
+verify_jwt = true
+

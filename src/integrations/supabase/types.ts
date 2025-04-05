@@ -358,6 +358,8 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          is_server_wide: boolean
+          status: string
           title: string
           updated_at: string | null
         }
@@ -365,6 +367,8 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          is_server_wide?: boolean
+          status?: string
           title: string
           updated_at?: string | null
         }
@@ -372,6 +376,8 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          is_server_wide?: boolean
+          status?: string
           title?: string
           updated_at?: string | null
         }

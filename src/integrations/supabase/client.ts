@@ -21,6 +21,8 @@ type CustomDatabase = Database & {
           content: string;
           created_at: string;
           updated_at: string | null;
+          status: string;
+          is_server_wide: boolean;
         };
         Insert: {
           id?: string;
@@ -28,6 +30,8 @@ type CustomDatabase = Database & {
           content: string;
           created_at?: string;
           updated_at?: string | null;
+          status?: string;
+          is_server_wide?: boolean;
         };
         Update: {
           id?: string;
@@ -35,6 +39,8 @@ type CustomDatabase = Database & {
           content?: string;
           created_at?: string;
           updated_at?: string | null;
+          status?: string;
+          is_server_wide?: boolean;
         };
       };
       application_seasons: {
@@ -159,6 +165,35 @@ type CustomDatabase = Database & {
           created_at?: string;
         };
       };
+      announcement_email_queue: {
+        Row: {
+          id: string;
+          announcement_id: string;
+          processed_at: string | null;
+          attempts: number;
+          created_at: string;
+          error: string | null;
+          status: string;
+        };
+        Insert: {
+          id?: string;
+          announcement_id: string;
+          processed_at?: string | null;
+          attempts?: number;
+          created_at?: string;
+          error?: string | null;
+          status?: string;
+        };
+        Update: {
+          id?: string;
+          announcement_id?: string;
+          processed_at?: string | null;
+          attempts?: number;
+          created_at?: string;
+          error?: string | null;
+          status?: string;
+        };
+      };
       account_deletion_requests: {
         Row: {
           id: string;
@@ -237,9 +272,30 @@ type CustomDatabase = Database & {
           updated_at?: string;
         };
       };
+      admin_users: {
+        Row: {
+          id: string;
+          user_id: string;
+          role: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          role?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          role?: string;
+          created_at?: string;
+        };
+      };
     } & Database['public']['Tables'];
     Functions: {
       get_users_by_ids: (args: { user_ids: string[] }) => { id: string; email: string }[];
+      find_users_by_email: (args: { email_query: string }) => { id: string; email: string }[];
     } & Database['public']['Functions'];
   } & Database['public'];
 };
