@@ -1,34 +1,16 @@
 
 import React from 'react';
-import { 
-  Dialog, DialogContent, DialogDescription, DialogHeader, 
-  DialogTitle, DialogFooter 
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Check, X, Eye } from 'lucide-react';
-
-interface Application {
-  id: string;
-  user_id: string;
-  discord_id: string;
-  discord_username?: string;
-  roblox_id: string;
-  roblox_username: string;
-  status: 'pending' | 'approved' | 'rejected';
-  created_at: string;
-  updated_at: string;
-  notes: string | null;
-  username?: string | null;
-  [key: string]: any;
-}
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card } from '@/components/ui/card';
+import { Check, X, AlertTriangle, Trash2 } from 'lucide-react';
 
 interface ApplicationViewDialogProps {
   showViewDialog: boolean;
   setShowViewDialog: (show: boolean) => void;
-  selectedApplication: Application | null;
-  handleStatusAction: (application: Application, action: 'approve' | 'reject') => void;
+  selectedApplication: any;
+  handleStatusAction: (application: any, action: 'approve' | 'reject' | 'waitlist' | 'delete') => void;
   getStatusBadge: (status: string) => JSX.Element;
   formatDate: (dateString: string) => string;
 }
@@ -45,138 +27,126 @@ const ApplicationViewDialog: React.FC<ApplicationViewDialogProps> = ({
 
   return (
     <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Bewerbungsdetails</DialogTitle>
           <DialogDescription>
-            Bewerbung von {selectedApplication?.username || "Unbekannter Benutzer"}
+            Bewerbung von {selectedApplication.username || "Unbekannter Benutzer"} - {formatDate(selectedApplication.created_at)}
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardContent className="pt-4">
-                <div className="space-y-2">
-                  <div>
-                    <Label className="text-sm font-medium">Benutzer</Label>
-                    <p className="text-sm">{selectedApplication.username || "Unbekannter Benutzer"}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium">Discord ID</Label>
-                    <p className="text-sm">{selectedApplication.discord_id}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium">Roblox Benutzername</Label>
-                    <p className="text-sm">{selectedApplication.roblox_username}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium">Roblox ID</Label>
-                    <p className="text-sm">{selectedApplication.roblox_id}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium">Alter</Label>
-                    <p className="text-sm">{selectedApplication.age} Jahre</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium">Eingereicht am</Label>
-                    <p className="text-sm">{formatDate(selectedApplication.created_at)}</p>
-                  </div>
+        <Tabs defaultValue="basic" className="w-full">
+          <TabsList className="w-full grid grid-cols-2">
+            <TabsTrigger value="basic">Grundinformationen</TabsTrigger>
+            <TabsTrigger value="details">Bewerbungsdetails</TabsTrigger>
+          </TabsList>
+          <TabsContent value="basic" className="space-y-4 mt-4">
+            <Card className="p-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-semibold mb-1">Status</h4>
+                  <div>{getStatusBadge(selectedApplication.status)}</div>
                 </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="pt-4">
-                <div className="space-y-2">
-                  <div>
-                    <Label className="text-sm font-medium">Status</Label>
-                    <p className="mt-1">{getStatusBadge(selectedApplication.status)}</p>
-                  </div>
-                  
-                  {selectedApplication.updated_at !== selectedApplication.created_at && (
-                    <div>
-                      <Label className="text-sm font-medium">Aktualisiert am</Label>
-                      <p className="text-sm">{formatDate(selectedApplication.updated_at)}</p>
-                    </div>
-                  )}
-                  
-                  {selectedApplication.notes && (
-                    <div>
-                      <Label className="text-sm font-medium">Notizen</Label>
-                      <p className="text-sm whitespace-pre-wrap">{selectedApplication.notes}</p>
-                    </div>
-                  )}
+                <div>
+                  <h4 className="text-sm font-semibold mb-1">Datum</h4>
+                  <p className="text-sm">{formatDate(selectedApplication.created_at)}</p>
                 </div>
-              </CardContent>
+                <div>
+                  <h4 className="text-sm font-semibold mb-1">Discord</h4>
+                  <p className="text-sm">{selectedApplication.discord_id}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold mb-1">Roblox</h4>
+                  <p className="text-sm">{selectedApplication.roblox_username}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold mb-1">Alter</h4>
+                  <p className="text-sm">{selectedApplication.age || "Nicht angegeben"}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold mb-1">Aktivität</h4>
+                  <p className="text-sm">{selectedApplication.activity_level || "Nicht angegeben"}/10</p>
+                </div>
+              </div>
             </Card>
-          </div>
-          
-          <div className="space-y-2">
-            <Card>
-              <CardContent className="pt-4">
-                <Label className="text-sm font-medium">Aktivitätslevel (1-10)</Label>
-                <p className="text-sm">{selectedApplication.activity_level}/10</p>
-              </CardContent>
+            {selectedApplication.notes && (
+              <Card className="p-4">
+                <h4 className="text-sm font-semibold mb-2">Admin-Notizen</h4>
+                <p className="text-sm whitespace-pre-wrap">{selectedApplication.notes}</p>
+              </Card>
+            )}
+          </TabsContent>
+          <TabsContent value="details" className="mt-4">
+            <Card className="p-4 space-y-4">
+              <div>
+                <h4 className="text-sm font-semibold mb-1">Erfahrung als Administrator</h4>
+                <p className="text-sm whitespace-pre-wrap">{selectedApplication.admin_experience || "Keine Angabe"}</p>
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold mb-1">Andere Server</h4>
+                <p className="text-sm whitespace-pre-wrap">{selectedApplication.other_servers || "Keine Angabe"}</p>
+              </div>
+              <div className="grid grid-cols-1 gap-4 mt-4">
+                <div>
+                  <h4 className="text-sm font-semibold mb-1">Regelverständnis</h4>
+                  <ul className="text-sm space-y-2">
+                    <li>
+                      <span className="font-medium">Freundschaftsregel:</span> {selectedApplication.friend_rule_violation}
+                    </li>
+                    <li>
+                      <span className="font-medium">Bodycam:</span> {selectedApplication.bodycam_understanding}
+                    </li>
+                    <li>
+                      <span className="font-medium">Situationshandhabung:</span> {selectedApplication.situation_handling}
+                    </li>
+                    <li>
+                      <span className="font-medium">Server-Altersbegrenzung:</span> {selectedApplication.server_age_understanding}
+                    </li>
+                    <li>
+                      <span className="font-medium">Taschen-RP:</span> {selectedApplication.taschen_rp_understanding}
+                    </li>
+                    <li>
+                      <span className="font-medium">VDM:</span> {selectedApplication.vdm_understanding}
+                    </li>
+                    <li>
+                      <span className="font-medium">FRP:</span> {selectedApplication.frp_understanding}
+                    </li>
+                  </ul>
+                </div>
+              </div>
             </Card>
-            
-            {Object.entries(selectedApplication).map(([key, value]) => {
-              // Only show text questions and answers
-              if (
-                typeof value === 'string' && 
-                !['id', 'user_id', 'discord_id', 'roblox_id', 'username', 'roblox_username', 
-                 'created_at', 'updated_at', 'status', 'notes'].includes(key) &&
-                key.includes('understanding') || key.includes('handling')
-              ) {
-                const label = key
-                  .replace(/_/g, ' ')
-                  .replace(/understanding/g, 'Verständnis')
-                  .replace(/handling/g, 'Umgang')
-                  .split(' ')
-                  .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                  .join(' ');
-                  
-                return (
-                  <Card key={key}>
-                    <CardContent className="pt-4">
-                      <Label className="text-sm font-medium">{label}</Label>
-                      <p className="text-sm whitespace-pre-wrap">{value}</p>
-                    </CardContent>
-                  </Card>
-                );
-              }
-              return null;
-            })}
-          </div>
-        </div>
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setShowViewDialog(false)}>
-            Schließen
-          </Button>
-          
-          {selectedApplication?.status === 'pending' && (
-            <>
+          </TabsContent>
+        </Tabs>
+        <DialogFooter className="flex justify-between gap-2 sm:justify-between">
+          <Button variant="outline" onClick={() => setShowViewDialog(false)}>Schließen</Button>
+          {selectedApplication.status === 'pending' && (
+            <div className="flex gap-2">
               <Button 
                 variant="default" 
                 className="bg-green-600 hover:bg-green-700"
-                onClick={() => {
-                  setShowViewDialog(false);
-                  handleStatusAction(selectedApplication, 'approve');
-                }}
+                onClick={() => handleStatusAction(selectedApplication, 'approve')}
               >
                 <Check className="h-4 w-4 mr-1" /> Annehmen
               </Button>
               <Button 
-                variant="destructive"
-                onClick={() => {
-                  setShowViewDialog(false);
-                  handleStatusAction(selectedApplication, 'reject');
-                }}
+                variant="destructive" 
+                onClick={() => handleStatusAction(selectedApplication, 'reject')}
               >
                 <X className="h-4 w-4 mr-1" /> Ablehnen
               </Button>
-            </>
+              <Button 
+                variant="default"
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={() => handleStatusAction(selectedApplication, 'waitlist')}
+              >
+                <AlertTriangle className="h-4 w-4 mr-1" /> Warteliste
+              </Button>
+              <Button 
+                variant="secondary"
+                onClick={() => handleStatusAction(selectedApplication, 'delete')}
+              >
+                <Trash2 className="h-4 w-4 mr-1" /> Löschen
+              </Button>
+            </div>
           )}
         </DialogFooter>
       </DialogContent>

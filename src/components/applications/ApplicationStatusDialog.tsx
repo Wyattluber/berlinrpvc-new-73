@@ -1,18 +1,14 @@
 
 import React from 'react';
-import { 
-  Dialog, DialogContent, DialogDescription, DialogHeader, 
-  DialogTitle, DialogFooter 
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Check, X, LoaderIcon } from 'lucide-react';
+import { LoaderIcon } from 'lucide-react';
 
 interface ApplicationStatusDialogProps {
   showStatusDialog: boolean;
   setShowStatusDialog: (show: boolean) => void;
-  statusAction: 'approve' | 'reject' | null;
+  statusAction: 'approve' | 'reject' | 'waitlist' | 'delete' | null;
   statusNotes: string;
   setStatusNotes: (notes: string) => void;
   handleStatusSubmit: () => Promise<void>;
@@ -28,60 +24,103 @@ const ApplicationStatusDialog: React.FC<ApplicationStatusDialogProps> = ({
   handleStatusSubmit,
   updatingStatus
 }) => {
+  const getStatusTitle = () => {
+    switch (statusAction) {
+      case 'approve':
+        return 'Bewerbung annehmen';
+      case 'reject':
+        return 'Bewerbung ablehnen';
+      case 'waitlist':
+        return 'Auf Warteliste setzen';
+      case 'delete':
+        return 'Bewerbung löschen';
+      default:
+        return 'Status aktualisieren';
+    }
+  };
+
+  const getStatusDescription = () => {
+    switch (statusAction) {
+      case 'approve':
+        return 'Die Bewerbung wird angenommen. Du kannst optional Anmerkungen hinzufügen, die der Bewerber sehen wird.';
+      case 'reject':
+        return 'Die Bewerbung wird abgelehnt. Du kannst optional Anmerkungen hinzufügen, die der Bewerber sehen wird.';
+      case 'waitlist':
+        return 'Die Bewerbung wird auf die Warteliste gesetzt. Du kannst optional Anmerkungen hinzufügen, die der Bewerber sehen wird.';
+      case 'delete':
+        return 'Die Bewerbung wird gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.';
+      default:
+        return 'Der Status der Bewerbung wird aktualisiert.';
+    }
+  };
+
+  const getStatusButtonText = () => {
+    switch (statusAction) {
+      case 'approve':
+        return 'Annehmen';
+      case 'reject':
+        return 'Ablehnen';
+      case 'waitlist':
+        return 'Auf Warteliste setzen';
+      case 'delete':
+        return 'Löschen';
+      default:
+        return 'Aktualisieren';
+    }
+  };
+
+  const getStatusButtonClass = () => {
+    switch (statusAction) {
+      case 'approve':
+        return 'bg-green-600 hover:bg-green-700';
+      case 'reject':
+        return 'bg-destructive hover:bg-destructive/90';
+      case 'waitlist':
+        return 'bg-blue-600 hover:bg-blue-700';
+      case 'delete':
+        return 'bg-gray-600 hover:bg-gray-700';
+      default:
+        return '';
+    }
+  };
+
   return (
     <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>
-            {statusAction === 'approve' ? 'Bewerbung annehmen' : 'Bewerbung ablehnen'}
-          </DialogTitle>
+          <DialogTitle>{getStatusTitle()}</DialogTitle>
           <DialogDescription>
-            {statusAction === 'approve' 
-              ? 'Bist du sicher, dass du diese Bewerbung annehmen möchtest?' 
-              : 'Bitte gib einen Grund für die Ablehnung ein.'}
+            {getStatusDescription()}
           </DialogDescription>
         </DialogHeader>
-        
-        <div className="py-4">
-          <Label htmlFor="notes">Notizen</Label>
-          <Textarea 
-            id="notes" 
-            value={statusNotes} 
-            onChange={(e) => setStatusNotes(e.target.value)} 
-            placeholder={statusAction === 'approve' 
-              ? 'Optionale Notizen zur Bewerbung...' 
-              : 'Grund für die Ablehnung...'}
-            rows={5}
+        <div className="grid gap-4 py-4">
+          <Textarea
+            placeholder="Anmerkungen (optional)"
+            value={statusNotes}
+            onChange={(e) => setStatusNotes(e.target.value)}
+            className="min-h-[100px]"
           />
         </div>
-        
         <DialogFooter>
-          <Button variant="outline" onClick={() => setShowStatusDialog(false)}>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowStatusDialog(false)}
+            disabled={updatingStatus}
+          >
             Abbrechen
           </Button>
           <Button 
-            variant={statusAction === 'approve' ? 'default' : 'destructive'}
-            className={statusAction === 'approve' ? 'bg-green-600 hover:bg-green-700' : ''}
+            variant="default"
             onClick={handleStatusSubmit}
-            disabled={updatingStatus || (statusAction === 'reject' && !statusNotes.trim())}
+            disabled={updatingStatus}
+            className={getStatusButtonClass()}
           >
             {updatingStatus ? (
               <>
-                <LoaderIcon className="h-4 w-4 mr-2 animate-spin" />
-                Verarbeite...
+                <LoaderIcon className="mr-2 h-4 w-4 animate-spin" /> Verarbeite...
               </>
             ) : (
-              <>
-                {statusAction === 'approve' ? (
-                  <>
-                    <Check className="h-4 w-4 mr-1" /> Annehmen
-                  </>
-                ) : (
-                  <>
-                    <X className="h-4 w-4 mr-1" /> Ablehnen
-                  </>
-                )}
-              </>
+              getStatusButtonText()
             )}
           </Button>
         </DialogFooter>

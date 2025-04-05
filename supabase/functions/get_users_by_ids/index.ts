@@ -83,13 +83,21 @@ serve(async (req) => {
       throw error;
     }
     
-    // Filter to only the requested user IDs
-    const filteredUsers = users.users
-      .filter(u => user_ids.includes(u.id))
-      .map(u => ({
-        id: u.id,
-        email: u.email
-      }));
+    // If user_ids is empty or null, return all users
+    const filteredUsers = user_ids.length === 0 
+      ? users.users.map(u => ({
+          id: u.id,
+          email: u.email,
+          username: u.user_metadata?.username || u.email,
+          created_at: u.created_at
+        }))
+      : users.users
+          .filter(u => user_ids.includes(u.id))
+          .map(u => ({
+            id: u.id,
+            email: u.email,
+            username: u.user_metadata?.username || u.email
+          }));
     
     // Return the user data
     return new Response(

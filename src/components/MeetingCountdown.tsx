@@ -20,13 +20,18 @@ const MeetingCountdown = () => {
 
   useEffect(() => {
     const checkAdminStatus = async () => {
-      const { data: adminData } = await supabase
-        .from('admin_users')
-        .select('role')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id || '')
-        .maybeSingle();
-      
-      setIsAdmin(!!adminData);
+      try {
+        const { data: adminData } = await supabase
+          .from('admin_users')
+          .select('role')
+          .eq('user_id', (await supabase.auth.getUser()).data.user?.id || '')
+          .maybeSingle();
+        
+        setIsAdmin(!!adminData);
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        setIsAdmin(false);
+      }
     };
     
     checkAdminStatus();
@@ -89,7 +94,10 @@ const MeetingCountdown = () => {
     
     const updateCountdown = () => {
       const nextMeeting = calculateNextMeeting();
-      if (!nextMeeting) return;
+      if (!nextMeeting) {
+        setCountdown(null);
+        return;
+      }
       
       const now = new Date();
       const timeDiff = nextMeeting.getTime() - now.getTime();
@@ -177,7 +185,9 @@ const MeetingCountdown = () => {
               </div>
             </div>
           ) : (
-            <div className="text-sm">Berechne...</div>
+            <div className="text-sm text-center p-4 bg-gray-100 rounded">
+              Countdown konnte nicht berechnet werden
+            </div>
           )}
         </div>
         

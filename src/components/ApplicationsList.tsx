@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
-import { LoaderIcon, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { LoaderIcon, CheckCircle, XCircle, Clock, AlertTriangle, Trash2 } from 'lucide-react';
 import { fetchApplications, updateApplicationStatus } from '@/lib/adminService';
 import { useIsMobile } from '@/hooks/use-mobile';
 import ApplicationListDesktop from './applications/ApplicationListDesktop';
@@ -16,7 +16,7 @@ interface Application {
   discord_username?: string;
   roblox_id: string;
   roblox_username: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'waitlist' | 'deleted';
   created_at: string;
   updated_at: string;
   notes: string | null;
@@ -31,7 +31,7 @@ const ApplicationsList = () => {
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
-  const [statusAction, setStatusAction] = useState<'approve' | 'reject' | null>(null);
+  const [statusAction, setStatusAction] = useState<'approve' | 'reject' | 'waitlist' | 'delete' | null>(null);
   const [statusNotes, setStatusNotes] = useState('');
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -73,7 +73,7 @@ const ApplicationsList = () => {
     setShowViewDialog(true);
   };
 
-  const handleStatusAction = (application: Application, action: 'approve' | 'reject') => {
+  const handleStatusAction = (application: Application, action: 'approve' | 'reject' | 'waitlist' | 'delete') => {
     setSelectedApplication(application);
     setStatusAction(action);
     setStatusNotes('');
@@ -85,12 +85,29 @@ const ApplicationsList = () => {
 
     setUpdatingStatus(true);
     try {
-      const newStatus = statusAction === 'approve' ? 'approved' : 'rejected';
+      let newStatus: string;
+      switch (statusAction) {
+        case 'approve':
+          newStatus = 'approved';
+          break;
+        case 'reject':
+          newStatus = 'rejected';
+          break;
+        case 'waitlist':
+          newStatus = 'waitlist';
+          break;
+        case 'delete':
+          newStatus = 'deleted';
+          break;
+        default:
+          newStatus = statusAction;
+      }
+      
       await updateApplicationStatus(selectedApplication.id, newStatus, statusNotes);
 
       toast({
         title: 'Erfolg',
-        description: `Die Bewerbung wurde erfolgreich ${statusAction === 'approve' ? 'angenommen' : 'abgelehnt'}.`
+        description: getStatusActionMessage(statusAction)
       });
 
       // Update local state
@@ -111,12 +128,31 @@ const ApplicationsList = () => {
     }
   };
 
+  const getStatusActionMessage = (action: string) => {
+    switch (action) {
+      case 'approve':
+        return 'Die Bewerbung wurde erfolgreich angenommen.';
+      case 'reject':
+        return 'Die Bewerbung wurde erfolgreich abgelehnt.';
+      case 'waitlist':
+        return 'Die Bewerbung wurde erfolgreich auf die Warteliste gesetzt.';
+      case 'delete':
+        return 'Die Bewerbung wurde erfolgreich gelöscht.';
+      default:
+        return 'Der Status wurde erfolgreich aktualisiert.';
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" /> Angenommen</span>;
       case 'rejected':
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" /> Abgelehnt</span>;
+      case 'waitlist':
+        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"><AlertTriangle className="w-3 h-3 mr-1" /> Warteliste</span>;
+      case 'deleted':
+        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"><Trash2 className="w-3 h-3 mr-1" /> Gelöscht</span>;
       case 'pending':
       default:
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" /> Ausstehend</span>;
