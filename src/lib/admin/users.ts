@@ -302,6 +302,15 @@ export async function getUserProfile(userId: string) {
     roblox_id: string;
   }
   
+  // Create a default profile object to ensure consistent return type
+  const defaultProfile: ProfileData = { 
+    id: userId, 
+    username: '', 
+    avatar_url: '', 
+    discord_id: '', 
+    roblox_id: '' 
+  };
+  
   try {
     const { data, error } = await supabase
       .from('profiles')
@@ -311,24 +320,17 @@ export async function getUserProfile(userId: string) {
     
     if (error) throw error;
     
-    // Return the data or a default object with the expected properties
-    return data as ProfileData || { 
-      id: userId, 
-      username: '', 
-      avatar_url: '', 
-      discord_id: '', 
-      roblox_id: '' 
-    };
+    // If we have data, cast it as ProfileData and return it
+    if (data) {
+      return data as ProfileData;
+    }
+    
+    // If no data is found, return the default profile
+    return defaultProfile;
   } catch (error) {
     console.error('Error fetching user profile:', error);
-    // Return a default object with the expected properties
-    return { 
-      id: userId, 
-      username: '', 
-      avatar_url: '', 
-      discord_id: '', 
-      roblox_id: '' 
-    };
+    // Return the default profile on error
+    return defaultProfile;
   }
 }
 
