@@ -17,6 +17,7 @@ const MeetingCountdown = () => {
   const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [nextMeetingDate, setNextMeetingDate] = useState<Date | null>(null);
 
   useEffect(() => {
     const checkAdminStatus = async () => {
@@ -99,6 +100,8 @@ const MeetingCountdown = () => {
         return;
       }
       
+      setNextMeetingDate(nextMeeting);
+      
       const now = new Date();
       const timeDiff = nextMeeting.getTime() - now.getTime();
       
@@ -123,6 +126,20 @@ const MeetingCountdown = () => {
     
     return () => clearInterval(intervalId);
   }, [settings]);
+
+  const formatMeetingDate = (date: Date | null) => {
+    if (!date) return 'Datum unbekannt';
+    
+    return date.toLocaleDateString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }) + ', ' + date.toLocaleTimeString('de-DE', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }) + ' Uhr';
+  };
 
   if (!isAdmin) {
     return null; // Only show to admins and moderators
@@ -163,7 +180,8 @@ const MeetingCountdown = () => {
       </CardHeader>
       <CardContent>
         <div className="mb-2">
-          <div className="font-medium text-sm text-muted-foreground mb-1">Nächstes Meeting in:</div>
+          <div className="font-medium text-sm text-muted-foreground mb-1">Nächstes Meeting:</div>
+          <div className="font-medium mb-3">{formatMeetingDate(nextMeetingDate)}</div>
           
           {countdown ? (
             <div className="grid grid-cols-4 gap-1 text-center">
