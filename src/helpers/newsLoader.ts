@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 // First, declare the global function type
@@ -8,7 +9,7 @@ declare global {
 }
 
 // Then, implement and export the function
-export const loadNewsIntoProfile = () => {
+export const loadNewsIntoProfile = async () => {
   const newsFeedContainer = document.getElementById('profile-news-feed');
   if (!newsFeedContainer) return;
   

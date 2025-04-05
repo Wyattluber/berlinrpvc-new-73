@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -136,8 +135,7 @@ const NewsManagement: React.FC = () => {
     
     setIsSubmitting(true);
     try {
-      // Fix: Use correct number of arguments for addNewsItem
-      const result = await addNewsItem(title, content, status);
+      const result = await addNewsItem(title, content);
       
       if (result.success) {
         toast({
@@ -184,12 +182,10 @@ const NewsManagement: React.FC = () => {
     
     setIsSubmitting(true);
     try {
-      // Fix: Use correct number of arguments for updateNewsItem
       const result = await updateNewsItem(
         activeNewsItem.id, 
         title, 
-        content, 
-        status
+        content
       );
       
       if (result.success) {
