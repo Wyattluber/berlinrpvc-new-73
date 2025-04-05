@@ -35,7 +35,7 @@ const AdminDashboard = () => {
           return;
         }
         
-        // If user has admin access, redirect to profile with admin tab
+        // Navigate directly to the profile page with admin tab
         navigate('/profile?tab=admin');
       } catch (error) {
         console.error("Error checking admin access:", error);

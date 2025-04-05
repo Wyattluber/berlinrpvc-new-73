@@ -3,12 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
-import { LoaderIcon, CheckCircle, XCircle, Clock, Eye, Check, X } from 'lucide-react';
+import { LoaderIcon, CheckCircle, XCircle, Clock, Eye, Check, X, Filter, RefreshCw } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { fetchApplications, updateApplicationStatus } from '@/lib/adminService';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Application {
   id: string;
@@ -27,6 +29,7 @@ interface Application {
 
 const ApplicationsList = () => {
   const [applications, setApplications] = useState<Application[]>([]);
+  const [filteredApplications, setFilteredApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
   const [showViewDialog, setShowViewDialog] = useState(false);
@@ -34,17 +37,28 @@ const ApplicationsList = () => {
   const [statusAction, setStatusAction] = useState<'approve' | 'reject' | null>(null);
   const [statusNotes, setStatusNotes] = useState('');
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     loadApplications();
   }, []);
 
+  useEffect(() => {
+    if (statusFilter === 'all') {
+      setFilteredApplications(applications);
+    } else {
+      setFilteredApplications(applications.filter(app => app.status === statusFilter));
+    }
+  }, [statusFilter, applications]);
+
   const loadApplications = async () => {
     setLoading(true);
     try {
       const data = await fetchApplications();
-      console.log('Loaded applications:', data); // Debug log
+      console.log('Loaded applications:', data);
       setApplications(data);
+      setFilteredApplications(data);
     } catch (error) {
       console.error('Error loading applications', error);
       toast({
@@ -126,8 +140,127 @@ const ApplicationsList = () => {
     );
   }
 
-  return (
+  // Render mobile card view for applications
+  const renderMobileView = () => (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex-1 mr-2">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Nach Status filtern" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle anzeigen</SelectItem>
+              <SelectItem value="pending">Ausstehend</SelectItem>
+              <SelectItem value="approved">Angenommen</SelectItem>
+              <SelectItem value="rejected">Abgelehnt</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={loadApplications}
+          className="flex-shrink-0"
+        >
+          <RefreshCw className="h-4 w-4 mr-1" /> Aktualisieren
+        </Button>
+      </div>
+
+      {filteredApplications.length === 0 ? (
+        <div className="text-center p-8 border rounded-md">
+          <p>Keine Bewerbungen gefunden.</p>
+        </div>
+      ) : (
+        filteredApplications.map((application) => (
+          <Card key={application.id} className="shadow-sm">
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="text-base">{application.username || "Unbekannter Benutzer"}</CardTitle>
+                  <CardDescription className="text-xs">
+                    {formatDate(application.created_at)}
+                  </CardDescription>
+                </div>
+                <div>{getStatusBadge(application.status)}</div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-sm space-y-2">
+                <div className="flex justify-between">
+                  <span className="font-medium">Discord:</span>
+                  <span className="text-right">{application.discord_id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Roblox:</span>
+                  <span className="text-right">{application.roblox_username}</span>
+                </div>
+              </div>
+              
+              <div className="mt-4 flex justify-end gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleViewApplication(application)}
+                  className="w-full"
+                >
+                  <Eye className="h-4 w-4 mr-1" /> Details
+                </Button>
+                
+                {application.status === 'pending' && (
+                  <div className="flex gap-2 w-full">
+                    <Button 
+                      variant="default" 
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 w-1/2"
+                      onClick={() => handleStatusAction(application, 'approve')}
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      className="w-1/2"
+                      onClick={() => handleStatusAction(application, 'reject')}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))
+      )}
+    </div>
+  );
+
+  // Render desktop table view for applications
+  const renderDesktopView = () => (
     <div className="overflow-hidden w-full">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex-1 max-w-xs">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-9">
+              <SelectValue placeholder="Nach Status filtern" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle anzeigen</SelectItem>
+              <SelectItem value="pending">Ausstehend</SelectItem>
+              <SelectItem value="approved">Angenommen</SelectItem>
+              <SelectItem value="rejected">Abgelehnt</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={loadApplications}
+        >
+          <RefreshCw className="h-4 w-4 mr-1" /> Aktualisieren
+        </Button>
+      </div>
+
       <div className="overflow-x-auto w-full">
         <Table className="min-w-[900px]">
           <TableHeader>
@@ -141,14 +274,14 @@ const ApplicationsList = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {applications.length === 0 ? (
+            {filteredApplications.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center">
                   Keine Bewerbungen gefunden.
                 </TableCell>
               </TableRow>
             ) : (
-              applications.map((application) => (
+              filteredApplications.map((application) => (
                 <TableRow key={application.id}>
                   <TableCell className="font-medium">
                     {application.username || "Unbekannter Benutzer"}
@@ -396,6 +529,12 @@ const ApplicationsList = () => {
         </DialogContent>
       </Dialog>
     </div>
+  );
+
+  return (
+    <>
+      {isMobile ? renderMobileView() : renderDesktopView()}
+    </>
   );
 };
 
