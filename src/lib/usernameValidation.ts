@@ -1,3 +1,4 @@
+import { supabase } from '@/integrations/supabase/client';
 
 // List of forbidden words for usernames
 const forbiddenWords = [
@@ -22,7 +23,7 @@ const forbiddenWords = [
  * @param username Username to validate
  * @returns Object with validation result
  */
-export function validateUsername(username: string): { valid: boolean; reason?: string } {
+export async function validateUsername(username: string): Promise<{ valid: boolean; reason?: string }> {
   // Check if username is empty
   if (!username.trim()) {
     return { valid: false, reason: "Benutzername darf nicht leer sein" };
@@ -38,19 +39,31 @@ export function validateUsername(username: string): { valid: boolean; reason?: s
     return { valid: false, reason: "Benutzername darf nicht länger als 20 Zeichen sein" };
   }
   
-  // Convert to lowercase for case-insensitive matching
-  const lowercaseUsername = username.toLowerCase();
-  
-  // Check for forbidden words
-  for (const word of forbiddenWords) {
-    if (lowercaseUsername.includes(word.toLowerCase())) {
-      return { valid: false, reason: `Benutzername enthält ein nicht erlaubtes Wort: '${word}'` };
-    }
-  }
-  
   // Check for valid characters (letters, numbers, underscores, hyphens)
   if (!/^[a-zA-Z0-9_\-]+$/.test(username)) {
     return { valid: false, reason: "Benutzername darf nur Buchstaben, Zahlen, Unterstriche und Bindestriche enthalten" };
+  }
+  
+  // Check against blacklist from database
+  try {
+    const lowercaseUsername = username.toLowerCase();
+    const { data: blacklistedWords, error } = await supabase
+      .from('username_blacklist')
+      .select('word');
+      
+    if (error) {
+      console.error('Error checking blacklist:', error);
+      // Continue with other validations if blacklist check fails
+    } else if (blacklistedWords) {
+      for (const item of blacklistedWords) {
+        if (lowercaseUsername.includes(item.word.toLowerCase())) {
+          return { valid: false, reason: `Benutzername enthält ein nicht erlaubtes Wort: '${item.word}'` };
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error checking blacklist:', error);
+    // Continue with other validations if blacklist check fails
   }
   
   return { valid: true };

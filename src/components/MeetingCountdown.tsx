@@ -12,7 +12,14 @@ const formatMeetingDay = (day: string) => {
     'thursday': 'Donnerstag',
     'friday': 'Freitag',
     'saturday': 'Samstag',
-    'sunday': 'Sonntag'
+    'sunday': 'Sonntag',
+    'montag': 'Montag',
+    'dienstag': 'Dienstag',
+    'mittwoch': 'Mittwoch',
+    'donnerstag': 'Donnerstag',
+    'freitag': 'Freitag',
+    'samstag': 'Samstag',
+    'sonntag': 'Sonntag',
   };
   return days[day.toLowerCase()] || day;
 };
@@ -22,8 +29,22 @@ const getNextMeetingDate = (dayOfWeek: string, timeString: string): Date | null 
   try {
     if (!dayOfWeek || !timeString) return null;
     
+    // Support both English and German day names
+    const germanToDays: Record<string, string> = {
+      'montag': 'monday',
+      'dienstag': 'tuesday',
+      'mittwoch': 'wednesday',
+      'donnerstag': 'thursday',
+      'freitag': 'friday',
+      'samstag': 'saturday',
+      'sonntag': 'sunday'
+    };
+    
+    // Normalize day name to English
+    const normalizedDay = germanToDays[dayOfWeek.toLowerCase()] || dayOfWeek.toLowerCase();
+    
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const targetDay = days.indexOf(dayOfWeek.toLowerCase());
+    const targetDay = days.indexOf(normalizedDay);
     if (targetDay === -1) return null;
     
     const now = new Date();

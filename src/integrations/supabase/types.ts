@@ -125,7 +125,7 @@ export type Database = {
             foreignKeyName: "announcement_email_queue_announcement_id_fkey"
             columns: ["announcement_id"]
             isOneToOne: false
-            referencedRelation: "announcements"
+            referencedRelation: "news"
             referencedColumns: ["id"]
           },
         ]
@@ -599,6 +599,24 @@ export type Database = {
           meeting_notes?: string | null
           meeting_time?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      username_blacklist: {
+        Row: {
+          created_at: string
+          id: string
+          word: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          word: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          word?: string
         }
         Relationships: []
       }
