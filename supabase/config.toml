@@ -9,3 +9,6 @@ enabled = true
 
 [functions.get_users_by_ids]
 verify_jwt = true
+
+[functions.send-announcement-emails]
+verify_jwt = true

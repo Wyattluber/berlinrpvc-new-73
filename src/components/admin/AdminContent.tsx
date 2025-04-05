@@ -1,19 +1,19 @@
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import DashboardOverview from '@/components/admin/DashboardOverview';
-import UsersManagement from '@/components/admin/UsersManagement';
+import AdminUserTable from '@/components/admin/UserRoleManager';
+import AnnouncementsList from '@/components/admin/AnnouncementsManagement';
 import ApplicationsList from '@/components/ApplicationsList';
-import NewsManagement from '@/components/NewsManagement';
-import PartnerServersManagement from '@/components/PartnerServersManagement';
-import SubServersManagement from '@/components/SubServersManagement';
 import TeamSettingsForm from '@/components/admin/TeamSettingsForm';
-import TeamAbsencesList from '@/components/admin/TeamAbsencesList';
-import ModeratorAbsencePanel from '@/components/admin/ModeratorAbsencePanel';
-import ServerStats from '@/components/ServerStats';
-import IdChangeRequestManager from '@/components/admin/IdChangeRequestManager';
+import NewsManagement from '@/components/NewsManagement';
 import AccountDeletionRequestManager from '@/components/admin/AccountDeletionRequestManager';
-import DiscordLinkManager from '@/components/admin/DiscordLinkManager';
+import IdChangeRequestManager from '@/components/admin/IdChangeRequestManager';
+import ApplicationSeasonManager from '@/components/ApplicationSeasonManager';
+import DashboardOverview from '@/components/admin/DashboardOverview';
+import SubServersManagement from '@/components/SubServersManagement';
+import PartnerServersManagement from '@/components/PartnerServersManagement';
+import ModeratorAbsencePanel from '@/components/admin/ModeratorAbsencePanel';
+import TeamAbsencesList from '@/components/admin/TeamAbsencesList';
+import AnnouncementsManagement from '@/components/admin/AnnouncementsManagement';
 
 interface AdminContentProps {
   isAdmin: boolean;
@@ -34,127 +34,71 @@ const AdminContent: React.FC<AdminContentProps> = ({
   handleUpdateRole,
   handleDeleteUser
 }) => {
-  // Only moderators and admins should see team-related content
-  if (!isModerator && !isAdmin) {
-    return (
-      <Card className="mt-4">
-        <CardHeader>
-          <CardTitle>Zugriff verweigert</CardTitle>
-          <CardDescription>
-            Du benötigst Administrator- oder Moderator-Berechtigungen, um auf diesen Inhalt zuzugreifen.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
-
-  if (isAdmin) {
+  // Render component based on active section
+  const renderComponent = () => {
     switch (activeSection) {
       case 'dashboard':
-        return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
+        return <DashboardOverview userCount={userCount} />;
       case 'users':
-        return <UsersManagement adminUsers={adminUsers} handleUpdateRole={handleUpdateRole} handleDeleteUser={handleDeleteUser} />;
-      case 'applications':
+        if (!isAdmin) return <AccessDenied />;
         return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Bewerbungsverwaltung</h2>
-            <ApplicationsList />
-          </div>
+          <AdminUserTable
+            adminUsers={adminUsers}
+            onUpdateRole={handleUpdateRole}
+            onDeleteUser={handleDeleteUser}
+          />
         );
+      case 'applications':
+        return <ApplicationsList />;
+      case 'announcements':
+        return <AnnouncementsManagement />;
       case 'news':
         return <NewsManagement />;
-      case 'partners':
-        return <PartnerServersManagement />;
-      case 'sub_servers':
-        return <SubServersManagement />;
+      case 'team-settings':
+        if (!isAdmin) return <AccessDenied />;
+        return <TeamSettingsForm />;
+      case 'team-absences':
+        return <TeamAbsencesList />;
+      case 'my-absences':
+        return <ModeratorAbsencePanel />;
       case 'change-requests':
+        if (!isAdmin) return <AccessDenied />;
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Änderungsanträge</h2>
             <IdChangeRequestManager />
           </div>
         );
-      case 'discord-link':
+      case 'delete-requests':
+        if (!isAdmin) return <AccessDenied />;
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Discord-Link verwalten</h2>
-            <DiscordLinkManager />
-          </div>
-        );
-      case 'deletion-requests':
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Kontolöschungsanträge</h2>
             <AccountDeletionRequestManager />
           </div>
         );
-      case 'team-settings':
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Teameinstellungen</h2>
-            <TeamSettingsForm />
-          </div>
-        );
-      case 'absences':
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Team-Abmeldungen</h2>
-            <Card>
-              <CardHeader>
-                <CardTitle>Übersicht der Abmeldungen</CardTitle>
-                <CardDescription>
-                  Sieh ein, welche Teammitglieder sich vom Meeting abgemeldet haben
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <TeamAbsencesList />
-              </CardContent>
-            </Card>
-            <ModeratorAbsencePanel />
-          </div>
-        );
+      case 'seasons':
+        if (!isAdmin) return <AccessDenied />;
+        return <ApplicationSeasonManager />;
+      case 'subservers':
+        if (!isAdmin) return <AccessDenied />;
+        return <SubServersManagement />;
+      case 'partners':
+        if (!isAdmin) return <AccessDenied />;
+        return <PartnerServersManagement />;
       default:
-        return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
+        return <DashboardOverview userCount={userCount} />;
     }
-  } else if (isModerator) {
-    switch (activeSection) {
-      case 'dashboard':
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Moderator Dashboard</h2>
-            <Card>
-              <CardHeader>
-                <CardTitle>Willkommen im Moderatorenbereich</CardTitle>
-                <CardDescription>
-                  Hier kannst du Bewerbungen einsehen und dich von Team-Meetings abmelden
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ServerStats isAdmin={false} />
-              </CardContent>
-            </Card>
-          </div>
-        );
-      case 'applications':
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Bewerbungsverwaltung</h2>
-            <ApplicationsList />
-          </div>
-        );
-      case 'absence-form':
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Vom Team-Meeting abmelden</h2>
-            <ModeratorAbsencePanel />
-          </div>
-        );
-      default:
-        return <div>Bereich nicht gefunden</div>;
-    }
-  }
-  
-  return null;
+  };
+
+  return <div>{renderComponent()}</div>;
 };
+
+const AccessDenied = () => (
+  <div className="p-6 bg-red-50 border border-red-200 rounded-md">
+    <h2 className="text-lg font-bold text-red-800 mb-2">Zugriff verweigert</h2>
+    <p className="text-red-600">
+      Du hast keine Berechtigung, auf diesen Bereich zuzugreifen. Bitte kontaktiere einen Administrator, wenn du glaubst, dass dies ein Fehler ist.
+    </p>
+  </div>
+);
 
 export default AdminContent;

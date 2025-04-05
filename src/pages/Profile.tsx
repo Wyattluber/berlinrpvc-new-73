@@ -25,6 +25,7 @@ import AdminPanel from '@/pages/AdminPanel';
 import { getTeamSettings } from '@/lib/adminService';
 import UserDataChangeRequest from '@/components/profile/UserDataChangeRequest';
 import AccountDeletionRequest from '@/components/profile/AccountDeletionRequest';
+import AnnouncementsList from '@/components/AnnouncementsList';
 
 type Application = {
   id: string;
@@ -142,6 +143,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const session = useContext(SessionContext);
   const activeTab = searchParams.get('tab') || 'dashboard';
+  const announcementId = searchParams.get('id');
 
   const { 
     isLoading: isApplicationsLoading, 
@@ -502,7 +504,13 @@ const Profile = () => {
     setRoleType('moderator');
   };
 
-  const showApplicationsTab = !isAdminOrModerator();
+  const showAdminTab = isAdminOrModerator();
+
+  const tabs = [
+    { id: 'profile', label: 'Profil' },
+    { id: 'announcements', label: 'Ankündigungen' },
+    ...(showAdminTab ? [{ id: 'admin', label: 'Admin' }] : []),
+  ];
 
   if (loading) {
     return (
@@ -559,18 +567,12 @@ const Profile = () => {
                 className="w-full"
               >
                 <TabsList className="w-full rounded-none border-b">
-                  <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-                  <TabsTrigger value="account">Konto</TabsTrigger>
-                  {showApplicationsTab && (
-                    <TabsTrigger value="applications">Bewerbungen</TabsTrigger>
-                  )}
-                  <TabsTrigger value="security">Sicherheit</TabsTrigger>
-                  {(isAdmin || isModerator) && (
-                    <TabsTrigger value="admin">Admin Dashboard</TabsTrigger>
-                  )}
+                  {tabs.map(tab => (
+                    <TabsTrigger key={tab.id} value={tab.id}>{tab.label}</TabsTrigger>
+                  ))}
                 </TabsList>
                 
-                <TabsContent value="dashboard" className="p-6 space-y-6">
+                <TabsContent value="profile" className="p-6 space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {isAdminOrModerator() && (
                       <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
@@ -695,6 +697,10 @@ const Profile = () => {
                   </Card>
                 </TabsContent>
                 
+                <TabsContent value="announcements" className="pt-6">
+                  <AnnouncementsList selectedId={announcementId} />
+                </TabsContent>
+                
                 <TabsContent value="account" className="p-6 space-y-4">
                   <div className="flex flex-col items-center gap-4">
                     <ProfileImageUpload
@@ -760,7 +766,7 @@ const Profile = () => {
                                 <Lock className="h-4 w-4 text-gray-400" />
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Diese ID kann nur über einen Änderungsantrag geändert werden.</p>
+                                <p>Diese ID kann nur über einen Änderungsantrag ge��ndert werden.</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
