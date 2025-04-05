@@ -54,10 +54,9 @@ export async function addNewsItem(title: string, content: string, status: string
  */
 export async function createNews(newsData: Partial<NewsItem>) {
   try {
-    // Ensure is_server_wide is false for security
+    // Ensure safety of the data
     const safeNewsData = {
-      ...newsData,
-      is_server_wide: false
+      ...newsData
     };
     
     const { data, error } = await supabase
@@ -92,15 +91,9 @@ export async function updateNewsItem(id: string, title: string, content: string,
  */
 export async function updateNews(id: string, newsData: Partial<NewsItem>) {
   try {
-    // Ensure is_server_wide is false for security
-    const safeNewsData = {
-      ...newsData,
-      is_server_wide: false
-    };
-    
     const { data, error } = await supabase
       .from('news')
-      .update(safeNewsData)
+      .update(newsData)
       .eq('id', id)
       .select()
       .single();

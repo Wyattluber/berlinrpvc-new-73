@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Check, X, Eye } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 
 interface Application {
   id: string;
@@ -21,6 +22,17 @@ interface Application {
   updated_at: string;
   notes: string | null;
   username?: string | null;
+  age?: number;
+  activity_level?: number;
+  frp_understanding?: string;
+  vdm_understanding?: string;
+  taschen_rp_understanding?: string;
+  server_age_understanding?: string;
+  situation_handling?: string;
+  bodycam_understanding?: string;
+  friend_rule_violation?: string;
+  other_servers?: string;
+  admin_experience?: string;
   [key: string]: any;
 }
 
@@ -43,13 +55,26 @@ const ApplicationViewDialog: React.FC<ApplicationViewDialogProps> = ({
 }) => {
   if (!selectedApplication) return null;
 
+  // List of fields to display in the detailed view
+  const applicationFields = [
+    { key: 'frp_understanding', label: 'FRP Verständnis' },
+    { key: 'vdm_understanding', label: 'VDM Verständnis' },
+    { key: 'taschen_rp_understanding', label: 'Taschen RP Verständnis' },
+    { key: 'server_age_understanding', label: 'Server-Alter Verständnis' },
+    { key: 'situation_handling', label: 'Umgang mit Situationen' },
+    { key: 'bodycam_understanding', label: 'Bodycam Verständnis' },
+    { key: 'friend_rule_violation', label: 'Freund Regelverstoß' },
+    { key: 'other_servers', label: 'Andere Server' },
+    { key: 'admin_experience', label: 'Admin Erfahrung' }
+  ];
+
   return (
     <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Bewerbungsdetails</DialogTitle>
           <DialogDescription>
-            Bewerbung von {selectedApplication?.username || "Unbekannter Benutzer"}
+            Bewerbung von {selectedApplication?.username || selectedApplication?.roblox_username || "Unbekannter Benutzer"}
           </DialogDescription>
         </DialogHeader>
         
@@ -112,7 +137,7 @@ const ApplicationViewDialog: React.FC<ApplicationViewDialogProps> = ({
             </Card>
           </div>
           
-          <div className="space-y-2">
+          <div className="space-y-4">
             <Card>
               <CardContent className="pt-4">
                 <Label className="text-sm font-medium">Aktivitätslevel (1-10)</Label>
@@ -120,18 +145,30 @@ const ApplicationViewDialog: React.FC<ApplicationViewDialogProps> = ({
               </CardContent>
             </Card>
             
+            {/* Alle Fragen und Antworten des Bewerbers anzeigen */}
+            {applicationFields.map(({ key, label }) => 
+              selectedApplication[key] ? (
+                <Card key={key}>
+                  <CardContent className="pt-4">
+                    <Label className="text-sm font-medium">{label}</Label>
+                    <p className="text-sm whitespace-pre-wrap mt-2">{selectedApplication[key]}</p>
+                  </CardContent>
+                </Card>
+              ) : null
+            )}
+            
+            {/* Zusätzlich alle anderen nicht-Standard-Felder durchgehen, falls vorhanden */}
             {Object.entries(selectedApplication).map(([key, value]) => {
-              // Only show text questions and answers
-              if (
-                typeof value === 'string' && 
-                !['id', 'user_id', 'discord_id', 'roblox_id', 'username', 'roblox_username', 
-                 'created_at', 'updated_at', 'status', 'notes'].includes(key) &&
-                key.includes('understanding') || key.includes('handling')
-              ) {
+              // Skip standard fields and those already displayed
+              const standardKeys = [
+                'id', 'user_id', 'discord_id', 'roblox_id', 'username', 
+                'roblox_username', 'created_at', 'updated_at', 'status', 'notes',
+                'age', 'activity_level', ...applicationFields.map(f => f.key)
+              ];
+              
+              if (!standardKeys.includes(key) && typeof value === 'string' && value.trim()) {
                 const label = key
                   .replace(/_/g, ' ')
-                  .replace(/understanding/g, 'Verständnis')
-                  .replace(/handling/g, 'Umgang')
                   .split(' ')
                   .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                   .join(' ');
@@ -140,7 +177,7 @@ const ApplicationViewDialog: React.FC<ApplicationViewDialogProps> = ({
                   <Card key={key}>
                     <CardContent className="pt-4">
                       <Label className="text-sm font-medium">{label}</Label>
-                      <p className="text-sm whitespace-pre-wrap">{value}</p>
+                      <p className="text-sm whitespace-pre-wrap mt-2">{value}</p>
                     </CardContent>
                   </Card>
                 );

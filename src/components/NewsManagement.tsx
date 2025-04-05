@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { fetchNews, addNewsItem, updateNewsItem, deleteNewsItem, NewsItem } from '@/lib/admin/news';
+import { fetchNews, addNewsItem, updateNewsItem, deleteNewsItem, publishNews, NewsItem } from '@/lib/admin/news';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { PlusCircle, Edit, Trash2, AlertTriangle, LoaderIcon, Info } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, AlertTriangle, LoaderIcon, Info, Send } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 
 const formatRelativeTime = (dateString: string) => {
   const date = new Date(dateString);
@@ -38,7 +39,7 @@ const formatRelativeTime = (dateString: string) => {
   }
 };
 
-type NewsStatus = 'planned' | 'in_progress' | 'completed' | 'cancelled';
+type NewsStatus = 'planned' | 'in_progress' | 'completed' | 'cancelled' | 'published';
 
 const getStatusBadgeClass = (status: NewsStatus) => {
   switch (status) {
@@ -50,6 +51,8 @@ const getStatusBadgeClass = (status: NewsStatus) => {
       return 'bg-green-100 text-green-800';
     case 'cancelled':
       return 'bg-red-100 text-red-800';
+    case 'published':
+      return 'bg-purple-100 text-purple-800';
     default:
       return 'bg-gray-100 text-gray-800';
   }
@@ -65,6 +68,8 @@ const getStatusLabel = (status: NewsStatus) => {
       return 'Umgesetzt';
     case 'cancelled':
       return 'Abgebrochen';
+    case 'published':
+      return 'Veröffentlicht';
     default:
       return 'Unbekannt';
   }
@@ -118,7 +123,7 @@ const NewsManagement: React.FC = () => {
     setActiveNewsItem(newsItem);
     setTitle(newsItem.title);
     setContent(newsItem.content);
-    setStatus(newsItem.status || 'planned');
+    setStatus(newsItem.status as NewsStatus || 'planned');
     setIsServerWide(newsItem.is_server_wide || false);
     setEditDialogOpen(true);
   };
@@ -135,7 +140,7 @@ const NewsManagement: React.FC = () => {
     
     setIsSubmitting(true);
     try {
-      const result = await addNewsItem(title, content);
+      const result = await addNewsItem(title, content, status, isServerWide);
       
       if (result.success) {
         toast({
@@ -148,7 +153,7 @@ const NewsManagement: React.FC = () => {
           updatedNews.unshift({
             ...result.data,
             status,
-            is_server_wide: false
+            is_server_wide: isServerWide
           });
         }
         setNews(updatedNews);
@@ -156,7 +161,7 @@ const NewsManagement: React.FC = () => {
       } else {
         throw new Error(result.message);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding news:", error);
       toast({
         title: "Fehler",
@@ -249,6 +254,35 @@ const NewsManagement: React.FC = () => {
       });
     }
   };
+
+  const handlePublishNews = async (id: string) => {
+    try {
+      const result = await publishNews(id);
+      
+      if (result.success) {
+        toast({
+          title: "Erfolg",
+          description: "Neuigkeit wurde erfolgreich veröffentlicht"
+        });
+        
+        const updatedNews = news.map(item => 
+          item.id === id 
+            ? { ...item, status: 'published' as NewsStatus } 
+            : item
+        );
+        setNews(updatedNews);
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error: any) {
+      console.error("Error publishing news:", error);
+      toast({
+        title: "Fehler",
+        description: error.message || "Fehler beim Veröffentlichen der Neuigkeit",
+        variant: "destructive"
+      });
+    }
+  };
   
   return (
     <div className="space-y-6">
@@ -267,7 +301,7 @@ const NewsManagement: React.FC = () => {
             Verwalte Neuigkeiten und Ankündigungen, die den Benutzern angezeigt werden
           </CardDescription>
         </CardHeader>
-        <CardContent className="max-h-[800px]">
+        <CardContent className="max-h-[800px] overflow-y-auto">
           {loading ? (
             <div className="flex justify-center p-6">
               <LoaderIcon className="h-8 w-8 animate-spin text-gray-400" />
@@ -289,13 +323,16 @@ const NewsManagement: React.FC = () => {
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-semibold text-lg">{item.title}</h3>
                         {item.is_server_wide && (
-                          <span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full text-xs">
+                          <Badge variant="secondary" className="bg-purple-100 text-purple-800 border-purple-200">
                             Serverweit
-                          </span>
+                          </Badge>
                         )}
-                        <span className={`px-2 py-0.5 rounded-full text-xs ${getStatusBadgeClass(item.status || 'planned')}`}>
-                          {getStatusLabel(item.status || 'planned')}
-                        </span>
+                        <Badge 
+                          variant="secondary" 
+                          className={getStatusBadgeClass(item.status as NewsStatus || 'planned')}
+                        >
+                          {getStatusLabel(item.status as NewsStatus || 'planned')}
+                        </Badge>
                       </div>
                       <p className="text-sm text-gray-500">
                         {formatRelativeTime(item.created_at)}
@@ -304,6 +341,16 @@ const NewsManagement: React.FC = () => {
                       </p>
                     </div>
                     <div className="flex space-x-2">
+                      {item.status !== 'published' && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handlePublishNews(item.id)} 
+                          title="Veröffentlichen"
+                        >
+                          <Send className="h-4 w-4 text-purple-500" />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="sm" onClick={() => handleEditDialog(item)}>
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -317,7 +364,7 @@ const NewsManagement: React.FC = () => {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Neuigkeit löschen</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Bist du sicher, dass du diese Neuigkeit löschen möchtest? Diese Aktion kann nicht r��ckgängig gemacht werden.
+                              Bist du sicher, dass du diese Neuigkeit löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -377,6 +424,7 @@ const NewsManagement: React.FC = () => {
                   <SelectItem value="planned">In Planung</SelectItem>
                   <SelectItem value="in_progress">In Umsetzung</SelectItem>
                   <SelectItem value="completed">Umgesetzt</SelectItem>
+                  <SelectItem value="published">Veröffentlichen</SelectItem>
                   <SelectItem value="cancelled">Abgebrochen</SelectItem>
                 </SelectContent>
               </Select>
@@ -448,6 +496,7 @@ const NewsManagement: React.FC = () => {
                   <SelectItem value="planned">In Planung</SelectItem>
                   <SelectItem value="in_progress">In Umsetzung</SelectItem>
                   <SelectItem value="completed">Umgesetzt</SelectItem>
+                  <SelectItem value="published">Veröffentlichen</SelectItem>
                   <SelectItem value="cancelled">Abgebrochen</SelectItem>
                 </SelectContent>
               </Select>

@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 // First, declare the global function type
 declare global {
   interface Window {
-    loadNewsIntoProfile: () => void;
+    loadNewsIntoProfile: () => Promise<void>;
   }
 }
 
