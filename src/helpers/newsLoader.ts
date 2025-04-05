@@ -1,14 +1,14 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
-// Extend the Window interface to include our global function
+// First, declare the global function type
 declare global {
   interface Window {
-    loadNewsIntoProfile: () => Promise<void>;
+    loadNewsIntoProfile: () => void;
   }
 }
 
-export const loadNewsIntoProfile = async () => {
+// Then, implement and export the function
+export const loadNewsIntoProfile = () => {
   const newsFeedContainer = document.getElementById('profile-news-feed');
   if (!newsFeedContainer) return;
   
@@ -74,5 +74,5 @@ export const loadNewsIntoProfile = async () => {
   }
 };
 
-// Make function available globally for reload button
+// Also assign to window object for global access
 window.loadNewsIntoProfile = loadNewsIntoProfile;

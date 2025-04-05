@@ -86,7 +86,8 @@ export const fetchTeamAbsences = async (): Promise<any[]> => {
       // Handle the profiles object correctly - each absence has its own profiles object
       let username = 'Unknown User';
       if (absence.profiles && typeof absence.profiles === 'object') {
-        username = absence.profiles.username || 'Unknown User';
+        // Fix: Access the username property properly
+        username = (absence.profiles as any).username || 'Unknown User';
       }
       return {
         ...absence,
