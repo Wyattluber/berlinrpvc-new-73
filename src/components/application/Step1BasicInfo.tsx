@@ -29,7 +29,9 @@ const Step1BasicInfo = ({ onNext, userDiscordId, userRobloxId, userRobloxUsernam
   const [discordIdValue, setDiscordIdValue] = useState(userDiscordId || applicationData.discordId || '');
   const [robloxIdValue, setRobloxIdValue] = useState(userRobloxId || applicationData.robloxId || '');
   const [robloxUsernameValue, setRobloxUsernameValue] = useState(userRobloxUsername || applicationData.robloxUsername || '');
-  const [age, setAge] = useState<number | undefined>(applicationData.age);
+  const [age, setAge] = useState<number | undefined>(
+    typeof applicationData.age === 'number' ? applicationData.age : undefined
+  );
   const [activityLevel, setActivityLevel] = useState(applicationData.activityLevel || 1);
   const [showUnderageConfirm, setShowUnderageConfirm] = useState(false);
 
@@ -105,7 +107,7 @@ const Step1BasicInfo = ({ onNext, userDiscordId, userRobloxId, userRobloxUsernam
     if (!isNaN(ageValue)) {
       setAge(ageValue);
     } else {
-      setAge(0); // Default to 0 if parsing fails
+      setAge(undefined); // Set to undefined if parsing fails
     }
   };
 
