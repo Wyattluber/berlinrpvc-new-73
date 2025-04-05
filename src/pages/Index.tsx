@@ -12,13 +12,13 @@ const Index = () => {
     <div className="flex flex-col min-h-screen">
       <Navbar />
       
-      <main className="flex-grow">
+      <main className="flex-grow mt-0">
         {/* Hero Section */}
         <section className="bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 text-white py-16 md:py-24 relative overflow-hidden">
           <div className="absolute inset-0 opacity-20">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-500 via-transparent to-transparent opacity-20"></div>
           </div>
-          <div className="container mx-auto px-4 text-center relative z-10">
+          <div className="container mx-auto px-4 text-center relative z-[1]">
             <div className="w-full max-w-4xl mx-auto mb-8">
               <img 
                 src="/lovable-uploads/facc787d-f5d9-4ce8-9d2b-2c329ba5f0cd.png" 
@@ -94,7 +94,7 @@ const Index = () => {
           <div className="absolute inset-0 opacity-10">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-500 via-transparent to-transparent opacity-30"></div>
           </div>
-          <div className="container mx-auto px-4 relative z-10">
+          <div className="container mx-auto px-4 relative z-[1]">
             <h2 className="text-3xl font-bold mb-4">Bereit für den Einsatz?</h2>
             <p className="text-xl mb-8 max-w-2xl mx-auto">
               Werde Teil unseres Teams und hilf mit, das virtuelle Berlin am Laufen zu halten.

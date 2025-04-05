@@ -97,7 +97,7 @@ const Navbar = () => {
   ];
   
   return (
-    <header className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white sticky top-0 z-10 shadow-md">
+    <header className="bg-gradient-to-r from-blue-900 to-indigo-900 text-white sticky top-0 z-50 shadow-md">
       <div className="container mx-auto px-4 py-3">
         <div className="flex justify-between items-center">
           <div className="flex items-center">
@@ -173,11 +173,18 @@ const Navbar = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Link to="/login">
-                  <Button variant="ghost" className="text-white hover:bg-blue-800">
-                    Login
-                  </Button>
-                </Link>
+                <div className="flex gap-2">
+                  <Link to="/login">
+                    <Button variant="ghost" className="text-white hover:bg-blue-800">
+                      Login
+                    </Button>
+                  </Link>
+                  <Link to="/apply">
+                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                      Bewerben
+                    </Button>
+                  </Link>
+                </div>
               )}
             </div>
           ) : (
@@ -290,8 +297,14 @@ const Navbar = () => {
         </div>
       </div>
       
-      {/* Mobile Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-blue-900 to-indigo-900 shadow-lg transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      {/* Mobile Sidebar - verbesserte Version */}
+      <div className={`fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} 
+           onClick={() => setSidebarOpen(false)}>
+      </div>
+      
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-blue-900 to-indigo-900 shadow-lg transform transition-transform duration-300 ease-in-out ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
         <div className="flex flex-col h-full">
           <div className="p-4 border-b border-blue-800 flex items-center justify-between">
             <span className="font-bold text-xl text-white">Navigation</span>
@@ -312,6 +325,7 @@ const Navbar = () => {
                   key={item.to} 
                   to={item.to}
                   className="flex items-center px-3 py-2 rounded-md text-sm text-white hover:bg-blue-800 transition-colors"
+                  onClick={() => setSidebarOpen(false)}
                 >
                   <item.icon className="mr-3 h-5 w-5" />
                   {item.label}
@@ -326,6 +340,7 @@ const Navbar = () => {
                     className={`flex items-center px-3 py-2 rounded-md text-sm text-white transition-colors ${
                       item.highlight ? 'bg-blue-700 hover:bg-blue-600' : 'hover:bg-blue-800'
                     }`}
+                    onClick={() => setSidebarOpen(false)}
                   >
                     <item.icon className="mr-3 h-5 w-5" />
                     {item.label}
@@ -334,7 +349,10 @@ const Navbar = () => {
                 
                 {session && (
                   <button 
-                    onClick={handleLogout}
+                    onClick={() => {
+                      handleLogout();
+                      setSidebarOpen(false);
+                    }}
                     className="w-full flex items-center px-3 py-2 mt-2 rounded-md text-sm text-red-300 hover:bg-red-900 hover:text-white transition-colors"
                   >
                     <LogOut className="mr-3 h-5 w-5" />
@@ -345,15 +363,7 @@ const Navbar = () => {
             </nav>
           </div>
         </div>
-      </aside>
-      
-      {/* Backdrop for mobile sidebar */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      </div>
     </header>
   );
 };
