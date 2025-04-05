@@ -42,7 +42,7 @@ const AdminContent: React.FC<AdminContentProps> = ({
         if (!isAdmin) return <AccessDenied />;
         return (
           <AdminUserTable
-            adminUsers={adminUsers}
+            users={adminUsers}
             onUpdateRole={handleUpdateRole}
             onDeleteUser={handleDeleteUser}
           />

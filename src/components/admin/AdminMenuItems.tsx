@@ -6,7 +6,7 @@ export interface MenuItem {
   id: string;
   icon: React.ReactNode;
   label: string;
-  title: string; // Required property now
+  title: string; 
   admin?: boolean;
 }
 

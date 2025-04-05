@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchAnnouncementById, markAnnouncementAsRead, addComment, getComments, Announcement, AnnouncementComment } from '@/lib/announcementService';
+import { getAnnouncementById, markAnnouncementAsRead, addAnnouncementComment, getAnnouncementComments, Announcement, AnnouncementComment } from '@/lib/announcementService';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -55,13 +55,13 @@ const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({ id, onBack }) =
     const fetchData = async () => {
       try {
         setLoading(true);
-        const announcementData = await fetchAnnouncementById(id);
+        const announcementData = await getAnnouncementById(id);
         if (announcementData) {
           setAnnouncement(announcementData);
           await markAnnouncementAsRead(id);
           
           // Fetch comments
-          const commentsData = await getComments(id);
+          const commentsData = await getAnnouncementComments(id);
           setComments(commentsData);
           
           // Get unique user IDs from comments
@@ -73,7 +73,7 @@ const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({ id, onBack }) =
             const { data: profiles } = await supabase
               .from('profiles')
               .select('id, username, avatar_url')
-              .in('id', userIds);
+              .in('id', userIds as string[]);
               
             if (profiles) {
               const profileMap: Record<string, UserProfile> = {};
@@ -106,10 +106,10 @@ const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({ id, onBack }) =
     
     setSubmittingComment(true);
     try {
-      const result = await addComment(id, newComment);
+      const result = await addAnnouncementComment(id, newComment);
       
-      if (result.success && result.data) {
-        const newCommentData = result.data as AnnouncementComment;
+      if (result) {
+        const newCommentData = result;
         setComments([...comments, newCommentData]);
         setNewComment('');
         
@@ -130,7 +130,7 @@ const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({ id, onBack }) =
           }
         }
       } else {
-        throw new Error(result.message);
+        throw new Error("Failed to add comment");
       }
     } catch (error: any) {
       console.error('Error adding comment:', error);
