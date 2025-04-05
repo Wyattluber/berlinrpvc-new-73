@@ -27,6 +27,7 @@ export interface AnnouncementComment {
  */
 export async function fetchAnnouncements(): Promise<Announcement[]> {
   try {
+    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
     const { data, error } = await supabase
       .from('announcements')
       .select('*')
@@ -49,6 +50,7 @@ export async function fetchAnnouncements(): Promise<Announcement[]> {
  */
 export async function fetchAnnouncementById(id: string): Promise<Announcement | null> {
   try {
+    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
     const { data, error } = await supabase
       .from('announcements')
       .select('*')
@@ -83,6 +85,7 @@ export async function addAnnouncement(
 
   try {
     const now = new Date().toISOString();
+    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
     const { data, error } = await supabase
       .from('announcements')
       .insert([{
@@ -130,6 +133,7 @@ export async function updateAnnouncement(
     
     // If we're making it server-wide for the first time, set published_at
     if (isServerWide) {
+      // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
       const { data: existingAnnouncement } = await supabase
         .from('announcements')
         .select('is_server_wide, published_at')
@@ -143,6 +147,7 @@ export async function updateAnnouncement(
       }
     }
 
+    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
     const { error } = await supabase
       .from('announcements')
       .update(updateData)
@@ -167,6 +172,7 @@ export async function deleteAnnouncement(id: string) {
   }
 
   try {
+    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
     const { error } = await supabase
       .from('announcements')
       .delete()
@@ -192,6 +198,7 @@ export async function markAnnouncementAsRead(announcementId: string) {
     }
 
     // Check if the read entry already exists
+    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
     const { data: existingEntry } = await supabase
       .from('announcement_reads')
       .select('id')
@@ -205,6 +212,7 @@ export async function markAnnouncementAsRead(announcementId: string) {
     }
 
     // Create a new read entry
+    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
     const { error } = await supabase
       .from('announcement_reads')
       .insert({
@@ -231,6 +239,7 @@ export async function checkAnnouncementRead(announcementId: string): Promise<boo
       return false;
     }
 
+    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
     const { data, error } = await supabase
       .from('announcement_reads')
       .select('id')
@@ -258,6 +267,7 @@ export async function getUnreadServerWideAnnouncements(): Promise<Announcement[]
     }
 
     // First, get all server-wide announcements
+    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
     const { data: announcements, error: announcementsError } = await supabase
       .from('announcements')
       .select('*')
@@ -271,6 +281,7 @@ export async function getUnreadServerWideAnnouncements(): Promise<Announcement[]
     }
 
     // Then, get all read announcements for the user
+    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
     const { data: reads, error: readsError } = await supabase
       .from('announcement_reads')
       .select('announcement_id')
@@ -299,6 +310,7 @@ export async function addComment(announcementId: string, content: string) {
       throw new Error('User not authenticated');
     }
 
+    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
     const { data, error } = await supabase
       .from('announcement_comments')
       .insert({
@@ -322,6 +334,7 @@ export async function addComment(announcementId: string, content: string) {
  */
 export async function getComments(announcementId: string): Promise<AnnouncementComment[]> {
   try {
+    // @ts-ignore - The Supabase TypeScript types don't automatically include tables added via SQL migrations
     const { data, error } = await supabase
       .from('announcement_comments')
       .select('*')

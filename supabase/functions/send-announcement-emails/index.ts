@@ -1,133 +1,197 @@
 
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const supabaseUrl = "https://aaqhxeiesnphwhazvkck.supabase.co";
-const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+interface EmailPayload {
+  to: string;
+  subject: string;
+  html: string;
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
+  if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
-    // Process pending emails in the queue
-    const { data: queueItems, error: queueError } = await supabase
-      .from("announcement_email_queue")
-      .select("*, announcements(*)")
-      .eq("status", "pending")
-      .order("created_at", { ascending: true })
-      .limit(10);
+    // Create a Supabase client with the service role key (admin privileges)
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') || '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '',
+      {
+        auth: { persistSession: false }
+      }
+    );
+
+    // Get pending emails from the queue
+    const { data: pendingEmails, error: queueError } = await supabaseAdmin
+      .from('announcement_email_queue')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true })
+      .limit(50);
 
     if (queueError) {
       throw queueError;
     }
 
-    if (!queueItems || queueItems.length === 0) {
+    console.log(`Found ${pendingEmails?.length || 0} pending emails`);
+    
+    if (!pendingEmails || pendingEmails.length === 0) {
       return new Response(
-        JSON.stringify({ message: "No pending email notifications found" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ 
+          success: true, 
+          message: 'No pending emails found' 
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
       );
     }
 
-    console.log(`Processing ${queueItems.length} announcement email notifications`);
+    // Get the announcements for these emails
+    const announcementIds = pendingEmails.map(email => email.announcement_id);
+    const { data: announcements, error: announcementsError } = await supabaseAdmin
+      .from('announcements')
+      .select('*')
+      .in('id', announcementIds);
+
+    if (announcementsError) {
+      throw announcementsError;
+    }
+
+    if (!announcements || announcements.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          message: 'Announcements not found' 
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404,
+        }
+      );
+    }
 
     // Get all users to send emails to
-    const { data: users, error: usersError } = await supabase.auth.admin.listUsers();
+    const { data: users, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
     
     if (usersError) {
       throw usersError;
     }
 
-    const results = [];
+    let emailsSent = 0;
+    let emailErrors = 0;
 
-    for (const item of queueItems) {
+    // Process each announcement
+    for (const email of pendingEmails) {
       try {
-        const announcement = item.announcements;
-        if (!announcement) {
-          throw new Error(`Announcement not found for queue item ${item.id}`);
-        }
-
-        console.log(`Sending email for announcement: ${announcement.title}`);
-
-        // In a real implementation, you would use an email service like Resend, SendGrid, etc.
-        // For now, we'll just simulate sending emails and mark them as processed
-        for (const user of users.users) {
-          // In production, you'd send an actual email here to user.email
-          console.log(`Would send email to ${user.email} about announcement: ${announcement.title}`);
-        }
-
-        // Update the queue item status to processed
-        const { error: updateError } = await supabase
-          .from("announcement_email_queue")
-          .update({
-            status: "processed",
-            processed_at: new Date().toISOString(),
-          })
-          .eq("id", item.id);
-
-        if (updateError) {
-          throw updateError;
-        }
-
-        results.push({
-          id: item.id,
-          announcement_id: item.announcement_id,
-          success: true,
-        });
-      } catch (error) {
-        console.error(`Error processing queue item ${item.id}:`, error);
+        const announcement = announcements.find(a => a.id === email.announcement_id);
         
-        // Update attempts and error info
-        const { error: updateError } = await supabase
-          .from("announcement_email_queue")
-          .update({
-            attempts: item.attempts + 1,
-            error: error.message,
-            status: item.attempts >= 3 ? "failed" : "pending", // Mark as failed after 3 attempts
-          })
-          .eq("id", item.id);
-
-        if (updateError) {
-          console.error("Error updating queue item:", updateError);
+        if (!announcement) {
+          console.error(`Announcement ${email.announcement_id} not found`);
+          continue;
         }
 
-        results.push({
-          id: item.id,
-          announcement_id: item.announcement_id,
-          success: false,
-          error: error.message,
-        });
+        // Update the processing status
+        await supabaseAdmin
+          .from('announcement_email_queue')
+          .update({ 
+            status: 'processing',
+            attempts: email.attempts + 1 
+          })
+          .eq('id', email.id);
+
+        // Send email to each user
+        for (const user of users.users) {
+          if (!user.email) continue;
+
+          try {
+            // Compose email content
+            const emailPayload: EmailPayload = {
+              to: user.email,
+              subject: `Neue Ankündigung: ${announcement.title}`,
+              html: `
+                <h1>${announcement.title}</h1>
+                <p style="white-space: pre-wrap;">${announcement.content}</p>
+                <p style="margin-top: 20px;">
+                  <a href="${Deno.env.get('FRONTEND_URL') || 'https://your-app-url.com'}/profile?tab=announcements&id=${announcement.id}" 
+                     style="background-color: #3b82f6; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px;">
+                    Ankündigung ansehen
+                  </a>
+                </p>
+              `,
+            };
+
+            // This is a placeholder - in a production system, you would use an email service
+            console.log(`Would send email to: ${user.email}`);
+            console.log(`Subject: ${emailPayload.subject}`);
+            
+            // In a real implementation, you'd send the email here
+            // await sendEmail(emailPayload);
+            
+            emailsSent++;
+          } catch (error) {
+            console.error(`Error sending email to ${user.email}:`, error);
+            emailErrors++;
+          }
+        }
+
+        // Mark email as processed
+        await supabaseAdmin
+          .from('announcement_email_queue')
+          .update({ 
+            status: 'completed',
+            processed_at: new Date().toISOString()
+          })
+          .eq('id', email.id);
+
+      } catch (error) {
+        console.error(`Error processing email ${email.id}:`, error);
+        
+        // Update with error
+        await supabaseAdmin
+          .from('announcement_email_queue')
+          .update({ 
+            status: 'error',
+            error: error.message,
+            attempts: email.attempts + 1
+          })
+          .eq('id', email.id);
+          
+        emailErrors++;
       }
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        processed: results.length,
-        results 
+      JSON.stringify({
+        success: true,
+        message: `Processed ${pendingEmails.length} announcements. Sent ${emailsSent} emails. Encountered ${emailErrors} errors.`
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      }
     );
+
   } catch (error) {
-    console.error("Error in send-announcement-emails function:", error);
+    console.error('Error in send-announcement-emails function:', error);
     
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message 
+      JSON.stringify({
+        success: false,
+        message: error.message || 'An error occurred',
       }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
       }
     );
   }

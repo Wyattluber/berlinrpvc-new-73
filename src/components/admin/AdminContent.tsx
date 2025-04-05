@@ -1,7 +1,7 @@
 
 import React from 'react';
 import AdminUserTable from '@/components/admin/UserRoleManager';
-import AnnouncementsList from '@/components/admin/AnnouncementsManagement';
+import AnnouncementsManagement from '@/components/admin/AnnouncementsManagement';
 import ApplicationsList from '@/components/ApplicationsList';
 import TeamSettingsForm from '@/components/admin/TeamSettingsForm';
 import NewsManagement from '@/components/NewsManagement';
@@ -13,7 +13,6 @@ import SubServersManagement from '@/components/SubServersManagement';
 import PartnerServersManagement from '@/components/PartnerServersManagement';
 import ModeratorAbsencePanel from '@/components/admin/ModeratorAbsencePanel';
 import TeamAbsencesList from '@/components/admin/TeamAbsencesList';
-import AnnouncementsManagement from '@/components/admin/AnnouncementsManagement';
 
 interface AdminContentProps {
   isAdmin: boolean;
@@ -38,7 +37,7 @@ const AdminContent: React.FC<AdminContentProps> = ({
   const renderComponent = () => {
     switch (activeSection) {
       case 'dashboard':
-        return <DashboardOverview userCount={userCount} />;
+        return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
       case 'users':
         if (!isAdmin) return <AccessDenied />;
         return (
@@ -85,7 +84,7 @@ const AdminContent: React.FC<AdminContentProps> = ({
         if (!isAdmin) return <AccessDenied />;
         return <PartnerServersManagement />;
       default:
-        return <DashboardOverview userCount={userCount} />;
+        return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
     }
   };
 

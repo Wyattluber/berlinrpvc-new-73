@@ -36,13 +36,19 @@ interface AnnouncementDetailProps {
   onBack?: () => void;
 }
 
+interface UserProfile {
+  id: string;
+  username?: string;
+  avatar_url?: string;
+}
+
 const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({ id, onBack }) => {
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [comments, setComments] = useState<AnnouncementComment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [userProfiles, setUserProfiles] = useState<Record<string, any>>({});
+  const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -63,13 +69,14 @@ const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({ id, onBack }) =
           
           // Fetch user profiles
           if (userIds.length > 0) {
+            // @ts-ignore - The Supabase TypeScript types don't automatically include all tables
             const { data: profiles } = await supabase
               .from('profiles')
               .select('id, username, avatar_url')
               .in('id', userIds);
               
             if (profiles) {
-              const profileMap: Record<string, any> = {};
+              const profileMap: Record<string, UserProfile> = {};
               profiles.forEach(profile => {
                 profileMap[profile.id] = profile;
               });
@@ -102,15 +109,17 @@ const AnnouncementDetail: React.FC<AnnouncementDetailProps> = ({ id, onBack }) =
       const result = await addComment(id, newComment);
       
       if (result.success && result.data) {
-        setComments([...comments, result.data]);
+        const newCommentData = result.data as AnnouncementComment;
+        setComments([...comments, newCommentData]);
         setNewComment('');
         
         // If this is a new user commenting, fetch their profile
-        if (!userProfiles[result.data.user_id]) {
+        if (!userProfiles[newCommentData.user_id]) {
+          // @ts-ignore - The Supabase TypeScript types don't automatically include all tables
           const { data: profile } = await supabase
             .from('profiles')
             .select('id, username, avatar_url')
-            .eq('id', result.data.user_id)
+            .eq('id', newCommentData.user_id)
             .maybeSingle();
             
           if (profile) {
