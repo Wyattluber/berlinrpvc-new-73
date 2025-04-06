@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getTeamSettings } from '@/lib/admin/team';
-import { Calendar, Clock, Users, MessageSquare, AlertCircle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Calendar, Clock, Users, MessageSquare } from 'lucide-react';
 
 // Format meeting day in German
 const formatMeetingDay = (day: string) => {
@@ -121,13 +120,9 @@ const formatCountdown = (timeRemaining: { days: number; hours: number; minutes: 
 
 type MeetingCountdownProps = {
   className?: string;
-  display?: 'card' | 'inline';
 }
 
-const MeetingCountdown: React.FC<MeetingCountdownProps> = ({ 
-  className = '', 
-  display = 'inline' 
-}) => {
+const MeetingCountdown: React.FC<MeetingCountdownProps> = ({ className }) => {
   const [teamSettings, setTeamSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [nextMeeting, setNextMeeting] = useState<Date | null>(null);
@@ -191,35 +186,10 @@ const MeetingCountdown: React.FC<MeetingCountdownProps> = ({
   }, [nextMeeting]);
   
   if (loading) {
-    return display === 'card' ? (
-      <Card className={className}>
-        <CardContent className="pt-6">
-          <p className="text-center text-sm">Lade Teammeetings...</p>
-        </CardContent>
-      </Card>
-    ) : (
-      <div className="text-center p-2">Lade Teammeetings...</div>
-    );
+    return <div className="text-center p-2">Lade Teammeetings...</div>;
   }
   
   if (error) {
-    if (display === 'card') {
-      return (
-        <Card className={className}>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-red-500" />
-              Fehler
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-red-500">{error}</p>
-            <p className="text-xs text-gray-500 mt-2">Teammeetings werden im Admin-Panel konfiguriert</p>
-          </CardContent>
-        </Card>
-      );
-    }
-    
     return (
       <div className={`space-y-1 ${className}`}>
         <p className="text-sm font-medium text-red-500">Fehler: {error}</p>
@@ -229,19 +199,6 @@ const MeetingCountdown: React.FC<MeetingCountdownProps> = ({
   }
   
   if (!teamSettings || !teamSettings.meeting_day || !teamSettings.meeting_time) {
-    if (display === 'card') {
-      return (
-        <Card className={className}>
-          <CardHeader>
-            <CardTitle className="text-base">Kein Teammeeting geplant</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-gray-500">Teammeetings werden im Admin-Panel konfiguriert</p>
-          </CardContent>
-        </Card>
-      );
-    }
-    
     return (
       <div className={`space-y-1 ${className}`}>
         <p className="text-sm font-medium">Kein Teammeeting geplant</p>
@@ -263,55 +220,6 @@ const MeetingCountdown: React.FC<MeetingCountdownProps> = ({
     hour12: false
   }) : 'Unbekannt';
   
-  if (display === 'card') {
-    return (
-      <Card className={className}>
-        <CardHeader>
-          <CardTitle className="text-lg">Nächstes Team-Meeting</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="bg-blue-50 p-4 rounded-md">
-            <p className="text-lg font-semibold text-blue-800">{formattedDate}</p>
-            <p className="text-base font-medium text-blue-700 mt-1">{formatCountdown(timeRemaining)}</p>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gray-50 p-3 rounded-md">
-              <p className="text-sm font-medium flex items-center">
-                <Calendar className="h-4 w-4 mr-2 text-blue-500" />
-                <span>{formatMeetingDay(teamSettings.meeting_day)}</span>
-              </p>
-            </div>
-            <div className="bg-gray-50 p-3 rounded-md">
-              <p className="text-sm font-medium flex items-center">
-                <Clock className="h-4 w-4 mr-2 text-blue-500" />
-                <span>{teamSettings.meeting_time} Uhr</span>
-              </p>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <p className="text-sm font-medium flex items-center">
-              <Users className="h-4 w-4 mr-2 text-blue-500" />
-              <span>{teamSettings.meeting_frequency || 'Wöchentlich'}</span>
-            </p>
-            <p className="text-sm font-medium flex items-center">
-              <MessageSquare className="h-4 w-4 mr-2 text-blue-500" />
-              <span>{teamSettings.meeting_location || 'Discord'}</span>
-            </p>
-          </div>
-          
-          {teamSettings.meeting_notes && (
-            <p className="text-xs text-gray-600 mt-1 border-t pt-2">
-              {teamSettings.meeting_notes}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    );
-  }
-  
-  // Inline display (default)
   return (
     <div className={`space-y-1 ${className}`}>
       <p className="text-sm font-semibold">
