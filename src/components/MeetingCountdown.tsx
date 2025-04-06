@@ -135,19 +135,25 @@ const MeetingCountdown: React.FC<MeetingCountdownProps> = ({ className }) => {
       setLoading(true);
       setError(null);
       try {
+        console.log('Fetching team settings...');
         const settings = await getTeamSettings();
+        console.log('Received team settings:', settings);
         
         setTeamSettings(settings);
         
         if (settings?.meeting_day && settings?.meeting_time) {
+          console.log(`Calculating next meeting for ${settings.meeting_day} at ${settings.meeting_time}`);
           const meetingDate = getNextMeetingDate(settings.meeting_day, settings.meeting_time);
           
           if (meetingDate) {
+            console.log('Next meeting calculated:', meetingDate);
             setNextMeeting(meetingDate);
           } else {
+            console.error('Failed to calculate next meeting date');
             setError("Nächstes Meeting konnte nicht berechnet werden - ungültiges Format für Tag oder Zeit");
           }
         } else {
+          console.warn('Missing meeting day or time in settings', settings);
           setError("Keine Meeting-Daten angegeben");
         }
       } catch (error) {
@@ -168,14 +174,6 @@ const MeetingCountdown: React.FC<MeetingCountdownProps> = ({ className }) => {
     const updateCountdown = () => {
       const remaining = getTimeRemaining(nextMeeting);
       setTimeRemaining(remaining);
-      
-      // If the meeting time has passed, recalculate the next meeting
-      if (!remaining && teamSettings?.meeting_day && teamSettings?.meeting_time) {
-        const newMeetingDate = getNextMeetingDate(teamSettings.meeting_day, teamSettings.meeting_time);
-        if (newMeetingDate) {
-          setNextMeeting(newMeetingDate);
-        }
-      }
     };
     
     // Initial update
@@ -185,7 +183,7 @@ const MeetingCountdown: React.FC<MeetingCountdownProps> = ({ className }) => {
     const interval = setInterval(updateCountdown, 60000);
     
     return () => clearInterval(interval);
-  }, [nextMeeting, teamSettings]);
+  }, [nextMeeting]);
   
   if (loading) {
     return <div className="text-center p-2">Lade Teammeetings...</div>;
