@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, MessageSquareWarning } from 'lucide-react';
+import { Loader2, MessageSquareWarning, Pencil } from 'lucide-react';
 import { requestIdChange } from '@/lib/admin/users';
 
 interface UserDataChangeRequestProps {
@@ -20,6 +20,8 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
   currentRobloxId,
   userId
 }) => {
+  const [showDiscordForm, setShowDiscordForm] = useState(false);
+  const [showRobloxForm, setShowRobloxForm] = useState(false);
   const [newDiscordId, setNewDiscordId] = useState('');
   const [newRobloxId, setNewRobloxId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,6 +50,10 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
             discord: hasDiscordRequest,
             roblox: hasRobloxRequest
           });
+          
+          // If there are pending requests, disable the edit forms
+          if (hasDiscordRequest) setShowDiscordForm(false);
+          if (hasRobloxRequest) setShowRobloxForm(false);
         }
       } catch (error) {
         console.error('Error checking pending requests:', error);
@@ -95,9 +101,11 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
       // Reset form and update pending status
       if (fieldName === 'discord_id') {
         setNewDiscordId('');
+        setShowDiscordForm(false);
         setPendingRequests(prev => ({ ...prev, discord: true }));
       } else {
         setNewRobloxId('');
+        setShowRobloxForm(false);
         setPendingRequests(prev => ({ ...prev, roblox: true }));
       }
     } catch (error: any) {
@@ -123,24 +131,61 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
       <CardContent className="space-y-6">
         {/* Discord ID Change Request */}
         <div className="space-y-2">
-          <Label htmlFor="discord-id">Discord ID</Label>
-          <div className="flex items-center gap-2">
-            <Input
-              id="discord-id"
-              placeholder={currentDiscordId || "Keine Discord ID gesetzt"}
-              value={newDiscordId}
-              onChange={(e) => setNewDiscordId(e.target.value)}
-              disabled={isSubmitting || pendingRequests.discord}
-            />
-            <Button 
-              onClick={() => handleSubmit('discord_id', newDiscordId)}
-              disabled={isSubmitting || pendingRequests.discord || !newDiscordId.trim()}
-              size="sm"
-              variant="outline"
-            >
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Beantragen"}
-            </Button>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="discord-id">Discord ID</Label>
+            {!pendingRequests.discord && !showDiscordForm && (
+              <Button 
+                onClick={() => setShowDiscordForm(true)}
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2"
+              >
+                <Pencil className="h-3.5 w-3.5 mr-1" />
+                Ändern
+              </Button>
+            )}
           </div>
+          
+          {showDiscordForm ? (
+            <div className="flex items-center gap-2">
+              <Input
+                id="discord-id"
+                placeholder={currentDiscordId || "Keine Discord ID gesetzt"}
+                value={newDiscordId}
+                onChange={(e) => setNewDiscordId(e.target.value)}
+                disabled={isSubmitting}
+              />
+              <Button 
+                onClick={() => handleSubmit('discord_id', newDiscordId)}
+                disabled={isSubmitting || !newDiscordId.trim()}
+                size="sm"
+                variant="outline"
+              >
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Beantragen"}
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowDiscordForm(false);
+                  setNewDiscordId('');
+                }}
+                size="sm"
+                variant="ghost"
+                disabled={isSubmitting}
+              >
+                Abbrechen
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Input
+                id="discord-id-display"
+                value={currentDiscordId || "Keine Discord ID gesetzt"}
+                disabled
+                className="bg-gray-50"
+              />
+            </div>
+          )}
+          
           {pendingRequests.discord && (
             <div className="text-amber-600 flex items-center text-sm mt-1">
               <MessageSquareWarning className="h-4 w-4 mr-1" />
@@ -151,24 +196,61 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
         
         {/* Roblox ID Change Request */}
         <div className="space-y-2">
-          <Label htmlFor="roblox-id">Roblox ID</Label>
-          <div className="flex items-center gap-2">
-            <Input
-              id="roblox-id"
-              placeholder={currentRobloxId || "Keine Roblox ID gesetzt"}
-              value={newRobloxId}
-              onChange={(e) => setNewRobloxId(e.target.value)}
-              disabled={isSubmitting || pendingRequests.roblox}
-            />
-            <Button 
-              onClick={() => handleSubmit('roblox_id', newRobloxId)}
-              disabled={isSubmitting || pendingRequests.roblox || !newRobloxId.trim()}
-              size="sm"
-              variant="outline"
-            >
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Beantragen"}
-            </Button>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="roblox-id">Roblox ID</Label>
+            {!pendingRequests.roblox && !showRobloxForm && (
+              <Button 
+                onClick={() => setShowRobloxForm(true)}
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2"
+              >
+                <Pencil className="h-3.5 w-3.5 mr-1" />
+                Ändern
+              </Button>
+            )}
           </div>
+          
+          {showRobloxForm ? (
+            <div className="flex items-center gap-2">
+              <Input
+                id="roblox-id"
+                placeholder={currentRobloxId || "Keine Roblox ID gesetzt"}
+                value={newRobloxId}
+                onChange={(e) => setNewRobloxId(e.target.value)}
+                disabled={isSubmitting}
+              />
+              <Button 
+                onClick={() => handleSubmit('roblox_id', newRobloxId)}
+                disabled={isSubmitting || !newRobloxId.trim()}
+                size="sm"
+                variant="outline"
+              >
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Beantragen"}
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowRobloxForm(false);
+                  setNewRobloxId('');
+                }}
+                size="sm"
+                variant="ghost"
+                disabled={isSubmitting}
+              >
+                Abbrechen
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Input
+                id="roblox-id-display"
+                value={currentRobloxId || "Keine Roblox ID gesetzt"}
+                disabled
+                className="bg-gray-50"
+              />
+            </div>
+          )}
+          
           {pendingRequests.roblox && (
             <div className="text-amber-600 flex items-center text-sm mt-1">
               <MessageSquareWarning className="h-4 w-4 mr-1" />

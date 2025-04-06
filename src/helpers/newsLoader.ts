@@ -8,6 +8,15 @@ declare global {
   }
 }
 
+interface NewsItem {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
+  status: string;
+  source: 'news' | 'announcement';
+}
+
 // Then, implement and export the function
 export const loadNewsIntoProfile = async () => {
   const newsFeedContainer = document.getElementById('profile-news-feed');
@@ -22,15 +31,29 @@ export const loadNewsIntoProfile = async () => {
       </div>
     `;
     
-    // Get latest news
-    const { data: news, error } = await supabase
+    // Get latest news from both news and announcements tables
+    const { data: newsData, error: newsError } = await supabase
       .from('news')
-      .select('*')
+      .select('id, title, content, created_at, status')
       .eq('status', 'published')
-      .order('created_at', { ascending: false })
-      .limit(5);
+      .order('created_at', { ascending: false });
     
-    if (error) throw error;
+    if (newsError) throw newsError;
+    
+    const { data: announcementsData, error: announcementsError } = await supabase
+      .from('announcements')
+      .select('id, title, content, created_at, status')
+      .eq('status', 'published')
+      .order('created_at', { ascending: false });
+    
+    if (announcementsError) throw announcementsError;
+    
+    // Combine and sort both types of content
+    const news: NewsItem[] = [
+      ...(newsData?.map(item => ({ ...item, source: 'news' as const })) || []),
+      ...(announcementsData?.map(item => ({ ...item, source: 'announcement' as const })) || [])
+    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+     .slice(0, 5); // Only show 5 latest items
     
     if (!news || news.length === 0) {
       newsFeedContainer.innerHTML = `
@@ -52,11 +75,22 @@ export const loadNewsIntoProfile = async () => {
         year: 'numeric'
       });
       
+      const badgeClass = item.source === 'announcement' 
+        ? 'bg-blue-100 text-blue-800' 
+        : 'bg-green-100 text-green-800';
+      
+      const badgeText = item.source === 'announcement' 
+        ? 'Ankündigung' 
+        : 'Neuigkeit';
+      
       const newsItem = document.createElement('div');
       newsItem.className = 'p-4 border rounded-md mb-4 bg-white shadow-sm';
       newsItem.innerHTML = `
         <div class="flex justify-between items-start mb-2">
-          <h3 class="font-semibold">${item.title}</h3>
+          <div class="flex items-center gap-2">
+            <h3 class="font-semibold">${item.title}</h3>
+            <span class="text-xs px-2 py-1 rounded-full ${badgeClass}">${badgeText}</span>
+          </div>
           <span class="text-xs text-gray-500">${date}</span>
         </div>
         <p class="text-sm text-gray-700">${item.content}</p>
