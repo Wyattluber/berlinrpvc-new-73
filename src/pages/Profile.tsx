@@ -24,6 +24,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { loadNewsIntoProfile } from '@/helpers/newsLoader';
 import AdminPanel from '@/pages/AdminPanel';
+import UserDataChangeRequest from '@/components/profile/UserDataChangeRequest';
+import AccountDeletionRequest from '@/components/profile/AccountDeletionRequest';
 
 type Application = {
   id: string;
@@ -845,6 +847,15 @@ const Profile = () => {
                       <p className="text-xs text-gray-500 text-center">Alle IDs wurden bereits gesetzt und können nicht mehr geändert werden.</p>
                     )}
                   </div>
+                  
+                  {/* Add the UserDataChangeRequest component here */}
+                  {session?.user?.id && (
+                    <UserDataChangeRequest
+                      currentDiscordId={discordId}
+                      currentRobloxId={robloxId}
+                      userId={session.user.id}
+                    />
+                  )}
                 </TabsContent>
                 
                 {showApplicationsTab && (
@@ -1012,6 +1023,9 @@ const Profile = () => {
                       </div>
                     </CardContent>
                   </Card>
+                  
+                  {/* Add the AccountDeletionRequest component */}
+                  <AccountDeletionRequest />
                 </TabsContent>
                 
                 {(isAdmin || isModerator) && (
