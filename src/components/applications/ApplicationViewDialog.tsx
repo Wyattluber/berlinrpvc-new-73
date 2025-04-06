@@ -55,8 +55,8 @@ const ApplicationViewDialog: React.FC<ApplicationViewDialogProps> = ({
 }) => {
   if (!selectedApplication) return null;
 
-  // List of fields to display in the detailed view
-  const applicationFields = [
+  // List of standard fields to display in the detailed view
+  const standardFields = [
     { key: 'frp_understanding', label: 'FRP Verständnis' },
     { key: 'vdm_understanding', label: 'VDM Verständnis' },
     { key: 'taschen_rp_understanding', label: 'Taschen RP Verständnis' },
@@ -67,6 +67,47 @@ const ApplicationViewDialog: React.FC<ApplicationViewDialogProps> = ({
     { key: 'other_servers', label: 'Andere Server' },
     { key: 'admin_experience', label: 'Admin Erfahrung' }
   ];
+
+  // Identify the keys we don't want to show as answers
+  const excludedKeys = [
+    'id', 'user_id', 'discord_id', 'roblox_id', 'username', 
+    'roblox_username', 'created_at', 'updated_at', 'status', 'notes',
+    'age', 'activity_level', 'discord_username'
+  ];
+
+  // Get all application fields that should be displayed as answers
+  const getApplicationFields = () => {
+    const allFields = [];
+    
+    // First add standard fields if they exist
+    standardFields.forEach(({ key, label }) => {
+      if (selectedApplication[key]) {
+        allFields.push({ key, label });
+      }
+    });
+    
+    // Then add any other fields that aren't in the excluded list
+    for (const [key, value] of Object.entries(selectedApplication)) {
+      if (
+        !excludedKeys.includes(key) && 
+        !standardFields.some(field => field.key === key) &&
+        typeof value === 'string' && 
+        value.trim() !== ''
+      ) {
+        const label = key
+          .replace(/_/g, ' ')
+          .split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+          
+        allFields.push({ key, label });
+      }
+    }
+    
+    return allFields;
+  };
+
+  const applicationFields = getApplicationFields();
 
   return (
     <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
@@ -145,45 +186,15 @@ const ApplicationViewDialog: React.FC<ApplicationViewDialogProps> = ({
               </CardContent>
             </Card>
             
-            {/* Alle Fragen und Antworten des Bewerbers anzeigen */}
-            {applicationFields.map(({ key, label }) => 
-              selectedApplication[key] ? (
-                <Card key={key}>
-                  <CardContent className="pt-4">
-                    <Label className="text-sm font-medium">{label}</Label>
-                    <p className="text-sm whitespace-pre-wrap mt-2">{selectedApplication[key]}</p>
-                  </CardContent>
-                </Card>
-              ) : null
-            )}
-            
-            {/* Zusätzlich alle anderen nicht-Standard-Felder durchgehen, falls vorhanden */}
-            {Object.entries(selectedApplication).map(([key, value]) => {
-              // Skip standard fields and those already displayed
-              const standardKeys = [
-                'id', 'user_id', 'discord_id', 'roblox_id', 'username', 
-                'roblox_username', 'created_at', 'updated_at', 'status', 'notes',
-                'age', 'activity_level', ...applicationFields.map(f => f.key)
-              ];
-              
-              if (!standardKeys.includes(key) && typeof value === 'string' && value.trim()) {
-                const label = key
-                  .replace(/_/g, ' ')
-                  .split(' ')
-                  .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                  .join(' ');
-                  
-                return (
-                  <Card key={key}>
-                    <CardContent className="pt-4">
-                      <Label className="text-sm font-medium">{label}</Label>
-                      <p className="text-sm whitespace-pre-wrap mt-2">{value}</p>
-                    </CardContent>
-                  </Card>
-                );
-              }
-              return null;
-            })}
+            {/* Display all answers from the applicant */}
+            {applicationFields.map(({ key, label }) => (
+              <Card key={key}>
+                <CardContent className="pt-4">
+                  <Label className="text-sm font-medium">{label}</Label>
+                  <p className="text-sm whitespace-pre-wrap mt-2">{selectedApplication[key]}</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
         

@@ -14,6 +14,14 @@ export const loadNewsIntoProfile = async () => {
   if (!newsFeedContainer) return;
   
   try {
+    // Show loading indicator
+    newsFeedContainer.innerHTML = `
+      <div class="text-center py-4">
+        <div class="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-blue-500 border-r-transparent"></div>
+        <p class="mt-2 text-sm text-gray-500">Neuigkeiten werden geladen...</p>
+      </div>
+    `;
+    
     // Get latest news
     const { data: news, error } = await supabase
       .from('news')
@@ -76,4 +84,6 @@ export const loadNewsIntoProfile = async () => {
 };
 
 // Also assign to window object for global access
-window.loadNewsIntoProfile = loadNewsIntoProfile;
+if (typeof window !== 'undefined') {
+  window.loadNewsIntoProfile = loadNewsIntoProfile;
+}

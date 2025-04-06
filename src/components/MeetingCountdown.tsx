@@ -135,17 +135,25 @@ const MeetingCountdown: React.FC<MeetingCountdownProps> = ({ className }) => {
       setLoading(true);
       setError(null);
       try {
+        console.log('Fetching team settings...');
         const settings = await getTeamSettings();
+        console.log('Received team settings:', settings);
+        
         setTeamSettings(settings);
         
         if (settings?.meeting_day && settings?.meeting_time) {
+          console.log(`Calculating next meeting for ${settings.meeting_day} at ${settings.meeting_time}`);
           const meetingDate = getNextMeetingDate(settings.meeting_day, settings.meeting_time);
+          
           if (meetingDate) {
+            console.log('Next meeting calculated:', meetingDate);
             setNextMeeting(meetingDate);
           } else {
+            console.error('Failed to calculate next meeting date');
             setError("Nächstes Meeting konnte nicht berechnet werden - ungültiges Format für Tag oder Zeit");
           }
         } else {
+          console.warn('Missing meeting day or time in settings', settings);
           setError("Keine Meeting-Daten angegeben");
         }
       } catch (error) {

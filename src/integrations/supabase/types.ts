@@ -92,44 +92,6 @@ export type Database = {
           },
         ]
       }
-      announcement_email_queue: {
-        Row: {
-          announcement_id: string
-          attempts: number
-          created_at: string
-          error: string | null
-          id: string
-          processed_at: string | null
-          status: string
-        }
-        Insert: {
-          announcement_id: string
-          attempts?: number
-          created_at?: string
-          error?: string | null
-          id?: string
-          processed_at?: string | null
-          status?: string
-        }
-        Update: {
-          announcement_id?: string
-          attempts?: number
-          created_at?: string
-          error?: string | null
-          id?: string
-          processed_at?: string | null
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "announcement_email_queue_announcement_id_fkey"
-            columns: ["announcement_id"]
-            isOneToOne: false
-            referencedRelation: "news"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       announcement_reads: {
         Row: {
           announcement_id: string
@@ -566,39 +528,6 @@ export type Database = {
           start_date?: string
           status?: string
           user_id?: string
-        }
-        Relationships: []
-      }
-      team_settings: {
-        Row: {
-          created_at: string | null
-          id: string
-          meeting_day: string | null
-          meeting_frequency: string | null
-          meeting_location: string | null
-          meeting_notes: string | null
-          meeting_time: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          meeting_day?: string | null
-          meeting_frequency?: string | null
-          meeting_location?: string | null
-          meeting_notes?: string | null
-          meeting_time?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          meeting_day?: string | null
-          meeting_frequency?: string | null
-          meeting_location?: string | null
-          meeting_notes?: string | null
-          meeting_time?: string | null
-          updated_at?: string | null
         }
         Relationships: []
       }
