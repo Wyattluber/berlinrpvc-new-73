@@ -53,10 +53,10 @@ export const loadNewsIntoProfile = async () => {
       });
       
       const newsItem = document.createElement('div');
-      newsItem.className = 'p-4 border rounded-md mb-4 bg-white shadow-sm';
+      newsItem.className = 'p-4 border rounded-md mb-4 bg-white shadow-sm hover:shadow-md transition-shadow';
       newsItem.innerHTML = `
         <div class="flex justify-between items-start mb-2">
-          <h3 class="font-semibold">${item.title}</h3>
+          <h3 class="font-semibold text-gray-800">${item.title}</h3>
           <span class="text-xs text-gray-500">${date}</span>
         </div>
         <p class="text-sm text-gray-700">${item.content}</p>
@@ -70,9 +70,9 @@ export const loadNewsIntoProfile = async () => {
     if (newsFeedContainer) {
       newsFeedContainer.innerHTML = `
         <div class="text-center py-4">
-          <p class="text-red-500">Fehler beim Laden der Neuigkeiten.</p>
+          <p class="text-red-500 mb-2">Fehler beim Laden der Neuigkeiten.</p>
           <button 
-            class="mt-2 text-sm text-blue-600 hover:underline"
+            class="px-4 py-2 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 transition-colors"
             onclick="window.loadNewsIntoProfile()"
           >
             Erneut versuchen

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, MessageSquareWarning } from 'lucide-react';
+import { Loader2, MessageSquareWarning, CheckCircle } from 'lucide-react';
 import { requestIdChange } from '@/lib/admin/users';
 
 interface UserDataChangeRequestProps {
@@ -24,6 +24,10 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
   const [newRobloxId, setNewRobloxId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingRequests, setPendingRequests] = useState<{discord: boolean, roblox: boolean}>({
+    discord: false,
+    roblox: false
+  });
+  const [successMessage, setSuccessMessage] = useState<{discord: boolean, roblox: boolean}>({
     discord: false,
     roblox: false
   });
@@ -96,9 +100,21 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
       if (fieldName === 'discord_id') {
         setNewDiscordId('');
         setPendingRequests(prev => ({ ...prev, discord: true }));
+        setSuccessMessage(prev => ({ ...prev, discord: true }));
+        
+        // Auto-hide success message after 5 seconds
+        setTimeout(() => {
+          setSuccessMessage(prev => ({ ...prev, discord: false }));
+        }, 5000);
       } else {
         setNewRobloxId('');
         setPendingRequests(prev => ({ ...prev, roblox: true }));
+        setSuccessMessage(prev => ({ ...prev, roblox: true }));
+        
+        // Auto-hide success message after 5 seconds
+        setTimeout(() => {
+          setSuccessMessage(prev => ({ ...prev, roblox: false }));
+        }, 5000);
       }
     } catch (error: any) {
       console.error(`Error submitting ${fieldName} change request:`, error);
@@ -131,14 +147,17 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
               value={newDiscordId}
               onChange={(e) => setNewDiscordId(e.target.value)}
               disabled={isSubmitting || pendingRequests.discord}
+              className="flex-1"
             />
             <Button 
               onClick={() => handleSubmit('discord_id', newDiscordId)}
               disabled={isSubmitting || pendingRequests.discord || !newDiscordId.trim()}
               size="sm"
-              variant="outline"
+              variant={successMessage.discord ? "secondary" : "outline"}
             >
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Beantragen"}
+              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+               successMessage.discord ? <CheckCircle className="h-4 w-4 text-green-500 mr-1" /> : "Beantragen"}
+              {successMessage.discord && "Gesendet"}
             </Button>
           </div>
           {pendingRequests.discord && (
@@ -159,14 +178,17 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
               value={newRobloxId}
               onChange={(e) => setNewRobloxId(e.target.value)}
               disabled={isSubmitting || pendingRequests.roblox}
+              className="flex-1"
             />
             <Button 
               onClick={() => handleSubmit('roblox_id', newRobloxId)}
               disabled={isSubmitting || pendingRequests.roblox || !newRobloxId.trim()}
               size="sm"
-              variant="outline"
+              variant={successMessage.roblox ? "secondary" : "outline"}
             >
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Beantragen"}
+              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 
+               successMessage.roblox ? <CheckCircle className="h-4 w-4 text-green-500 mr-1" /> : "Beantragen"}
+              {successMessage.roblox && "Gesendet"}
             </Button>
           </div>
           {pendingRequests.roblox && (
@@ -177,8 +199,9 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
           )}
         </div>
       </CardContent>
-      <CardFooter className="text-xs text-muted-foreground">
-        Hinweis: Änderungen an deinen IDs müssen von einem Administrator genehmigt werden, um Missbrauch zu verhindern.
+      <CardFooter className="text-xs text-muted-foreground flex flex-col items-start">
+        <p>Hinweis: Änderungen an deinen IDs müssen von einem Administrator genehmigt werden, um Missbrauch zu verhindern.</p>
+        <p className="mt-1">Bitte gib nur deine tatsächlichen IDs ein. Falsche Angaben können zur Ablehnung führen.</p>
       </CardFooter>
     </Card>
   );
