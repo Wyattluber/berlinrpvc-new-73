@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -17,6 +18,7 @@ import SubServers from "./pages/SubServers";
 import Impressum from "./pages/Impressum";
 import Datenschutz from "./pages/Datenschutz";
 import { ApplicationProvider } from "@/contexts/ApplicationContext";
+import CancelDeletion from "./pages/CancelDeletion";
 
 // Create context for session
 export const SessionContext = createContext<any>(null);
@@ -69,6 +71,7 @@ const App = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadingError, setLoadingError] = useState<string | null>(null);
+  const [hasDeletionRequest, setHasDeletionRequest] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -77,11 +80,31 @@ const App = () => {
     const initializeAuth = async () => {
       try {
         // Set up auth state change listener first
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
           console.log("Auth state changed:", _event);
           if (!isMounted) return;
           
           setSession(newSession);
+          
+          // Check for deletion request if user is logged in
+          if (newSession?.user) {
+            try {
+              const { data, error } = await supabase
+                .from('account_deletion_requests')
+                .select('id')
+                .eq('user_id', newSession.user.id)
+                .eq('status', 'pending')
+                .single();
+                
+              setHasDeletionRequest(!!data);
+            } catch (err) {
+              // Ignore error, assume no deletion request
+              setHasDeletionRequest(false);
+            }
+          } else {
+            setHasDeletionRequest(false);
+          }
+          
           setLoading(false);
         });
         
@@ -95,6 +118,24 @@ const App = () => {
         if (isMounted) {
           console.log("Initial session check:", sessionData.session ? "Logged in" : "Not logged in");
           setSession(sessionData.session);
+          
+          // Check for deletion request if user is logged in
+          if (sessionData.session?.user) {
+            try {
+              const { data, error } = await supabase
+                .from('account_deletion_requests')
+                .select('id')
+                .eq('user_id', sessionData.session.user.id)
+                .eq('status', 'pending')
+                .single();
+                
+              setHasDeletionRequest(!!data);
+            } catch (err) {
+              // Ignore error, assume no deletion request
+              setHasDeletionRequest(false);
+            }
+          }
+          
           setLoading(false);
         }
         
@@ -146,6 +187,20 @@ const App = () => {
     );
   }
 
+  // If user has a pending deletion request, redirect them to the cancellation page
+  // except if they're already on that page
+  const handleProtectedRoute = (component: React.ReactNode, requiresAuth = true) => {
+    if (!session && requiresAuth) {
+      return <Navigate to="/login" />;
+    }
+    
+    if (session && hasDeletionRequest && window.location.pathname !== '/cancel-deletion') {
+      return <Navigate to="/cancel-deletion" />;
+    }
+    
+    return component;
+  };
+
   return (
     <QueryClientProvider client={queryClient}>
       <SessionContext.Provider value={session}>
@@ -186,18 +241,22 @@ const App = () => {
                 } />
                 <Route 
                   path="/login" 
-                  element={session ? <Navigate to="/profile" /> : <Login />} 
+                  element={session ? (hasDeletionRequest ? <Navigate to="/cancel-deletion" /> : <Navigate to="/profile" />) : <Login />} 
                 />
                 <Route 
                   path="/profile" 
-                  element={session ? <Profile /> : <Navigate to="/login" />} 
+                  element={handleProtectedRoute(<Profile />)} 
+                />
+                <Route 
+                  path="/cancel-deletion" 
+                  element={handleProtectedRoute(<CancelDeletion />)} 
                 />
                 <Route path="/subservers" element={<SubServers />} />
                 <Route path="/impressum" element={<Impressum />} />
                 <Route path="/datenschutz" element={<Datenschutz />} />
                 <Route 
                   path="/admin/*" 
-                  element={session ? <Navigate to="/profile?tab=admin" /> : <Navigate to="/login" />} 
+                  element={<Navigate to="https://berlinrpvc-new-51.lovable.app/login" />} 
                 />
                 {/* Catch-all route */}
                 <Route path="*" element={<NotFound />} />

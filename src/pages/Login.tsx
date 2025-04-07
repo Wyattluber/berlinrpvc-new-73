@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Check, Loader2, X } from 'lucide-react';
+import { AlertCircle, Check, Loader2 } from 'lucide-react';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -21,21 +21,10 @@ const Login = () => {
   const [signupLoading, setSignupLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Password validation state
-  const [passwordRequirements, setPasswordRequirements] = useState({
-    minLength: false,
-    hasLetter: false,
-    hasNumber: false
-  });
-
-  // Update password requirements whenever password changes
-  useEffect(() => {
-    setPasswordRequirements({
-      minLength: password.length >= 8,
-      hasLetter: /[a-zA-Z]/.test(password),
-      hasNumber: /\d/.test(password)
-    });
-  }, [password]);
+  // Update title based on active tab
+  const getCardTitle = () => {
+    return "Willkommen zurück";
+  };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,13 +61,6 @@ const Login = () => {
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    
-    // Validate password before submission
-    if (!passwordRequirements.minLength || !passwordRequirements.hasLetter || !passwordRequirements.hasNumber) {
-      setError('Bitte erfülle alle Passwortanforderungen.');
-      return;
-    }
-    
     setSignupLoading(true);
 
     try {
@@ -108,17 +90,28 @@ const Login = () => {
     }
   };
 
-  // Future Discord login implementation
-  const handleDiscordLogin = () => {
-    toast({
-      title: "Discord Login",
-      description: "Discord Login wird in Kürze verfügbar sein.",
-    });
-  };
+  const handleDiscordLogin = async () => {
+    try {
+      setLoginLoading(true);
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'discord',
+        options: {
+          redirectTo: window.location.origin + '/profile'
+        }
+      });
 
-  const isPasswordValid = passwordRequirements.minLength && 
-                         passwordRequirements.hasLetter && 
-                         passwordRequirements.hasNumber;
+      if (error) throw error;
+    } catch (error: any) {
+      console.error('Discord login error:', error);
+      toast({
+        title: "Discord Login fehlgeschlagen",
+        description: error.message || 'Ein Fehler ist aufgetreten. Bitte versuche es erneut.',
+        variant: "destructive",
+      });
+    } finally {
+      setLoginLoading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -128,7 +121,7 @@ const Login = () => {
         <div className="w-full max-w-md">
           <Card className="shadow-lg border-blue-100">
             <CardHeader className="space-y-1 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg">
-              <CardTitle className="text-2xl font-bold text-center text-blue-900">Willkommen zurück</CardTitle>
+              <CardTitle className="text-2xl font-bold text-center text-blue-900">{getCardTitle()}</CardTitle>
               <CardDescription className="text-center text-blue-700">
                 Melde dich an oder registriere dich
               </CardDescription>
@@ -150,6 +143,36 @@ const Login = () => {
                 )}
                 
                 <TabsContent value="login">
+                  <Button 
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 mb-4"
+                    onClick={handleDiscordLogin}
+                    disabled={loginLoading}
+                  >
+                    {loginLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Wird angemeldet...
+                      </>
+                    ) : (
+                      <>
+                        <img src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png" 
+                          alt="Discord Logo" 
+                          className="w-5 h-4 mr-2" 
+                        />
+                        Mit Discord anmelden
+                      </>
+                    )}
+                  </Button>
+                  
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white text-gray-500">oder mit E-Mail anmelden</span>
+                    </div>
+                  </div>
+                
                   <form onSubmit={handleLoginSubmit} className="space-y-4 mt-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" htmlFor="email-login">
@@ -197,32 +220,40 @@ const Login = () => {
                         "Anmelden"
                       )}
                     </Button>
-                    
-                    <div className="relative my-4">
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-gray-300"></div>
-                      </div>
-                      <div className="relative flex justify-center text-sm">
-                        <span className="px-2 bg-white text-gray-500">oder</span>
-                      </div>
-                    </div>
-                    
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      className="w-full border-blue-300"
-                      onClick={handleDiscordLogin}
-                    >
-                      <img src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png" 
-                        alt="Discord Logo" 
-                        className="w-5 h-4 mr-2" 
-                      />
-                      Mit Discord anmelden (bald verfügbar)
-                    </Button>
                   </form>
                 </TabsContent>
                 
                 <TabsContent value="signup">
+                  <Button 
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 mb-4"
+                    onClick={handleDiscordLogin}
+                    disabled={signupLoading}
+                  >
+                    {signupLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Wird registriert...
+                      </>
+                    ) : (
+                      <>
+                        <img src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png" 
+                          alt="Discord Logo" 
+                          className="w-5 h-4 mr-2" 
+                        />
+                        Mit Discord registrieren
+                      </>
+                    )}
+                  </Button>
+                  
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white text-gray-500">oder mit E-Mail registrieren</span>
+                    </div>
+                  </div>
+                
                   <form onSubmit={handleSignupSubmit} className="space-y-4 mt-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70" htmlFor="email-signup">
@@ -252,51 +283,14 @@ const Login = () => {
                         placeholder="Sicheres Passwort erstellen"
                         autoComplete="new-password"
                         required
-                        className={`border-blue-200 focus:border-blue-400 focus:ring-blue-400 ${
-                          password && !isPasswordValid ? 'border-red-300' : ''
-                        }`}
+                        className="border-blue-200 focus:border-blue-400 focus:ring-blue-400"
                       />
-                      
-                      {/* Password requirements */}
-                      <div className="mt-2 text-sm space-y-1">
-                        <p className="font-medium text-gray-700">Passwort muss enthalten:</p>
-                        <div className="flex items-center">
-                          {passwordRequirements.minLength ? (
-                            <Check className="h-4 w-4 text-green-500 mr-2" />
-                          ) : (
-                            <X className="h-4 w-4 text-red-500 mr-2" />
-                          )}
-                          <span className={passwordRequirements.minLength ? "text-green-600" : "text-gray-600"}>
-                            Mindestens 8 Zeichen
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          {passwordRequirements.hasLetter ? (
-                            <Check className="h-4 w-4 text-green-500 mr-2" />
-                          ) : (
-                            <X className="h-4 w-4 text-red-500 mr-2" />
-                          )}
-                          <span className={passwordRequirements.hasLetter ? "text-green-600" : "text-gray-600"}>
-                            Mindestens ein Buchstabe
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          {passwordRequirements.hasNumber ? (
-                            <Check className="h-4 w-4 text-green-500 mr-2" />
-                          ) : (
-                            <X className="h-4 w-4 text-red-500 mr-2" />
-                          )}
-                          <span className={passwordRequirements.hasNumber ? "text-green-600" : "text-gray-600"}>
-                            Mindestens eine Zahl
-                          </span>
-                        </div>
-                      </div>
                     </div>
                     
                     <Button 
                       type="submit" 
                       className="w-full bg-blue-600 hover:bg-blue-700" 
-                      disabled={signupLoading || !isPasswordValid}
+                      disabled={signupLoading}
                     >
                       {signupLoading ? (
                         <>
@@ -306,28 +300,6 @@ const Login = () => {
                       ) : (
                         "Registrieren"
                       )}
-                    </Button>
-                    
-                    <div className="relative my-4">
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-gray-300"></div>
-                      </div>
-                      <div className="relative flex justify-center text-sm">
-                        <span className="px-2 bg-white text-gray-500">oder</span>
-                      </div>
-                    </div>
-                    
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      className="w-full border-blue-300"
-                      onClick={handleDiscordLogin}
-                    >
-                      <img src="https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png" 
-                        alt="Discord Logo" 
-                        className="w-5 h-4 mr-2" 
-                      />
-                      Mit Discord registrieren (bald verfügbar)
                     </Button>
                   </form>
                 </TabsContent>

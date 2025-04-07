@@ -1,66 +1,84 @@
 
 import React from 'react';
-import { Menu, X, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Menu, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface AdminMobileNavProps {
+export const AdminMobileHeader: React.FC<{
   isAdmin: boolean;
   mobileMenuOpen: boolean;
   setMobileMenuOpen: (open: boolean) => void;
-  menuItems: Array<{
-    title: string;
-    id: string;
-    icon: React.ComponentType<any>;
-  }>;
-  activeSection: string;
-  handleMenuClick: (id: string) => void;
-}
-
-export const AdminMobileHeader = ({ 
-  isAdmin, 
-  mobileMenuOpen, 
-  setMobileMenuOpen 
-}: Pick<AdminMobileNavProps, 'isAdmin' | 'mobileMenuOpen' | 'setMobileMenuOpen'>) => {
+}> = ({ isAdmin, mobileMenuOpen, setMobileMenuOpen }) => {
   return (
-    <div className="md:hidden border-b py-3 px-4 flex items-center justify-between sticky top-0 bg-white z-10">
-      <h1 className="text-xl font-semibold">
-        {isAdmin ? "Admin Panel" : "Moderator Panel"}
-      </h1>
-      <Button 
-        variant="ghost" 
-        size="icon" 
+    <div className="md:hidden bg-white border-b border-gray-200 py-4 px-4 flex items-center justify-between">
+      <h2 className="text-lg font-semibold text-gray-800">
+        {isAdmin ? 'Admin Bereich' : 'Moderator Bereich'}
+      </h2>
+      <Button
+        variant="ghost"
+        size="icon"
         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
       >
-        {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </Button>
     </div>
   );
 };
 
-export const AdminMobileSidebar = ({ 
-  menuItems, 
-  activeSection, 
-  handleMenuClick 
-}: Pick<AdminMobileNavProps, 'menuItems' | 'activeSection' | 'handleMenuClick'>) => {
+export const AdminMobileSidebar: React.FC<{
+  menuItems: {
+    title: string;
+    id: string;
+    icon: any;
+    externalUrl?: string;
+  }[];
+  activeSection: string;
+  handleMenuClick: (id: string) => void;
+}> = ({ menuItems, activeSection, handleMenuClick }) => {
   return (
-    <div className="md:hidden bg-white w-full border-b shadow-sm z-10">
-      <nav className="py-2">
-        {menuItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => handleMenuClick(item.id)}
-            className={`w-full flex items-center px-4 py-3 text-sm ${
-              activeSection === item.id
-                ? "bg-gray-100 text-gray-900"
-                : "text-gray-700"
-            }`}
-          >
-            <item.icon className="mr-3 h-5 w-5" />
-            <span>{item.title}</span>
-            {activeSection === item.id && <ChevronRight className="ml-auto h-4 w-4" />}
-          </button>
-        ))}
-      </nav>
+    <div className="md:hidden fixed inset-0 z-40 bg-gray-800 bg-opacity-50">
+      <div className="fixed inset-y-0 left-0 max-w-xs w-full bg-white shadow-lg p-4 overflow-y-auto">
+        <div className="space-y-2 py-4">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            
+            if (item.externalUrl) {
+              return (
+                <a 
+                  key={item.id}
+                  href={item.externalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    "flex items-center px-4 py-2 text-sm rounded-md transition-colors",
+                    "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                  )}
+                >
+                  <Icon className="h-5 w-5 mr-3" />
+                  {item.title} ↗
+                </a>
+              );
+            }
+            
+            return (
+              <Button
+                key={item.id}
+                variant="ghost"
+                className={cn(
+                  "flex justify-start w-full items-center",
+                  activeSection === item.id
+                    ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                    : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                )}
+                onClick={() => handleMenuClick(item.id)}
+              >
+                <Icon className="h-5 w-5 mr-3" />
+                {item.title}
+              </Button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 };
