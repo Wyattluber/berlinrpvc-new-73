@@ -32,15 +32,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let isMounted = true;
+    console.log("AuthProvider initialized");
     
     // Improved auth initialization
     const initializeAuth = async () => {
       try {
         console.log("Initializing auth...");
+        setLoading(true);
         
-        // Set up auth state change listener first
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-          console.log("Auth state changed:", _event);
+        // Set up auth state change listener first to catch any auth events
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+          console.log("Auth state changed:", _event, newSession ? "Session exists" : "No session");
           if (!isMounted) return;
           
           setSession(newSession);
@@ -48,23 +50,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Check for deletion request if user is logged in
           if (newSession?.user) {
             try {
-              const { data, error } = await supabase
+              supabase
                 .from('account_deletion_requests')
                 .select('id')
                 .eq('user_id', newSession.user.id)
                 .eq('status', 'pending')
-                .maybeSingle();
-                
-              setHasDeletionRequest(!!data);
+                .maybeSingle()
+                .then(({ data, error }) => {
+                  if (error) {
+                    console.error("Error checking deletion requests:", error);
+                    return;
+                  }
+                  if (isMounted) {
+                    setHasDeletionRequest(!!data);
+                  }
+                });
             } catch (err) {
-              // Ignore error, assume no deletion request
-              setHasDeletionRequest(false);
+              console.error("Error checking deletion requests:", err);
             }
           } else {
             setHasDeletionRequest(false);
           }
           
-          setLoading(false);
+          if (isMounted) {
+            setLoading(false);
+          }
         });
         
         // Then check current session status
@@ -91,6 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 
               setHasDeletionRequest(!!data);
             } catch (err) {
+              console.error("Error checking deletion requests:", err);
               // Ignore error, assume no deletion request
               setHasDeletionRequest(false);
             }

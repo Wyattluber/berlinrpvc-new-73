@@ -29,10 +29,17 @@ const Login = () => {
       setLoginLoading(true);
       setError(null);
       
+      // Get the current domain for the redirect URL
+      const redirectUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:5173/profile'
+        : 'https://berlinrpvc.de/profile';
+      
+      console.log("Using redirect URL:", redirectUrl);
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'discord',
         options: {
-          redirectTo: 'https://berlinrpvc.de/profile'
+          redirectTo: redirectUrl
         }
       });
 

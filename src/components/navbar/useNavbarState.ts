@@ -1,13 +1,13 @@
 
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth, SessionContext } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { checkIsAdmin, checkIsModerator } from '@/lib/admin';
 import { toast } from '@/hooks/use-toast';
 
 export const useNavbarState = () => {
-  const session = useContext(SessionContext);
+  const { session } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isModerator, setIsModerator] = useState(false);
   const location = useLocation();
@@ -21,6 +21,9 @@ export const useNavbarState = () => {
         
         const moderatorStatus = await checkIsModerator();
         setIsModerator(moderatorStatus);
+      } else {
+        setIsAdmin(false);
+        setIsModerator(false);
       }
     };
     
@@ -38,6 +41,9 @@ export const useNavbarState = () => {
         title: "Erfolgreicher Logout",
         description: "Du wurdest erfolgreich ausgeloggt.",
       });
+      
+      // Optionally force reload after logout to ensure clean state
+      window.location.href = '/';
     } catch (error) {
       console.error('Error logging out:', error);
       toast({
