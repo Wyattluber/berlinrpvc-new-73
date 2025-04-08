@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import Navbar from '@/components/Navbar';
@@ -11,13 +10,14 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
 
 const Login = () => {
-  const navigate = useNavigate();
   const [loginLoading, setLoginLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleDiscordLogin = async () => {
     try {
       setLoginLoading(true);
+      setError(null);
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'discord',
         options: {
@@ -26,6 +26,8 @@ const Login = () => {
       });
 
       if (error) throw error;
+      
+      // We don't need to navigate here as OAuth will redirect the user
     } catch (error: any) {
       console.error('Discord login error:', error);
       setError(error.message || 'Ein Fehler ist aufgetreten. Bitte versuche es erneut.');
