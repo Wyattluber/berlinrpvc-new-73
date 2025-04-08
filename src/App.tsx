@@ -79,6 +79,8 @@ const App = () => {
     // Improved auth initialization
     const initializeAuth = async () => {
       try {
+        console.log("Initializing auth...");
+        
         // Set up auth state change listener first
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
           console.log("Auth state changed:", _event);
@@ -112,6 +114,7 @@ const App = () => {
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
+          console.error("Session error:", sessionError);
           throw sessionError;
         }
         
