@@ -19,6 +19,9 @@ export const AuthContext = createContext<AuthContextType>({
   resetAuth: async () => {},
 });
 
+// Export SessionContext for backward compatibility
+export const SessionContext = createContext<any>(null);
+
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -144,7 +147,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resetAuth 
       }}
     >
-      {children}
+      <SessionContext.Provider value={session}>
+        {children}
+      </SessionContext.Provider>
     </AuthContext.Provider>
   );
 };

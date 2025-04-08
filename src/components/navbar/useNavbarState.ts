@@ -2,7 +2,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { SessionContext } from '../../App';
+import { SessionContext } from '../../contexts/AuthContext';
 import { checkIsAdmin, checkIsModerator } from '@/lib/admin';
 import { toast } from '@/hooks/use-toast';
 

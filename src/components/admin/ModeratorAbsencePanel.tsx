@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useContext } from 'react';
-import { SessionContext } from '../../App'; 
+import { SessionContext } from '../../contexts/AuthContext'; 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import TeamAbsenceForm from './TeamAbsenceForm';
 import { AlertCircle } from 'lucide-react';

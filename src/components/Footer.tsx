@@ -2,7 +2,7 @@
 import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { SessionContext } from '../App';
+import { SessionContext } from '../contexts/AuthContext';
 import { checkIsAdmin } from '@/lib/admin';
 import { useState, useEffect } from 'react';
 

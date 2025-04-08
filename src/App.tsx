@@ -5,7 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { AuthProvider, useAuth, SessionContext } from "./contexts/AuthContext";
 
 import ErrorFallback from "./components/ErrorFallback";
 import LoadingSpinner from "./components/LoadingSpinner";
@@ -23,7 +23,6 @@ import Impressum from "./pages/Impressum";
 import Datenschutz from "./pages/Datenschutz";
 import CancelDeletion from "./pages/CancelDeletion";
 import { ApplicationProvider } from "@/contexts/ApplicationContext";
-import { SessionContext } from "./contexts/AuthContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -117,13 +116,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <ErrorFallback>
-            <SessionContext.Consumer>
-              {(session) => (
-                <SessionContext.Provider value={session}>
-                  <AppLoadingErrorManager />
-                </SessionContext.Provider>
-              )}
-            </SessionContext.Consumer>
+            <AppLoadingErrorManager />
           </ErrorFallback>
         </TooltipProvider>
       </AuthProvider>

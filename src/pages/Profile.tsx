@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,7 +10,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { SessionContext } from '../App';
+import { SessionContext } from '../contexts/AuthContext';
 import { LoaderIcon, CheckCircle, Calendar, Bell, HelpCircle, AlertTriangle, Plus, Lock } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { getUserApplicationsHistory } from '@/lib/admin/users';
