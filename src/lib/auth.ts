@@ -60,6 +60,9 @@ export function setupAuthEventListeners() {
             timestamp: new Date().toISOString()
           });
         }
+      } else if (event === 'TOKEN_REFRESHED') {
+        // Log token refresh events
+        console.log('Token refreshed successfully at', new Date().toISOString());
       }
     }
   );
@@ -128,7 +131,7 @@ export async function updateUserProfile(userId: string, profileData: any) {
       .from('profiles')
       .select('id, discord_id, roblox_id')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
       
     if (checkError && checkError.code !== 'PGRST116') {
       throw checkError;

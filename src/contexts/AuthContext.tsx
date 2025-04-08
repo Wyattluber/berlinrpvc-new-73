@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 .select('id')
                 .eq('user_id', newSession.user.id)
                 .eq('status', 'pending')
-                .single();
+                .maybeSingle();
                 
               setHasDeletionRequest(!!data);
             } catch (err) {
@@ -87,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 .select('id')
                 .eq('user_id', sessionData.session.user.id)
                 .eq('status', 'pending')
-                .single();
+                .maybeSingle();
                 
               setHasDeletionRequest(!!data);
             } catch (err) {

@@ -2,6 +2,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -12,7 +13,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children, 
   requiresAuth = true 
 }) => {
-  const { session, hasDeletionRequest } = useAuth();
+  const { session, loading, hasDeletionRequest } = useAuth();
+  
+  // Show loading spinner while auth state is being determined
+  if (loading) {
+    return <LoadingSpinner />;
+  }
   
   if (!session && requiresAuth) {
     return <Navigate to="/login" />;
