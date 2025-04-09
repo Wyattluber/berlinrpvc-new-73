@@ -87,7 +87,7 @@ const Datenschutz = () => {
               <p>
                 BerlinRP-VC<br />
                 <em>[Kontaktdaten auf Anfrage]</em><br />
-                E-Mail: kontakt@berlinrp.de
+                E-Mail: kontakt@berlinrpvc.de
               </p>
               <p>
                 Verantwortliche Stelle ist die natürliche oder juristische Person, die allein oder gemeinsam mit anderen über die Zwecke
@@ -199,6 +199,11 @@ const Datenschutz = () => {
                 Für Ihren erneuten Besuch gilt dann die neue Datenschutzerklärung.
               </p>
             </section>
+
+            <p className="text-sm text-gray-500 mt-6">
+  Stand: 9. April 2025
+</p>
+
           </CardContent>
         </Card>
       </main>
