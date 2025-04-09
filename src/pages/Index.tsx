@@ -147,20 +147,21 @@ const Index = () => {
         </section>
 
         {/* Discord Embed */}
-        <section className="bg-gray-100 py-16">
-          <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl font-bold mb-6 text-gray-800">Discord Live</h2>
-            <iframe
-              src="https://discord.com/widget?id=1173325263301746779&theme=dark"
-              width="100%"
-              height="500"
-              allowTransparency={true}
-              frameBorder="0"
-              sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
-              className="rounded-xl shadow-lg mx-auto"
-            ></iframe>
-          </div>
-        </section>
+<section className="bg-gray-100 py-16">
+  <div className="container mx-auto px-4 text-center">
+    <h2 className="text-3xl font-bold mb-6 text-gray-800">Discord Live</h2>
+    <iframe
+      src="https://discord.com/widget?id=1173325263301746779&theme=dark"
+      width="100%"
+      height="500"
+      allowtransparency="true"
+      frameborder="0"
+      sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
+      className="rounded-xl shadow-lg mx-auto"
+    ></iframe>
+  </div>
+</section>
+
 
         {/* Filler Padding for Scroll */}
         <div className="py-12"></div>
