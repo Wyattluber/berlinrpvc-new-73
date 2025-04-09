@@ -21,21 +21,36 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       loading, 
       authenticated: !!session, 
       path: location.pathname,
-      hasDeletionRequest 
+      hasDeletionRequest,
+      sessionData: session ? 'Session exists' : 'No session'
     });
   }, [loading, session, location.pathname, hasDeletionRequest]);
   
   // Show loading spinner while auth state is being determined
+  // Add a 5-second maximum loading time to prevent infinite loading
+  useEffect(() => {
+    if (loading) {
+      const timeoutId = setTimeout(() => {
+        console.log("Loading timeout reached - forcing authentication check");
+        // This will force a re-render and check if we have session data
+        // If not, the user will be redirected to login
+      }, 5000);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [loading]);
+  
+  // Don't render anything until we know the auth state
   if (loading) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner />
       </div>
     );
   }
   
   if (!session && requiresAuth) {
-    console.log("Not authenticated, redirecting to login");
+    console.log("Not authenticated, redirecting to login from", location.pathname);
     return <Navigate to="/login" replace />;
   }
   

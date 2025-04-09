@@ -160,3 +160,19 @@ export async function canUseAdminUsername(userId: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Extracts clean username from Discord display name
+ * Removes the #0000 format or any discriminator at the end
+ * @param discordName The full Discord display name
+ * @returns Clean username without discriminator
+ */
+export function cleanDiscordUsername(discordName: string): string {
+  // Remove any #XXXX discriminator format (old Discord format)
+  if (discordName.includes('#')) {
+    return discordName.split('#')[0];
+  }
+  
+  // For new Discord usernames that don't have the #0000 format
+  return discordName;
+}

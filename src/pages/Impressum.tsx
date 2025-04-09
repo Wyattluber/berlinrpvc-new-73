@@ -1,10 +1,11 @@
-
 import React from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const Impressum = () => {
+  const contactEmail = "kontakt@berlinrpvc.de";
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -25,7 +26,7 @@ const Impressum = () => {
             <section>
               <h2 className="text-2xl font-bold">Kontakt</h2>
               <p>
-                E-Mail: <a href="mailto:kontakt@berlinrpvc.de" className="text-blue-600 hover:underline">kontakt@berlinrpvc.de</a>
+                E-Mail: <a href="mailto:kontakt@berlinrpvc.de" className="text-blue-600 hover:underline">{contactEmail}</a>
               </p>
             </section>
 
