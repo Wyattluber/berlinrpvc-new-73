@@ -1,8 +1,5 @@
 
-import { 
-  LayoutDashboard, Users, FileText, Settings, BellRing, 
-  Share, Server, UserCog, Link as LinkIcon, UserX 
-} from 'lucide-react';
+import { LayoutDashboard } from 'lucide-react';
 
 export const getAdminMenuItems = (isAdmin: boolean) => {
   if (isAdmin) {
