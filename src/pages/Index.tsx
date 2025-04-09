@@ -25,7 +25,7 @@ const Index = () => {
                 alt="BerlinRP-VC"
                 className="w-full h-auto max-h-64 object-contain mx-auto filter drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]"
                 onError={(e) => {
-                  const target = e.target as HTMLImageElement;
+                  const target = e.target;
                   target.onerror = null;
                   target.src = 'https://via.placeholder.com/400x200?text=BerlinRP-VC';
                 }}
@@ -120,7 +120,7 @@ const Index = () => {
                     alt="BerlinRP-VC Community"
                     className="rounded-lg shadow-lg w-full h-auto max-w-md mx-auto"
                     onError={(e) => {
-                      const target = e.target as HTMLImageElement;
+                      const target = e.target;
                       target.onerror = null;
                       target.src = 'https://via.placeholder.com/600x400?text=Community+Image';
                     }}
@@ -147,21 +147,20 @@ const Index = () => {
         </section>
 
         {/* Discord Embed */}
-<section className="bg-gray-100 py-16">
-  <div className="container mx-auto px-4 text-center">
-    <h2 className="text-3xl font-bold mb-6 text-gray-800">Discord Live</h2>
-    <iframe
-      src="https://discord.com/widget?id=1173325263301746779&theme=dark"
-      width="100%"
-      height="500"
-      allowtransparency="true"
-      frameborder="0"
-      sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
-      className="rounded-xl shadow-lg mx-auto"
-    ></iframe>
-  </div>
-</section>
-
+        <section className="bg-gray-100 py-16">
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">Discord Live</h2>
+            <iframe
+              src="https://discord.com/widget?id=1173325263301746779&theme=dark"
+              width="100%"
+              height="500"
+              allowTransparency="true"
+              frameBorder="0"
+              sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
+              className="rounded-xl shadow-lg mx-auto"
+            ></iframe>
+          </div>
+        </section>
 
         {/* Filler Padding for Scroll */}
         <div className="py-12"></div>
