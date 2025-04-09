@@ -24,85 +24,84 @@ const ApplicationForm = () => {
   const { currentStep, goToNextStep, goToPreviousStep, applicationData } = useApplication();
   const navigate = useNavigate();
 
-useEffect(() => {
-  const checkAuth = async () => {
-    setLoading(true);
+  useEffect(() => {
+    const checkAuth = async () => {
+      setLoading(true);
 
-    const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
 
-    if (!session) {
-      setAuthenticated(false);
-      toast({
-        title: "Nicht angemeldet",
-        description: "Du musst angemeldet sein, um eine Bewerbung einzureichen.",
-        variant: "destructive"
-      });
-      navigate('/login');
-      return;
-    }
-
-    setAuthenticated(true);
-
-    // Holen der Benutzerinformationen aus Supabase
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      // Laden der Discord- und Roblox-IDs aus der "profiles"-Tabelle
-      const { data: profileData, error } = await supabase
-        .from('profiles')
-        .select('discord_id, roblox_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (profileData) {
-        setUserDiscordId(profileData.discord_id || '');
-        setUserRobloxId(profileData.roblox_id || '');
-      } else {
+      if (!session) {
+        setAuthenticated(false);
         toast({
-          title: "Fehler beim Laden der Benutzerdaten",
-          description: "Die Profilinformationen konnten nicht abgerufen werden.",
+          title: "Nicht angemeldet",
+          description: "Du musst angemeldet sein, um eine Bewerbung einzureichen.",
           variant: "destructive"
         });
+        navigate('/login');
+        return;
       }
-    }
 
-    // Überprüfen, ob der Benutzer bereits eine Bewerbung eingereicht hat
-    const { data: applications } = await supabase
-      .from('applications')
-      .select('id, status')
-      .eq('user_id', session.user.id)
-      .maybeSingle();
+      setAuthenticated(true);
 
-    if (applications && applications.id) {
-      setHasSubmittedApplication(true);
-      toast({
-        title: "Bewerbung bereits eingereicht",
-        description: "Du hast bereits eine Bewerbung eingereicht. Überprüfe den Status im Profil-Dashboard.",
-      });
-      navigate('/profile');
-    }
+      // Holen der Benutzerinformationen aus Supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Laden der Discord- und Roblox-IDs aus der "profiles"-Tabelle
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('discord_id, roblox_id')
+          .eq('user_id', user.id)
+          .single();
 
-    // Überprüfen, ob der Benutzer Administrator oder Moderator ist
-    const { data: adminData } = await supabase
-      .from('admin_users')
-      .select('role')
-      .eq('user_id', session.user.id)
-      .maybeSingle();
+        if (profileData) {
+          setUserDiscordId(profileData.discord_id || '');
+          setUserRobloxId(profileData.roblox_id || '');
+        } else {
+          toast({
+            title: "Fehler beim Laden der Benutzerdaten",
+            description: "Die Profilinformationen konnten nicht abgerufen werden.",
+            variant: "destructive"
+          });
+        }
+      }
 
-    if (adminData && adminData.role) {
-      setUserRole(adminData.role);
-      toast({
-        title: "Admin/Moderator-Zugriff",
-        description: "Als Teammitglied kannst du keine Bewerbung einreichen.",
-      });
-      navigate('/profile');
-    }
+      // Überprüfen, ob der Benutzer bereits eine Bewerbung eingereicht hat
+      const { data: applications } = await supabase
+        .from('applications')
+        .select('id, status')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
 
-    setLoading(false);
-  };
+      if (applications && applications.id) {
+        setHasSubmittedApplication(true);
+        toast({
+          title: "Bewerbung bereits eingereicht",
+          description: "Du hast bereits eine Bewerbung eingereicht. Überprüfe den Status im Profil-Dashboard.",
+        });
+        navigate('/profile');
+      }
 
-  checkAuth();
-}, [navigate]);
+      // Überprüfen, ob der Benutzer Administrator oder Moderator ist
+      const { data: adminData } = await supabase
+        .from('admin_users')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
 
+      if (adminData && adminData.role) {
+        setUserRole(adminData.role);
+        toast({
+          title: "Admin/Moderator-Zugriff",
+          description: "Als Teammitglied kannst du keine Bewerbung einreichen.",
+        });
+        navigate('/profile');
+      }
+
+      setLoading(false);
+    };
+
+    checkAuth();
+  }, [navigate]);
 
   if (loading) {
     return (
@@ -132,24 +131,34 @@ useEffect(() => {
     );
   }
 
-const renderStepContent = () => {
-  switch (currentStep) {
-    case 1:
-      return (
-        <Step1BasicInfo
-          onNext={goToNextStep}
-          userDiscordId={userDiscordId}  // Discord ID
-          userRobloxId={userRobloxId}    // Roblox ID
-          userRobloxUsername={userRobloxUsername}
-        />
-      );
-    // Weitere Schritte...
-    default:
-      return null;
-  }
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <Step1BasicInfo
+            onNext={goToNextStep}
+            userDiscordId={userDiscordId}  // Discord ID
+            userRobloxId={userRobloxId}    // Roblox ID
+            userRobloxUsername={userRobloxUsername}
+          />
+        );
+      // Weitere Schritte...
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Navbar />
+      <main className="flex-grow py-10 bg-gradient-to-b from-gray-50 to-white">
+        {renderStepContent()}
+      </main>
+      <Footer />
+    </div>
+  );
 };
 
-// In Step1BasicInfo-Komponente:
 const Step1BasicInfo = ({ onNext, userDiscordId, userRobloxId, userRobloxUsername }) => {
   return (
     <div>
@@ -185,6 +194,5 @@ const Step1BasicInfo = ({ onNext, userDiscordId, userRobloxId, userRobloxUsernam
     </div>
   );
 };
-
 
 export default ApplicationForm;
