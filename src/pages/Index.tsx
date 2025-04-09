@@ -179,6 +179,22 @@ const Index = () => {
             </div>
           </div>
         </section>
+
+        {/* Discord Widget Section */}
+        <section className="py-16 bg-gray-900 text-white">
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="text-3xl font-bold mb-6">Tritt unserem Discord bei!</h2>
+            <iframe
+              src="https://discord.com/widget?id=1283167094854258741&theme=dark"
+              width="350"
+              height="500"
+              allowtransparency="true"
+              frameBorder="0"
+              sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
+              className="mx-auto"
+            ></iframe>
+          </div>
+        </section>
       </main>
 
       <Footer />
