@@ -25,8 +25,11 @@ const Impressum = () => {
 
             <section>
               <h2 className="text-2xl font-bold">Kontakt</h2>
-              <p>
-                E-Mail: <a href="mailto:kontakt@berlinrpvc.de" className="text-blue-600 hover:underline">{contactEmail}</a>
+              <p className="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M3 4a2 2 0 011.438-.582l8 2A2 2 0 0113 6v8a2 2 0 01-1.562 1.582l-8 2A2 2 0 013 16V4z" clipRule="evenodd" />
+                </svg>
+                E-Mail: <a href={`mailto:${contactEmail}`} className="text-blue-600 hover:underline">{contactEmail}</a>
               </p>
             </section>
 
@@ -95,6 +98,7 @@ const Impressum = () => {
                 entsprechenden Hinweis. Bei Bekanntwerden von Rechtsverletzungen werden wir derartige Inhalte umgehend entfernen.
               </p>
             </section>
+            <p className="text-sm text-gray-500">Stand: April 2025</p>
           </CardContent>
         </Card>
       </main>
