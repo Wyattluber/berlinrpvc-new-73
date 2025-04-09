@@ -1,4 +1,4 @@
-import React from 'react'; import Navbar from '../components/Navbar'; import Footer from '../components/Footer'; import ServerStats from '../components/ServerStats'; import { Button } from '@/components/ui/button'; import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'; import { Link } from 'react-router-dom'; import { ExternalLink } from 'lucide-react'; import Changelog from '@/components/Changelog';
+import React from 'react'; import Navbar from '../components/Navbar'; import Footer from '../components/Footer'; import ServerStats from '../components/ServerStats'; import { Button } from '@/components/ui/button'; import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'; import { Link } from 'react-router-dom'; import { ExternalLink } from 'lucide-react';
 
 const Index = () => { return ( <div className="flex flex-col min-h-screen"> <Navbar />
 
@@ -40,15 +40,50 @@ const Index = () => { return ( <div className="flex flex-col min-h-screen"> <Nav
     </section>
 
     {/* Stats Section */}
-    <div className="container mx-auto px-4 mt-[-2rem]">
+    <div className="py-8">
       <ServerStats />
     </div>
 
+    {/* Team Section */}
+    <section className="py-16 bg-gray-100">
+      <div className="container mx-auto px-4 text-center">
+        <h2 className="text-3xl font-bold mb-10 text-gray-800">Unser Team</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {/* Founder */}
+          <div className="bg-white shadow-lg rounded-2xl p-6 text-center">
+            <img
+              src="https://cdn.discordapp.com/avatars/1150411455443783795/4255ccaf55b3d9ecdddcabe4e6d53fc5?size=1024"
+              alt="Founder"
+              className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-indigo-500"
+            />
+            <h3 className="text-xl font-bold text-gray-800">◤✞𝕯𝖆𝖗𝖐 𝕬𝖓𝖌𝖊𝖑✞◥</h3>
+            <p className="text-sm text-indigo-600 mt-1">Founder</p>
+          </div>
+          {/* Co-Founder */}
+          <div className="bg-white shadow-lg rounded-2xl p-6 text-center">
+            <img
+              src="https://cdn.discordapp.com/avatars/1020320597936439429/0328f839138b450d1029f2c582f4f4e0?size=1024"
+              alt="Co-Founder"
+              className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-indigo-500"
+            />
+            <h3 className="text-xl font-bold text-gray-800">Backtrix_23 | Berlin RP-VC</h3>
+            <p className="text-sm text-indigo-600 mt-1">Co-Founder</p>
+          </div>
+          {/* Platzhalter */}
+          <div className="bg-white shadow-inner rounded-2xl p-6 flex items-center justify-center text-center text-gray-500 italic">
+            Weitere Teammitglieder werden bald eingetragen...
+          </div>
+        </div>
+      </div>
+    </section>
+
     {/* Changelog Section */}
-    <section className="py-12 bg-gray-50">
-      <div className="container mx-auto px-4">
+    <section className="relative py-16 bg-gray-50">
+      <div className="absolute inset-0 bg-white/70 z-10 flex items-center justify-center rotate-[-5deg]">
+        <h2 className="text-5xl font-extrabold text-gray-400 opacity-60">COMING SOON</h2>
+      </div>
+      <div className="container mx-auto px-4 relative z-0">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold mb-6 text-gray-800 text-center">Neueste Änderungen</h2>
           <Card>
             <CardHeader>
               <CardTitle>Changelog</CardTitle>
@@ -57,7 +92,7 @@ const Index = () => { return ( <div className="flex flex-col min-h-screen"> <Nav
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Changelog />
+              {/* Platzhalter für zukünftige Einbindung */}
             </CardContent>
           </Card>
         </div>
@@ -65,7 +100,7 @@ const Index = () => { return ( <div className="flex flex-col min-h-screen"> <Nav
     </section>
 
     {/* About Section */}
-    <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
+    <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row items-center">
           <div className="md:w-1/2 mb-8 md:mb-0 md:pr-8">
@@ -101,46 +136,24 @@ const Index = () => { return ( <div className="flex flex-col min-h-screen"> <Nav
       </div>
     </section>
 
-    {/* Team Section */}
-    <section className="py-16 bg-gradient-to-b from-gray-100 to-gray-200">
+    {/* Discord Embed */}
+    <section className="bg-gray-100 py-16">
       <div className="container mx-auto px-4 text-center">
-        <h2 className="text-3xl font-bold mb-4 text-gray-800">Unser Team</h2>
-        <p className="text-gray-600 mb-6">Hier wird bald unser Team eingetragen – direkt verknüpft mit unserem Discord!</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-          <div className="bg-white rounded-lg p-4 shadow text-left">
-            <div className="text-lg font-semibold">Noch leer...</div>
-            <div className="text-sm text-gray-500">Wird automatisch ergänzt</div>
-          </div>
-          <div className="bg-white rounded-lg p-4 shadow text-left">
-            <div className="text-lg font-semibold">Hier könnte dein Name stehen</div>
-            <div className="text-sm text-gray-500">Bewerbung offen</div>
-          </div>
-          <div className="bg-white rounded-lg p-4 shadow text-left">
-            <div className="text-lg font-semibold">Bald mehr!</div>
-            <div className="text-sm text-gray-500">Bleib gespannt</div>
-          </div>
-        </div>
+        <h2 className="text-3xl font-bold mb-6 text-gray-800">Discord Live</h2>
+        <iframe
+          src="https://discord.com/widget?id=1173325263301746779&theme=dark"
+          width="100%"
+          height="500"
+          allowTransparency={true}
+          frameBorder="0"
+          sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
+          className="rounded-xl shadow-lg mx-auto"
+        ></iframe>
       </div>
     </section>
 
-    {/* CTA Section */}
-    <section className="bg-gradient-to-r from-purple-700 to-blue-700 text-white py-16 text-center relative overflow-hidden">
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-500 via-transparent to-transparent opacity-30"></div>
-      </div>
-      <div className="container mx-auto px-4 relative z-[1]">
-        <h2 className="text-3xl font-bold mb-4">Bereit für den Einsatz?</h2>
-        <p className="text-xl mb-8 max-w-2xl mx-auto">
-          Werde Teil unseres Teams und hilf mit, das virtuelle Berlin am Laufen zu halten.
-        </p>
-        <Button
-          size="lg"
-          className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 border-0 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all duration-300"
-        >
-          <Link to="/apply/form">Jetzt Bewerben</Link>
-        </Button>
-      </div>
-    </section>
+    {/* Filler Padding for Scroll */}
+    <div className="py-12"></div>
   </main>
 
   <Footer />
@@ -150,4 +163,3 @@ const Index = () => { return ( <div className="flex flex-col min-h-screen"> <Nav
 
 export default Index;
 
- 
