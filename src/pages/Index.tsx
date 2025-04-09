@@ -38,7 +38,7 @@ const Index = () => {
               <Button
                 size="lg"
                 variant="outline"
-                className="text-white border-white/20 hover:bg-white/10 backdrop-blur-sm bg-white/5 group"
+                className="text-white border-white/20 hover:bg-gradient-to-r from-blue-600 to-indigo-700 backdrop-blur-sm bg-white/5 group"
               >
                 <a href="https://discord.gg/berlinrpvc" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                   <span>Discord Beitreten</span>
@@ -60,7 +60,7 @@ const Index = () => {
             <h2 className="text-3xl font-bold mb-10 text-gray-800">Unser Team</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {/* Founder */}
-              <div className="bg-white shadow-lg rounded-2xl p-6 text-center">
+              <div className="bg-white shadow-lg rounded-2xl p-6 text-center hover:bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 transition-all duration-300">
                 <img
                   src="https://cdn.discordapp.com/avatars/1150411455443783795/4255ccaf55b3d9ecdddcabe4e6d53fc5?size=1024"
                   alt="Founder"
@@ -70,7 +70,7 @@ const Index = () => {
                 <p className="text-sm text-indigo-600 mt-1">Founder</p>
               </div>
               {/* Co-Founder */}
-              <div className="bg-white shadow-lg rounded-2xl p-6 text-center">
+              <div className="bg-white shadow-lg rounded-2xl p-6 text-center hover:bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 transition-all duration-300">
                 <img
                   src="https://cdn.discordapp.com/avatars/1020320597936439429/0328f839138b450d1029f2c582f4f4e0?size=1024"
                   alt="Co-Founder"
