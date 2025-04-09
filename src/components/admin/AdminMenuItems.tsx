@@ -1,5 +1,5 @@
 
-import { LayoutDashboard } from 'lucide-react';
+import { LayoutDashboard, FileText, UserCog } from 'lucide-react';
 
 export const getAdminMenuItems = (isAdmin: boolean) => {
   if (isAdmin) {
