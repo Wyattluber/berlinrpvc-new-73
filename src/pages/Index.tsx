@@ -1,19 +1,19 @@
-import React from 'react'; import Navbar from '../components/Navbar'; import Footer from '../components/Footer'; import { Button } from '@/components/ui/button'; import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'; import { Link } from 'react-router-dom'; import { ExternalLink } from 'lucide-react';
+import React from 'react'; import Navbar from '../components/Navbar'; import Footer from '../components/Footer'; import ServerStats from '../components/ServerStats'; import { Button } from '@/components/ui/button'; import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'; import { Link } from 'react-router-dom'; import { ExternalLink } from 'lucide-react'; import Changelog from '@/components/Changelog';
 
 const Index = () => { return ( <div className="flex flex-col min-h-screen"> <Navbar />
 
 <main className="flex-grow mt-0 z-10">
     {/* Hero Section */}
-    <section className="bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 text-white py-20 md:py-28 relative overflow-hidden">
+    <section className="bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 text-white py-16 md:py-24 relative overflow-hidden">
       <div className="absolute inset-0 opacity-20">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-500 via-transparent to-transparent opacity-20"></div>
       </div>
       <div className="container mx-auto px-4 text-center relative z-[1]">
-        <div className="w-full max-w-3xl mx-auto mb-8">
-          <img 
-            src="/lovable-uploads/facc787d-f5d9-4ce8-9d2b-2c329ba5f0cd.png" 
-            alt="BerlinRP-VC" 
-            className="w-full h-auto max-h-72 object-contain mx-auto filter drop-shadow-[0_0_20px_rgba(59,130,246,0.5)]"
+        <div className="w-full max-w-4xl mx-auto mb-8">
+          <img
+            src="/lovable-uploads/facc787d-f5d9-4ce8-9d2b-2c329ba5f0cd.png"
+            alt="BerlinRP-VC"
+            className="w-full h-auto max-h-64 object-contain mx-auto filter drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.onerror = null;
@@ -25,9 +25,9 @@ const Index = () => { return ( <div className="flex flex-col min-h-screen"> <Nav
           Deine Community für den privaten BerlinRP-VC Server
         </p>
         <div className="flex flex-col sm:flex-row justify-center gap-4">
-          <Button 
-            size="lg" 
-            variant="outline" 
+          <Button
+            size="lg"
+            variant="outline"
             className="text-white border-white/20 hover:bg-white/10 backdrop-blur-sm bg-white/5 group"
           >
             <a href="https://discord.gg/berlinrpvc" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
@@ -40,56 +40,84 @@ const Index = () => { return ( <div className="flex flex-col min-h-screen"> <Nav
     </section>
 
     {/* Stats Section */}
-    <section className="py-12 bg-white">
-      <div className="container mx-auto px-4 text-center grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-5xl">
-        <div className="bg-gray-100 p-6 rounded-xl shadow-sm">
-          <h3 className="text-2xl font-semibold text-indigo-600">+500</h3>
-          <p className="text-gray-700">Mitglieder</p>
-        </div>
-        <div className="bg-gray-100 p-6 rounded-xl shadow-sm">
-          <h3 className="text-2xl font-semibold text-indigo-600">+50</h3>
-          <p className="text-gray-700">Tägliche Spieler</p>
-        </div>
-        <div className="bg-gray-100 p-6 rounded-xl shadow-sm">
-          <h3 className="text-2xl font-semibold text-indigo-600">+30</h3>
-          <p className="text-gray-700">Bewerbungen pro Woche</p>
+    <div className="container mx-auto px-4 mt-[-2rem]">
+      <ServerStats />
+    </div>
+
+    {/* Changelog Section */}
+    <section className="py-12 bg-gray-50">
+      <div className="container mx-auto px-4">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-3xl font-bold mb-6 text-gray-800 text-center">Neueste Änderungen</h2>
+          <Card>
+            <CardHeader>
+              <CardTitle>Changelog</CardTitle>
+              <CardDescription>
+                Hier findest du alle wichtigen Updates und Änderungen unserer Community
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Changelog />
+            </CardContent>
+          </Card>
         </div>
       </div>
     </section>
 
-    {/* Coming Soon Section */}
-    <section className="py-24 bg-gray-100 relative text-center">
-      <div className="absolute top-8 right-8 rotate-12 text-gray-300 text-5xl font-black tracking-widest opacity-30 select-none">
-        COMING SOON
-      </div>
-      <div className="container mx-auto px-4 max-w-3xl">
-        <h2 className="text-3xl font-bold text-gray-800 mb-4">Neueste Änderungen</h2>
-        <p className="mb-6 text-gray-600">Changelog und Community Highlights bald verfügbar.</p>
-        <div className="border-dashed border-4 border-gray-400 rounded-xl py-20">Stempelartige Visualisierung geplant</div>
+    {/* About Section */}
+    <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
+      <div className="container mx-auto px-4">
+        <div className="flex flex-col md:flex-row items-center">
+          <div className="md:w-1/2 mb-8 md:mb-0 md:pr-8">
+            <div className="relative rounded-lg overflow-hidden shadow-xl">
+              <img
+                src="/lovable-uploads/dd1f41c8-840e-4e30-a847-665d1ef1d0b1.png"
+                alt="BerlinRP-VC Community"
+                className="rounded-lg shadow-lg w-full h-auto max-w-md mx-auto"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  target.src = 'https://via.placeholder.com/600x400?text=Community+Image';
+                }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-blue-900/80 to-transparent"></div>
+            </div>
+          </div>
+          <div className="md:w-1/2">
+            <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">Über Unsere Community</h2>
+            <p className="text-gray-700 mb-4">
+              Der BerlinRP-VC Server bietet dir eine realistische Simulation des Berliner Roleplays mit Voice-Chat.
+              Werde Teil unserer aktiven Community und erlebe spannende Einsätze, Teamwork und Freundschaften.
+            </p>
+            <p className="text-gray-700 mb-6">
+              Egal ob du als Sanitäter, Feuerwehrmann oder Polizist aktiv werden möchtest - bei uns findest du
+              deinen Platz im Team!
+            </p>
+            <Button className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 border-0 shadow-md hover:shadow-lg transition-all duration-300">
+              <Link to="/partners">Unsere Partner</Link>
+            </Button>
+          </div>
+        </div>
       </div>
     </section>
 
     {/* Team Section */}
-    <section className="py-20 bg-gradient-to-br from-indigo-50 to-white">
+    <section className="py-16 bg-gradient-to-b from-gray-100 to-gray-200">
       <div className="container mx-auto px-4 text-center">
-        <h2 className="text-3xl font-bold mb-12 text-indigo-700">Unser Team</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Founder */}
-          <div className="bg-white p-6 rounded-lg shadow-lg transition-transform duration-300 hover:scale-105 hover:rotate-1">
-            <img src="https://cdn.discordapp.com/avatars/1150411455443783795/4255ccaf55b3d9ecdddcabe4e6d53fc5?size=1024" alt="Founder" className="w-24 h-24 rounded-full mx-auto mb-4 shadow-md" />
-            <h3 className="text-indigo-600 font-bold">Founder</h3>
-            <p className="text-lg font-semibold">◤✞𝕯𝖆𝖗𝖐 𝕬𝖓𝖌𝖊𝖑✞◥</p>
+        <h2 className="text-3xl font-bold mb-4 text-gray-800">Unser Team</h2>
+        <p className="text-gray-600 mb-6">Hier wird bald unser Team eingetragen – direkt verknüpft mit unserem Discord!</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          <div className="bg-white rounded-lg p-4 shadow text-left">
+            <div className="text-lg font-semibold">Noch leer...</div>
+            <div className="text-sm text-gray-500">Wird automatisch ergänzt</div>
           </div>
-          {/* Co-Founder */}
-          <div className="bg-white p-6 rounded-lg shadow-lg transition-transform duration-300 hover:scale-105 hover:-rotate-1">
-            <img src="https://cdn.discordapp.com/avatars/1020320597936439429/0328f839138b450d1029f2c582f4f4e0?size=1024" alt="Co-Founder" className="w-24 h-24 rounded-full mx-auto mb-4 shadow-md" />
-            <h3 className="text-indigo-600 font-bold">Co-Founder</h3>
-            <p className="text-lg font-semibold">Backtrix_23 | Berlin RP-VC</p>
+          <div className="bg-white rounded-lg p-4 shadow text-left">
+            <div className="text-lg font-semibold">Hier könnte dein Name stehen</div>
+            <div className="text-sm text-gray-500">Bewerbung offen</div>
           </div>
-          {/* Weitere Rollen */}
-          <div className="bg-white p-6 rounded-lg shadow-lg transition-transform duration-300 hover:scale-105">
-            <h3 className="text-indigo-600 font-bold">Teamleiter & Moderatoren</h3>
-            <p className="text-gray-600">Wird eingetragen...</p>
+          <div className="bg-white rounded-lg p-4 shadow text-left">
+            <div className="text-lg font-semibold">Bald mehr!</div>
+            <div className="text-sm text-gray-500">Bleib gespannt</div>
           </div>
         </div>
       </div>
@@ -105,8 +133,8 @@ const Index = () => { return ( <div className="flex flex-col min-h-screen"> <Nav
         <p className="text-xl mb-8 max-w-2xl mx-auto">
           Werde Teil unseres Teams und hilf mit, das virtuelle Berlin am Laufen zu halten.
         </p>
-        <Button 
-          size="lg" 
+        <Button
+          size="lg"
           className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 border-0 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all duration-300"
         >
           <Link to="/apply/form">Jetzt Bewerben</Link>
@@ -122,4 +150,4 @@ const Index = () => { return ( <div className="flex flex-col min-h-screen"> <Nav
 
 export default Index;
 
-
+ 
