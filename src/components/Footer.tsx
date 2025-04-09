@@ -35,7 +35,7 @@ const Footer: React.FC<FooterProps> = ({ hideApplyButton = false }) => {
             </p>
             {!hideApplyButton && !isAdmin && (
               <Link to="/apply">
-                <Button className="bg-blue-600 hover:bg-blue-700">
+                <Button className="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800">
                   Jetzt bewerben
                 </Button>
               </Link>
@@ -78,15 +78,13 @@ const Footer: React.FC<FooterProps> = ({ hideApplyButton = false }) => {
                 </a>
               </li>
               <li className="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <img
+                  src="https://upload.wikimedia.org/wikipedia/commons/a/a7/Discord_logo_2023.svg"
+                  alt="Discord"
+                  className="h-5 w-5 mr-2"
+                  onError={(e) => e.currentTarget.src = "fallback-image-url"} // Fallback-Bild hinzufügen, falls das Bild nicht lädt
+                />
                 <a href="https://discord.gg/berlinrpvc" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-white">
-                  <img
-                    src="https://upload.wikimedia.org/wikipedia/commons/a/a7/Discord_logo_2023.svg"
-                    alt="Discord"
-                    className="h-5 w-5 mr-2"
-                  />
                   Discord
                 </a>
               </li>
