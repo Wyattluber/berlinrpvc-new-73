@@ -6,7 +6,7 @@ import {
 
 export const getAdminMenuItems = (isAdmin: boolean) => {
   if (isAdmin) {
-    // Now we'll return just a single item that redirects to the external website
+    // Return just a single item that directly links to the external website
     return [
       { title: "Admin Dashboard", id: "external-admin", icon: LayoutDashboard, externalUrl: "https://berlinrpvc-new-51.lovable.app/login" }
     ];

@@ -1,64 +1,53 @@
 
-import React, { useEffect } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import React, { useEffect, useState } from 'react';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import LoadingSpinner from '../LoadingSpinner';
+import { checkIsModerator } from '@/lib/admin';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiresAuth?: boolean;
+  requireModerator?: boolean;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
-  requiresAuth = true 
+  children,
+  requireModerator = false
 }) => {
-  const { session, loading, hasDeletionRequest } = useAuth();
-  const location = useLocation();
-  
+  const { session, loading } = useAuth();
+  const [isCheckingModerator, setIsCheckingModerator] = useState(requireModerator);
+  const [isModerator, setIsModerator] = useState(false);
+
   useEffect(() => {
-    console.log("ProtectedRoute:", { 
-      loading, 
-      authenticated: !!session, 
-      path: location.pathname,
-      hasDeletionRequest,
-      sessionData: session ? 'Session exists' : 'No session'
-    });
-  }, [loading, session, location.pathname, hasDeletionRequest]);
-  
-  // Show loading spinner while auth state is being determined
-  // Add a 5-second maximum loading time to prevent infinite loading
-  useEffect(() => {
-    if (loading) {
-      const timeoutId = setTimeout(() => {
-        console.log("Loading timeout reached - forcing authentication check");
-        // This will force a re-render and check if we have session data
-        // If not, the user will be redirected to login
-      }, 5000);
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [loading]);
-  
-  // Don't render anything until we know the auth state
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner />
-      </div>
-    );
+    const checkModeratorAccess = async () => {
+      if (requireModerator && session) {
+        try {
+          const hasAccess = await checkIsModerator();
+          setIsModerator(hasAccess);
+        } catch (error) {
+          console.error('Error checking moderator access:', error);
+          setIsModerator(false);
+        } finally {
+          setIsCheckingModerator(false);
+        }
+      }
+    };
+
+    checkModeratorAccess();
+  }, [session, requireModerator]);
+
+  if (loading || (requireModerator && isCheckingModerator)) {
+    return <LoadingSpinner />;
   }
-  
-  if (!session && requiresAuth) {
-    console.log("Not authenticated, redirecting to login from", location.pathname);
+
+  if (!session) {
     return <Navigate to="/login" replace />;
   }
-  
-  if (session && hasDeletionRequest && location.pathname !== '/cancel-deletion') {
-    console.log("User has deletion request, redirecting to cancel-deletion");
-    return <Navigate to="/cancel-deletion" replace />;
+
+  if (requireModerator && !isModerator) {
+    return <Navigate to="/" replace />;
   }
-  
+
   return <>{children}</>;
 };
 

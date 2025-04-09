@@ -22,6 +22,7 @@ import SubServers from "./pages/SubServers";
 import Impressum from "./pages/Impressum";
 import Datenschutz from "./pages/Datenschutz";
 import CancelDeletion from "./pages/CancelDeletion";
+import ModeratorPanel from "./pages/ModeratorPanel";
 import { ApplicationProvider } from "@/contexts/ApplicationContext";
 
 const queryClient = new QueryClient({
@@ -86,6 +87,14 @@ const AppLoadingErrorManager = () => {
             } 
           />
           <Route 
+            path="/moderator" 
+            element={
+              <ProtectedRoute requireModerator>
+                <ModeratorPanel />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
             path="/cancel-deletion" 
             element={
               <ProtectedRoute>
@@ -96,9 +105,10 @@ const AppLoadingErrorManager = () => {
           <Route path="/subservers" element={<SubServers />} />
           <Route path="/impressum" element={<Impressum />} />
           <Route path="/datenschutz" element={<Datenschutz />} />
+          {/* Remove the admin route and replace with direct redirect */}
           <Route 
             path="/admin/*" 
-            element={<Navigate to="https://berlinrpvc-new-51.lovable.app/login" />} 
+            element={<Navigate to="https://berlinrpvc-new-51.lovable.app/login" replace />} 
           />
           {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />

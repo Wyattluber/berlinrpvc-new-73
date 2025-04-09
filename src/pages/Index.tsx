@@ -1,11 +1,12 @@
-
 import React from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import ServerStats from '../components/ServerStats';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
 import { ExternalLink } from 'lucide-react';
+import Changelog from '@/components/Changelog';
 
 const Index = () => {
   return (
@@ -51,6 +52,26 @@ const Index = () => {
         
         {/* Stats Section */}
         <ServerStats />
+        
+        {/* Changelog Section */}
+        <section className="py-12 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto">
+              <h2 className="text-3xl font-bold mb-6 text-gray-800 text-center">Neueste Änderungen</h2>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Changelog</CardTitle>
+                  <CardDescription>
+                    Hier findest du alle wichtigen Updates und Änderungen unserer Community
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Changelog />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
         
         {/* About Section */}
         <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
