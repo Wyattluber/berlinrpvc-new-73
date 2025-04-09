@@ -35,7 +35,7 @@ const Footer: React.FC<FooterProps> = ({ hideApplyButton = false }) => {
             </p>
             {!hideApplyButton && !isAdmin && (
               <Link to="/apply">
-                <Button className="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800">
+                <Button className="bg-gradient-to-r from-blue-500 to-purple-800 hover:from-blue-600 hover:to-purple-700">
                   Jetzt bewerben
                 </Button>
               </Link>
