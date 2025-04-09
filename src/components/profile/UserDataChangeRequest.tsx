@@ -12,11 +12,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 
 interface UserDataChangeRequestProps {
   currentRobloxId: string | null;
+  currentDiscordId?: string | null; // Added this prop to match what's being passed from Profile.tsx
   userId: string;
 }
 
 export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
   currentRobloxId,
+  currentDiscordId,
   userId
 }) => {
   const [newRobloxId, setNewRobloxId] = useState('');

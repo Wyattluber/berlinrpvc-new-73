@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -852,7 +851,6 @@ const Profile = () => {
                   {/* Add the UserDataChangeRequest component here */}
                   {session?.user?.id && (
                     <UserDataChangeRequest
-                      currentDiscordId={discordId}
                       currentRobloxId={robloxId}
                       userId={session.user.id}
                     />
