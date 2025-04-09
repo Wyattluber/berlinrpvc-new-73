@@ -136,7 +136,7 @@ const Index = () => {
                 </p>
                 <p className="text-gray-700 mb-6">
                   Egal ob du als Sanitäter, Feuerwehrmann oder Polizist aktiv werden möchtest - bei uns findest du
-                  deinen Platz im Team!
+                  deinen Platz in unserer Community!
                 </p>
                 <Button className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 border-0 shadow-md hover:shadow-lg transition-all duration-300">
                   <Link to="/partners">Unsere Partner</Link>
