@@ -6,7 +6,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info } from 'lucide-react';
+import { Info, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useApplication } from '@/contexts/ApplicationContext';
 import Step1BasicInfo from '@/components/application/Step1BasicInfo';
 import Step2RulesUnderstanding from '@/components/application/Step2RulesUnderstanding';
@@ -181,32 +181,11 @@ const ApplicationForm = () => {
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
                   <div 
                     className="bg-blue-600 h-2.5 rounded-full transition-all" 
-                    style={{ width: `${(currentStep / 3) * 100}%` }}
+                    style={{ width: ${(currentStep / 3) * 100}% }}
                   ></div>
                 </div>
               </div>
               
-              {/* Step 1 Content */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700">Discord ID</label>
-                <input 
-                  type="text" 
-                  value={userDiscordId} 
-                  readOnly 
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
-                />
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700">Roblox ID</label>
-                <input 
-                  type="text" 
-                  value={userRobloxId} 
-                  readOnly 
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
-                />
-              </div>
-
               {renderStepContent()}
             </CardContent>
           </Card>
