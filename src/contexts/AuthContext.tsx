@@ -34,11 +34,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let isMounted = true;
     console.log("AuthProvider initialized");
     
-    // Improved auth initialization
+    // Ensure loading state is properly managed
     const initializeAuth = async () => {
       try {
         console.log("Initializing auth...");
-        setLoading(true);
+        // Set timeout to prevent infinite loading
+        const timeoutId = setTimeout(() => {
+          if (isMounted && loading) {
+            console.log("Auth initialization timeout - forcing completion");
+            setLoading(false);
+          }
+        }, 5000); // 5 second timeout
         
         // Setup auth listener first
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
@@ -74,6 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           if (isMounted) {
             setLoading(false);
+            clearTimeout(timeoutId);
           }
         });
         
@@ -109,10 +116,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           // Important: set loading to false after we have a session
           setLoading(false);
+          clearTimeout(timeoutId);
         }
         
         return () => {
           subscription.unsubscribe();
+          clearTimeout(timeoutId);
         };
       } catch (error) {
         console.error("Critical app initialization error:", error);

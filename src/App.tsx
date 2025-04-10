@@ -38,8 +38,30 @@ const queryClient = new QueryClient({
 const AppLoadingErrorManager = () => {
   const { loading, loadingError, resetAuth, session } = useAuth();
 
+  // Short timeout to prevent infinite loading display
+  React.useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      console.log("Loading timeout check running");
+      // Force loading to end if it's still showing after 8 seconds
+      document.getElementById('force-loading-end')?.click();
+    }, 8000);
+    
+    return () => clearTimeout(timeoutId);
+  }, []);
+
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <>
+        <LoadingSpinner />
+        <button 
+          id="force-loading-end" 
+          onClick={() => window.location.reload()} 
+          style={{ display: 'none' }}
+        >
+          Force End Loading
+        </button>
+      </>
+    );
   }
 
   return (
