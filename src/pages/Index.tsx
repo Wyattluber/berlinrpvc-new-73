@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -55,6 +56,25 @@ const Index = () => {
         <div className="py-8">
           <ServerStats />
         </div>
+
+        {/* Discord Widget Section */}
+        <section className="py-8 bg-white">
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">Unser Discord</h2>
+            <div className="flex justify-center">
+              <iframe 
+                src="https://discord.com/widget?id=1283167094854258741&theme=dark" 
+                width="350" 
+                height="500" 
+                allowTransparency={true} 
+                frameBorder="0" 
+                sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
+                title="Discord Embed"
+                className="rounded-lg shadow-lg"
+              ></iframe>
+            </div>
+          </div>
+        </section>
 
         {/* Team Section */}
         <section className="py-16 bg-gray-100">

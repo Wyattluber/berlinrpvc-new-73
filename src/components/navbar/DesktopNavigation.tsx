@@ -51,13 +51,11 @@ const DesktopNavigation: React.FC<DesktopNavigationProps> = ({
           {session ? (
             <>
               <NavigationMenuItem>
-                {!isAdmin && (
-                  <Link to="/apply">
-                    <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0">
-                      Bewerben
-                    </Button>
-                  </Link>
-                )}
+                <Link to="/apply">
+                  <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0">
+                    Bewerben
+                  </Button>
+                </Link>
               </NavigationMenuItem>
               <NavigationMenuItem>
                 <UserDropdown 
