@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { cleanDiscordUsername } from './usernameValidation';
 
@@ -61,7 +62,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
         .insert({
           user_id: session.user.id,
           event: event,
-          session_id: session.session?.access_token,
+          session_id: session.access_token, // Fixed: using access_token instead of session?.access_token
         });
 
       if (error) {
