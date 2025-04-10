@@ -59,7 +59,7 @@ const Index: React.FC = () => {
           left: '50%', 
           transform: 'translateX(-50%)',
         }}>
-          <p>&copy; 2025 Dein Team. Alle Rechte vorbehalten.</p>
+          <p>&copy; 2025 BerlinRP-VC. Alle Rechte vorbehalten.</p>
         </footer>
       </div>
     </div>
