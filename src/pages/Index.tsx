@@ -7,7 +7,7 @@ const Index: React.FC = () => {
       display: 'flex', 
       justifyContent: 'center', 
       alignItems: 'center', 
-      backgroundColor: '#2c3e50', 
+      backgroundColor: '#34495e',  // Farbe angepasst
       color: 'white', 
       fontFamily: 'Arial, sans-serif', 
       flexDirection: 'column',
@@ -23,12 +23,12 @@ const Index: React.FC = () => {
           Wartungsarbeiten!
         </h1>
         
-        {/* Bild hinzugefügt */}
+        {/* Bild größer und zentriert */}
         <img 
           src="/lovable-uploads/facc787d-f5d9-4ce8-9d2b-2c329ba5f0cd.png" 
           alt="Wartungsmodus" 
           style={{
-            width: '300px', 
+            width: '500px',  // Bild größer gemacht
             height: 'auto', 
             marginBottom: '30px', 
             borderRadius: '10px',
@@ -44,16 +44,8 @@ const Index: React.FC = () => {
           Unsere Website befindet sich momentan in Wartung. Wir sind bald wieder online!
         </p>
 
-        <div style={{
-          border: '8px solid #f3f3f3', 
-          borderTop: '8px solid #3498db', 
-          borderRadius: '50%', 
-          width: '50px', 
-          height: '50px', 
-          animation: 'spin 2s linear infinite',
-          marginBottom: '30px',
-        }}></div>
-
+        {/* Lade-Kreis entfernt */}
+        {/* Footer */}
         <footer style={{
           fontSize: '1em', 
           color: '#ecf0f1',
