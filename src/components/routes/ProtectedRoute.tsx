@@ -1,9 +1,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
-import LoadingSpinner from '../LoadingSpinner';
-import { checkIsModerator } from '@/lib/admin';
+import { useAuth } from '@/contexts/AuthContext';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import { checkIsModerator } from '@/lib/admin/auth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -30,6 +30,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         } finally {
           setIsCheckingModerator(false);
         }
+      } else {
+        setIsCheckingModerator(false);
       }
     };
 

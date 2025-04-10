@@ -40,40 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log("Initializing auth...");
         setLoading(true);
         
-        // Then check current session status
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          throw sessionError;
-        }
-        
-        if (isMounted) {
-          console.log("Initial session check:", sessionData.session ? "Logged in" : "Not logged in");
-          setSession(sessionData.session);
-          
-          // Check for deletion request if user is logged in
-          if (sessionData.session?.user) {
-            try {
-              const { data, error } = await supabase
-                .from('account_deletion_requests')
-                .select('id')
-                .eq('user_id', sessionData.session.user.id)
-                .eq('status', 'pending')
-                .maybeSingle();
-                
-              setHasDeletionRequest(!!data);
-            } catch (err) {
-              console.error("Error checking deletion requests:", err);
-              // Ignore error, assume no deletion request
-              setHasDeletionRequest(false);
-            }
-          }
-          
-          setLoading(false);
-        }
-        
-        // Set up auth state change listener to catch any auth events
+        // Setup auth listener first
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
           console.log("Auth state changed:", _event, newSession ? "Session exists" : "No session");
           if (!isMounted) return;
@@ -109,6 +76,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setLoading(false);
           }
         });
+        
+        // Then check current session status
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          throw sessionError;
+        }
+        
+        if (isMounted) {
+          console.log("Initial session check:", sessionData.session ? "Logged in" : "Not logged in");
+          setSession(sessionData.session);
+          
+          // Check for deletion request if user is logged in
+          if (sessionData.session?.user) {
+            try {
+              const { data, error } = await supabase
+                .from('account_deletion_requests')
+                .select('id')
+                .eq('user_id', sessionData.session.user.id)
+                .eq('status', 'pending')
+                .maybeSingle();
+                
+              setHasDeletionRequest(!!data);
+            } catch (err) {
+              console.error("Error checking deletion requests:", err);
+              // Ignore error, assume no deletion request
+              setHasDeletionRequest(false);
+            }
+          }
+          
+          // Important: set loading to false after we have a session
+          setLoading(false);
+        }
         
         return () => {
           subscription.unsubscribe();
