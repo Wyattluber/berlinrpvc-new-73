@@ -8,6 +8,12 @@ import { Link } from 'react-router-dom';
 import { ExternalLink } from 'lucide-react';
 
 const Index = () => {
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const target = e.currentTarget;
+    target.onerror = null;
+    target.src = 'https://via.placeholder.com/400x200?text=BerlinRP-VC';
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -24,11 +30,7 @@ const Index = () => {
                 src="/lovable-uploads/facc787d-f5d9-4ce8-9d2b-2c329ba5f0cd.png"
                 alt="BerlinRP-VC"
                 className="w-full h-auto max-h-64 object-contain mx-auto filter drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]"
-                onError={(e) => {
-                  const target = e.target;
-                  target.onerror = null;
-                  target.src = 'https://via.placeholder.com/400x200?text=BerlinRP-VC';
-                }}
+                onError={handleImageError}
               />
             </div>
             <p className="text-xl md:text-2xl mb-8 max-w-3xl mx-auto text-blue-100">
@@ -85,6 +87,7 @@ const Index = () => {
                   src="https://cdn.discordapp.com/avatars/22020/username" // Füge hier das Profilbild von gamestarlolo ein
                   alt="gamestarlolo"
                   className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-indigo-500"
+                  onError={handleImageError}
                 />
                 <h3 className="text-xl font-bold text-gray-800">gamestarlolo</h3>
                 <p className="text-sm text-indigo-600 mt-1">Teamleitung</p>
@@ -156,11 +159,7 @@ const Index = () => {
                     src="/lovable-uploads/dd1f41c8-840e-4e30-a847-665d1ef1d0b1.png"
                     alt="BerlinRP-VC Community"
                     className="rounded-lg shadow-lg w-full h-auto max-w-md mx-auto"
-                    onError={(e) => {
-                      const target = e.target;
-                      target.onerror = null;
-                      target.src = 'https://via.placeholder.com/600x400?text=Community+Image';
-                    }}
+                    onError={handleImageError}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-blue-900/80 to-transparent"></div>
                 </div>

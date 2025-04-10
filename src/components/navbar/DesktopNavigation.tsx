@@ -49,13 +49,24 @@ const DesktopNavigation: React.FC<DesktopNavigationProps> = ({
           </NavigationMenuItem>
           
           {session ? (
-            <NavigationMenuItem>
-              <UserDropdown 
-                session={session} 
-                isAdmin={isAdmin} 
-                handleLogout={handleLogout} 
-              />
-            </NavigationMenuItem>
+            <>
+              <NavigationMenuItem>
+                {!isAdmin && (
+                  <Link to="/apply">
+                    <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0">
+                      Bewerben
+                    </Button>
+                  </Link>
+                )}
+              </NavigationMenuItem>
+              <NavigationMenuItem>
+                <UserDropdown 
+                  session={session} 
+                  isAdmin={isAdmin} 
+                  handleLogout={handleLogout} 
+                />
+              </NavigationMenuItem>
+            </>
           ) : (
             <>
               <NavigationMenuItem>
@@ -66,15 +77,13 @@ const DesktopNavigation: React.FC<DesktopNavigationProps> = ({
                 </Link>
               </NavigationMenuItem>
               
-              {!isAdmin && (
-                <NavigationMenuItem>
-                  <Link to="/apply">
-                    <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0">
-                      Bewerben
-                    </Button>
-                  </Link>
-                </NavigationMenuItem>
-              )}
+              <NavigationMenuItem>
+                <Link to="/apply">
+                  <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0">
+                    Bewerben
+                  </Button>
+                </Link>
+              </NavigationMenuItem>
             </>
           )}
         </NavigationMenuList>

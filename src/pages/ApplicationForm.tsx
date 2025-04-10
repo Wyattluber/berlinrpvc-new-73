@@ -47,13 +47,19 @@ const ApplicationForm = () => {
       // Get the user's Discord ID and other info from metadata
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const discordId = user.user_metadata?.discord_id || '';
-        const robloxId = user.user_metadata?.roblox_id || '';
-        const robloxUsername = user.user_metadata?.roblox_username || '';
-        
-        setUserDiscordId(discordId);
-        setUserRobloxId(robloxId);
-        setUserRobloxUsername(robloxUsername);
+        // Get profile data which includes discord_id and roblox_id
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('discord_id, roblox_id, username')
+          .eq('id', user.id)
+          .maybeSingle();
+          
+        if (profileData) {
+          setUserDiscordId(profileData.discord_id || '');
+          setUserRobloxId(profileData.roblox_id || '');
+          // For Roblox username, we would need to add that to the profiles table
+          // or retrieve it from somewhere else if available
+        }
       }
 
       // Check if the user has already submitted an application
@@ -92,6 +98,9 @@ const ApplicationForm = () => {
     };
 
     checkAuth();
+    
+    // Scroll to top when component mounts
+    window.scrollTo(0, 0);
   }, [navigate]);
 
   if (loading) {
