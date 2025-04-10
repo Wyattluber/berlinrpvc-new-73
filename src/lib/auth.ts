@@ -15,6 +15,9 @@ export const ensureUserProfile = async (user: any) => {
       .maybeSingle();
 
     if (!existingProfile) {
+      console.log("Creating new user profile for:", user.id);
+      console.log("User metadata:", user.user_metadata);
+      
       // Extract username from user metadata
       const discordUsername = user.user_metadata?.full_name || 
                              user.user_metadata?.name ||
@@ -25,19 +28,28 @@ export const ensureUserProfile = async (user: any) => {
       // Clean the Discord username (remove any #0000 format)
       const cleanUsername = cleanDiscordUsername(discordUsername);
       
-      // Discord ID from user metadata if available
+      // Discord ID from user metadata
       const discordId = user.user_metadata?.provider_id || null;
+      
+      // Avatar URL from user metadata
+      const avatarUrl = user.user_metadata?.avatar_url || null;
+      
+      console.log("Creating profile with username:", cleanUsername);
+      console.log("Discord ID:", discordId);
+      console.log("Avatar URL:", avatarUrl);
       
       // Create profile
       const { error } = await supabase.from('profiles').insert({
         id: user.id,
         username: cleanUsername,
         discord_id: discordId,
-        avatar_url: user.user_metadata?.avatar_url || null
+        avatar_url: avatarUrl
       });
       
       if (error) {
         console.error('Error creating user profile:', error);
+      } else {
+        console.log('User profile created successfully');
       }
     }
   } catch (error) {
@@ -62,7 +74,9 @@ supabase.auth.onAuthStateChange(async (event, session) => {
         .insert({
           user_id: session.user.id,
           event: event,
-          session_id: session.access_token, // Fixed: using access_token instead of session?.access_token
+          session_id: session.access_token,
+          user_agent: navigator.userAgent,
+          ip_address: null, // IP will be captured by RLS policy on server
         });
 
       if (error) {

@@ -5,7 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth, SessionContext } from "./contexts/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
 import ErrorFallback from "./components/ErrorFallback";
 import LoadingSpinner from "./components/LoadingSpinner";
@@ -38,8 +38,14 @@ const queryClient = new QueryClient({
 const AppLoadingErrorManager = () => {
   const { loading, loadingError, resetAuth, session } = useAuth();
 
+  // Function to handle manual reset when loading gets stuck
+  const handleReset = () => {
+    console.log("Manual reset triggered");
+    resetAuth();
+  };
+
   if (loading) {
-    return <LoadingSpinner />;
+    return <LoadingSpinner timeout={true} onReset={handleReset} />;
   }
 
   return (
