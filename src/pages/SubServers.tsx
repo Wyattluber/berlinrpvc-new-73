@@ -3,8 +3,11 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, LoaderIcon } from 'lucide-react';
+import { ExternalLink, LoaderIcon, AlertCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 interface SubServer {
@@ -22,28 +25,33 @@ interface SubServer {
 const SubServers = () => {
   const [subServers, setSubServers] = useState<SubServer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchSubServers = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const { data, error } = await supabase
+        .from('sub_servers')
+        .select('*')
+        .order('status', { ascending: false }) // Active servers first, then coming_soon and inactive
+        .order('name', { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      setSubServers(data || []);
+    } catch (error: any) {
+      console.error('Error fetching sub servers:', error);
+      setError(error.message || 'Fehler beim Laden der Unterserver');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchSubServers = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('sub_servers')
-          .select('*')
-          .order('status', { ascending: false }) // Active servers first, then coming_soon and inactive
-          .order('name', { ascending: true });
-
-        if (error) {
-          throw error;
-        }
-
-        setSubServers(data || []);
-      } catch (error) {
-        console.error('Error fetching sub servers:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchSubServers();
   }, []);
 
@@ -143,9 +151,26 @@ const SubServers = () => {
             </p>
           </div>
           
+          {error && (
+            <Alert variant="destructive" className="mb-8 mx-auto max-w-2xl">
+              <AlertCircle className="h-4 w-4 mr-2" />
+              <AlertDescription className="flex justify-between items-center">
+                <span>{error}</span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={fetchSubServers} 
+                  className="ml-4 flex items-center gap-1"
+                >
+                  <RefreshCw className="h-3 w-3" /> Neu laden
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+          
           {loading ? (
             <div className="flex justify-center items-center py-12">
-              <LoaderIcon className="h-10 w-10 animate-spin text-indigo-400" />
+              <LoadingSpinner size="medium" message="Lade Unterserver..." />
             </div>
           ) : (
             <div className="space-y-10 max-w-5xl mx-auto">
@@ -176,7 +201,7 @@ const SubServers = () => {
                 </div>
               )}
               
-              {subServers.length === 0 && (
+              {subServers.length === 0 && !error && (
                 <div className="col-span-2 text-center py-8">
                   <p className="text-gray-500">Keine Unterserver gefunden.</p>
                 </div>

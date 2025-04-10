@@ -29,8 +29,10 @@ import { ApplicationProvider } from "@/contexts/ApplicationContext";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1,
+      retry: 2,
       refetchOnWindowFocus: false,
+      staleTime: 60000, // 1 minute
+      retryDelay: attempt => Math.min(1000 * 2 ** attempt, 30000),
     },
   },
 });

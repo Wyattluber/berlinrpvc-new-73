@@ -1,6 +1,11 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { cleanDiscordUsername } from './usernameValidation';
+
+// Function to remove Discord discriminator (#0000 format) from usernames
+export const cleanDiscordUsername = (username: string): string => {
+  // Remove the Discord discriminator (#1234) if present
+  return username.replace(/#\d{4}$/, '').replace(/#0$/, '');
+};
 
 // Add this function to create a profile for a new user
 export const ensureUserProfile = async (user: any) => {
@@ -8,11 +13,16 @@ export const ensureUserProfile = async (user: any) => {
   
   try {
     // Check if profile exists
-    const { data: existingProfile } = await supabase
+    const { data: existingProfile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .maybeSingle();
+    
+    if (profileError) {
+      console.error("Error checking profile:", profileError);
+      return;
+    }
 
     if (!existingProfile) {
       console.log("Creating new user profile for:", user.id);
@@ -69,11 +79,11 @@ supabase.auth.onAuthStateChange(async (event, session) => {
         await ensureUserProfile(session.user);
       }
       
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('auth_logs')
         .insert({
           user_id: session.user.id,
-          event: event,
+          event_type: event,
           session_id: session.access_token,
           user_agent: navigator.userAgent,
           ip_address: null, // IP will be captured by RLS policy on server

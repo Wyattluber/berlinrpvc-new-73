@@ -88,13 +88,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         });
         
-        // Then check current session status
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        // Then check current session status with reduced timeout (5 seconds)
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("Session check timeout")), 5000);
+        });
         
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          throw sessionError;
-        }
+        const sessionPromise = supabase.auth.getSession();
+        
+        const { data: sessionData } = await Promise.race([
+          sessionPromise,
+          timeoutPromise.then(() => {
+            throw new Error("Session check timeout");
+          })
+        ]) as {data: any};
         
         if (isMounted) {
           console.log("Initial session check:", sessionData.session ? "Logged in" : "Not logged in");
