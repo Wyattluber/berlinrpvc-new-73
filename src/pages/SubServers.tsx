@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -26,6 +25,7 @@ const SubServers = () => {
   const [subServers, setSubServers] = useState<SubServer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const fetchSubServers = async () => {
     setLoading(true);
@@ -39,13 +39,22 @@ const SubServers = () => {
         .order('name', { ascending: true });
 
       if (error) {
+        console.error('Supabase error:', error);
         throw error;
       }
 
       setSubServers(data || []);
+      setRetryCount(0);
     } catch (error: any) {
       console.error('Error fetching sub servers:', error);
       setError(error.message || 'Fehler beim Laden der Unterserver');
+      
+      if (retryCount < 3) {
+        setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+          fetchSubServers();
+        }, 2000);
+      }
     } finally {
       setLoading(false);
     }
@@ -80,7 +89,6 @@ const SubServers = () => {
     }
   };
 
-  // Group servers by status
   const activeServers = subServers.filter(server => server.status === 'active');
   const comingSoonServers = subServers.filter(server => server.status === 'coming_soon');
   const inactiveServers = subServers.filter(server => server.status === 'inactive');

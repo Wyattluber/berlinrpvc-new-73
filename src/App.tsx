@@ -16,6 +16,7 @@ import Index from "./pages/Index";
 import Apply from "./pages/Apply";
 import Partners from "./pages/Partners";
 import ApplicationForm from "./pages/ApplicationForm";
+import PartnerApplicationForm from "./pages/PartnerApplicationForm";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
@@ -25,6 +26,7 @@ import Datenschutz from "./pages/Datenschutz";
 import CancelDeletion from "./pages/CancelDeletion";
 import ModeratorPanel from "./pages/ModeratorPanel";
 import { ApplicationProvider } from "@/contexts/ApplicationContext";
+import { PartnerApplicationProvider } from "@/contexts/PartnerApplicationContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,6 +85,11 @@ const AppLoadingErrorManager = () => {
             <ApplicationProvider>
               <ApplicationForm />
             </ApplicationProvider>
+          } />
+          <Route path="/apply/partner-form" element={
+            <PartnerApplicationProvider>
+              <PartnerApplicationForm />
+            </PartnerApplicationProvider>
           } />
           <Route 
             path="/login" 
