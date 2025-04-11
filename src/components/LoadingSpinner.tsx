@@ -1,18 +1,20 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface LoadingSpinnerProps {
   timeout?: boolean;
   onReset?: () => void;
   size?: 'small' | 'medium' | 'large';
   message?: string;
+  timeoutMs?: number;
 }
 
 const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ 
   timeout = false,
   onReset,
   size = 'large',
-  message = 'Lade Anwendung...'
+  message = 'Lade Anwendung...',
+  timeoutMs = 15000
 }) => {
   // Define spinner sizes
   const spinnerSizes = {
@@ -27,12 +29,28 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
     large: 'min-h-screen',
   };
 
+  const [showTimeout, setShowTimeout] = useState(false);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    
+    if (timeout) {
+      timer = setTimeout(() => {
+        setShowTimeout(true);
+      }, timeoutMs);
+    }
+    
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [timeout, timeoutMs]);
+
   return (
     <div className={`flex flex-col items-center justify-center ${containerSizes[size]} p-4`}>
       <div className={`animate-spin rounded-full ${spinnerSizes[size]} border-blue-500 mb-4`}></div>
       <p className="text-gray-600 mb-2">{message}</p>
       
-      {timeout && onReset && (
+      {timeout && showTimeout && onReset && (
         <div className="mt-4 text-center">
           <p className="text-amber-600 mb-2">
             Das Laden dauert länger als erwartet.
@@ -43,6 +61,9 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
           >
             Neu laden
           </button>
+          <p className="text-sm text-gray-500 mt-2">
+            Alternativ kannst du auch versuchen, alle Cookies zu löschen und die Seite neu zu laden.
+          </p>
         </div>
       )}
     </div>

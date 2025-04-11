@@ -1,6 +1,7 @@
 
 import React, { createContext, useState, useEffect, useContext } from "react";
 import { supabase } from '@/integrations/supabase/client';
+import { ensureUserProfile } from '@/lib/auth';
 
 // Create context for session
 type AuthContextType = {
@@ -46,7 +47,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     setInitTimeout(timeout);
     
-    // Improved auth initialization
+    // Improved auth initialization with race condition handling
     const initializeAuth = async () => {
       try {
         console.log("Initializing auth...");
@@ -58,24 +59,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           setSession(newSession);
           
+          // Create profile for new users if needed
+          if (newSession?.user && _event === 'SIGNED_IN') {
+            try {
+              // Use setTimeout to prevent blocking the auth state change
+              setTimeout(async () => {
+                await ensureUserProfile(newSession.user);
+              }, 0);
+            } catch (err) {
+              console.error("Error ensuring user profile:", err);
+            }
+          }
+          
           // Check for deletion request if user is logged in
           if (newSession?.user) {
             try {
-              supabase
-                .from('account_deletion_requests')
-                .select('id')
-                .eq('user_id', newSession.user.id)
-                .eq('status', 'pending')
-                .maybeSingle()
-                .then(({ data, error }) => {
-                  if (error) {
-                    console.error("Error checking deletion requests:", error);
-                    return;
-                  }
-                  if (isMounted) {
-                    setHasDeletionRequest(!!data);
-                  }
-                });
+              // Use setTimeout to prevent blocking the auth state change
+              setTimeout(async () => {
+                const { data, error } = await supabase
+                  .from('account_deletion_requests')
+                  .select('id')
+                  .eq('user_id', newSession.user.id)
+                  .eq('status', 'pending')
+                  .maybeSingle();
+                
+                if (error) {
+                  console.error("Error checking deletion requests:", error);
+                  return;
+                }
+                
+                if (isMounted) {
+                  setHasDeletionRequest(!!data);
+                }
+              }, 0);
             } catch (err) {
               console.error("Error checking deletion requests:", err);
             }
@@ -89,47 +105,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         
         // Then check current session status with reduced timeout (5 seconds)
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error("Session check timeout")), 5000);
-        });
-        
-        const sessionPromise = supabase.auth.getSession();
-        
-        const { data: sessionData } = await Promise.race([
-          sessionPromise,
-          timeoutPromise.then(() => {
-            throw new Error("Session check timeout");
-          })
-        ]) as {data: any};
-        
-        if (isMounted) {
-          console.log("Initial session check:", sessionData.session ? "Logged in" : "Not logged in");
-          setSession(sessionData.session);
-          
-          // Check for deletion request if user is logged in
-          if (sessionData.session?.user) {
-            try {
-              const { data, error } = await supabase
-                .from('account_deletion_requests')
-                .select('id')
-                .eq('user_id', sessionData.session.user.id)
-                .eq('status', 'pending')
-                .maybeSingle();
-                
-              setHasDeletionRequest(!!data);
-            } catch (err) {
-              console.error("Error checking deletion requests:", err);
-              // Ignore error, assume no deletion request
-              setHasDeletionRequest(false);
-            }
+        const sessionPromise = new Promise<any>(async (resolve, reject) => {
+          try {
+            const result = await supabase.auth.getSession();
+            resolve(result);
+          } catch (error) {
+            reject(new Error("Session check failed"));
           }
           
-          setLoading(false);
+          // Add internal timeout
+          setTimeout(() => {
+            reject(new Error("Session check timeout"));
+          }, 5000);
+        });
+        
+        try {
+          const { data: sessionData } = await sessionPromise;
           
-          // Clear the safety timeout if auth completed successfully
-          if (initTimeout) {
-            clearTimeout(initTimeout);
-            setInitTimeout(null);
+          if (isMounted) {
+            console.log("Initial session check:", sessionData.session ? "Logged in" : "Not logged in");
+            setSession(sessionData.session);
+            
+            // Check for deletion request if user is logged in
+            if (sessionData.session?.user) {
+              try {
+                const { data, error } = await supabase
+                  .from('account_deletion_requests')
+                  .select('id')
+                  .eq('user_id', sessionData.session.user.id)
+                  .eq('status', 'pending')
+                  .maybeSingle();
+                  
+                setHasDeletionRequest(!!data);
+              } catch (err) {
+                console.error("Error checking deletion requests:", err);
+                // Ignore error, assume no deletion request
+                setHasDeletionRequest(false);
+              }
+            }
+            
+            setLoading(false);
+            
+            // Clear the safety timeout if auth completed successfully
+            if (initTimeout) {
+              clearTimeout(initTimeout);
+              setInitTimeout(null);
+            }
+          }
+        } catch (error) {
+          console.error("Session check failed:", error);
+          // Continue without error, the auth state change listener will handle authentication
+          if (isMounted) {
+            setLoading(false);
           }
         }
         
@@ -165,6 +192,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Clear local storage auth data to ensure a clean slate
       localStorage.removeItem('supabase.auth.token');
       
+      // Force reload to ensure clean state
       window.location.href = "/";
     } catch (error) {
       console.error("Error resetting auth:", error);

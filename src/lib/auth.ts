@@ -60,25 +60,24 @@ export const ensureUserProfile = async (user: any) => {
         console.error('Error creating user profile:', error);
       } else {
         console.log('User profile created successfully');
+        return true;
       }
     }
+    return false;
   } catch (error) {
     console.error('Error in ensureUserProfile:', error);
+    return false;
   }
 };
 
-// Call this function from the auth state listener
+// Modified auth state listener to handle profile creation separately
+// to avoid blocking the auth flow
 supabase.auth.onAuthStateChange(async (event, session) => {
   console.log(`Auth state changed: ${event}`, session);
   
   // Create an auth log entry
   if (session) {
     try {
-      // Create profile for new users
-      if (event === 'SIGNED_IN') {
-        await ensureUserProfile(session.user);
-      }
-      
       const { error } = await supabase
         .from('auth_logs')
         .insert({

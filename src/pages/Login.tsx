@@ -29,11 +29,13 @@ const Login = () => {
       setLoginLoading(true);
       setError(null);
       
+      // Clear any existing auth-related localStorage items to prevent conflicts
+      localStorage.removeItem('supabase.auth.token');
+      
       // Get the current domain for the redirect URL
       const isLocalhost = window.location.hostname === 'localhost';
-      const redirectUrl = isLocalhost 
-        ? 'http://localhost:5173/profile'
-        : 'https://berlinrpvc.de/profile';
+      const origin = window.location.origin;
+      const redirectUrl = `${origin}/profile`;
       
       console.log("Using redirect URL:", redirectUrl);
       

@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -77,57 +77,59 @@ const AppLoadingErrorManager = () => {
       )}
       <BrowserRouter>
         <ScrollToTop />
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/apply" element={<Apply />} />
-          <Route path="/partners" element={<Partners />} />
-          <Route path="/apply/form" element={
-            <ApplicationProvider>
-              <ApplicationForm />
-            </ApplicationProvider>
-          } />
-          <Route path="/apply/partner-form" element={
-            <PartnerApplicationProvider>
-              <PartnerApplicationForm />
-            </PartnerApplicationProvider>
-          } />
-          <Route 
-            path="/login" 
-            element={session ? <Navigate to="/profile" /> : <Login />} 
-          />
-          <Route 
-            path="/profile" 
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/moderator" 
-            element={
-              <ProtectedRoute requireModerator>
-                <ModeratorPanel />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/cancel-deletion" 
-            element={
-              <ProtectedRoute>
-                <CancelDeletion />
-              </ProtectedRoute>
-            } 
-          />
-          <Route path="/subservers" element={<SubServers />} />
-          <Route path="/impressum" element={<Impressum />} />
-          <Route path="/datenschutz" element={<Datenschutz />} />
-          <Route 
-            path="/admin/*" 
-            element={<Navigate to="https://berlinrpvc-new-51.lovable.app/login" replace />} 
-          />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <Suspense fallback={<LoadingSpinner message="Lade Seite..." />}>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/apply" element={<Apply />} />
+            <Route path="/partners" element={<Partners />} />
+            <Route path="/apply/form" element={
+              <ApplicationProvider>
+                <ApplicationForm />
+              </ApplicationProvider>
+            } />
+            <Route path="/apply/partner-form" element={
+              <PartnerApplicationProvider>
+                <PartnerApplicationForm />
+              </PartnerApplicationProvider>
+            } />
+            <Route 
+              path="/login" 
+              element={session ? <Navigate to="/profile" /> : <Login />} 
+            />
+            <Route 
+              path="/profile" 
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/moderator" 
+              element={
+                <ProtectedRoute requireModerator>
+                  <ModeratorPanel />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/cancel-deletion" 
+              element={
+                <ProtectedRoute>
+                  <CancelDeletion />
+                </ProtectedRoute>
+              } 
+            />
+            <Route path="/subservers" element={<SubServers />} />
+            <Route path="/impressum" element={<Impressum />} />
+            <Route path="/datenschutz" element={<Datenschutz />} />
+            <Route 
+              path="/admin/*" 
+              element={<Navigate to="https://berlinrpvc-new-51.lovable.app/login" replace />} 
+            />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </>
   );
