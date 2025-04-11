@@ -11,7 +11,7 @@ const Index = () => {
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     const target = e.currentTarget;
     target.onerror = null;
-    target.src = 'https://via.placeholder.com/400x200?text=BerlinRP-VC';
+    target.src = 'https://i.postimg.cc/LXp61z61/Berlin-RP-VC-Einladungsbild-1920-x-1080-px.png';
   };
 
   return (
