@@ -10,7 +10,6 @@ import { AuthProvider, useAuth, SessionContext } from "./contexts/AuthContext";
 import ErrorFallback from "./components/ErrorFallback";
 import LoadingSpinner from "./components/LoadingSpinner";
 import ProtectedRoute from "./components/routes/ProtectedRoute";
-import ScrollToTop from "./components/ScrollToTop";
 
 import Index from "./pages/Index";
 import Apply from "./pages/Apply";
@@ -66,7 +65,6 @@ const AppLoadingErrorManager = () => {
         </div>
       )}
       <BrowserRouter>
-        <ScrollToTop />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/apply" element={<Apply />} />
@@ -107,10 +105,12 @@ const AppLoadingErrorManager = () => {
           <Route path="/subservers" element={<SubServers />} />
           <Route path="/impressum" element={<Impressum />} />
           <Route path="/datenschutz" element={<Datenschutz />} />
+          {/* Remove the admin route and replace with direct redirect */}
           <Route 
             path="/admin/*" 
             element={<Navigate to="https://berlinrpvc-new-51.lovable.app/login" replace />} 
           />
+          {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
@@ -136,4 +136,5 @@ const App = () => {
 
 export default App;
 
+// Import auth helpers for logging
 import './lib/auth';
