@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 const Login = () => {
   const [loginLoading, setLoginLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { session } = useAuth();
+  const { session, resetAuth } = useAuth();
   const navigate = useNavigate();
   
   // If user is already logged in, redirect to profile
@@ -29,11 +29,10 @@ const Login = () => {
       setLoginLoading(true);
       setError(null);
       
-      // Clear any existing auth-related localStorage items to prevent conflicts
+      // Proactively clear auth state before login
       localStorage.removeItem('supabase.auth.token');
       
       // Get the current domain for the redirect URL
-      const isLocalhost = window.location.hostname === 'localhost';
       const origin = window.location.origin;
       const redirectUrl = `${origin}/profile`;
       
@@ -63,6 +62,12 @@ const Login = () => {
       });
       setLoginLoading(false);
     }
+  };
+  
+  // Handle manual auth reset if needed
+  const handleReset = async () => {
+    await resetAuth();
+    window.location.reload();
   };
 
   return (
@@ -111,6 +116,16 @@ const Login = () => {
               
               <div className="text-center text-sm text-gray-600 mt-4">
                 Die Anmeldung funktioniert für bestehende Benutzer und neue Benutzer gleichermaßen.
+              </div>
+              
+              <div className="text-center mt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={handleReset}
+                  className="text-xs text-gray-500"
+                >
+                  Auth zurücksetzen
+                </Button>
               </div>
             </CardContent>
             

@@ -14,7 +14,7 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   onReset,
   size = 'large',
   message = 'Lade Anwendung...',
-  timeoutMs = 15000
+  timeoutMs = 10000 // Reduced from 15000 to 10000
 }) => {
   // Define spinner sizes
   const spinnerSizes = {

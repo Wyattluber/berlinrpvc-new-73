@@ -36,23 +36,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let isMounted = true;
     console.log("AuthProvider initialized");
     
-    // Set a safety timeout to prevent infinite loading
+    // Set a safety timeout to prevent infinite loading (reduced from 10s to 8s)
     const timeout = setTimeout(() => {
       if (isMounted && loading) {
-        console.error("Auth initialization timeout after 10 seconds");
+        console.error("Auth initialization timeout after 8 seconds");
         setLoadingError("Authentifizierung Timeout - Bitte Seite neu laden");
         setLoading(false);
       }
-    }, 10000); // 10 second timeout
+    }, 8000); // 8 second timeout
     
     setInitTimeout(timeout);
     
-    // Improved auth initialization with race condition handling
+    // Simplified auth initialization to avoid race conditions
     const initializeAuth = async () => {
       try {
         console.log("Initializing auth...");
         
-        // First set up the auth state change listener
+        // First check current session status directly
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error("Error fetching session:", sessionError);
+          if (isMounted) {
+            setLoadingError("Fehler beim Laden der Sitzung");
+            setLoading(false);
+          }
+          return;
+        }
+        
+        if (isMounted) {
+          console.log("Initial session check:", sessionData.session ? "Logged in" : "Not logged in");
+          setSession(sessionData.session);
+          
+          // Clear the safety timeout if session check completed successfully
+          if (initTimeout) {
+            clearTimeout(initTimeout);
+            setInitTimeout(null);
+          }
+        }
+        
+        // Then set up the auth state change listener
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
           console.log("Auth state changed:", _event, newSession ? "Session exists" : "No session");
           if (!isMounted) return;
@@ -104,61 +127,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         });
         
-        // Then check current session status with reduced timeout (5 seconds)
-        const sessionPromise = new Promise<any>(async (resolve, reject) => {
-          try {
-            const result = await supabase.auth.getSession();
-            resolve(result);
-          } catch (error) {
-            reject(new Error("Session check failed"));
-          }
-          
-          // Add internal timeout
-          setTimeout(() => {
-            reject(new Error("Session check timeout"));
-          }, 5000);
-        });
-        
-        try {
-          const { data: sessionData } = await sessionPromise;
-          
-          if (isMounted) {
-            console.log("Initial session check:", sessionData.session ? "Logged in" : "Not logged in");
-            setSession(sessionData.session);
-            
-            // Check for deletion request if user is logged in
-            if (sessionData.session?.user) {
-              try {
-                const { data, error } = await supabase
-                  .from('account_deletion_requests')
-                  .select('id')
-                  .eq('user_id', sessionData.session.user.id)
-                  .eq('status', 'pending')
-                  .maybeSingle();
-                  
-                setHasDeletionRequest(!!data);
-              } catch (err) {
-                console.error("Error checking deletion requests:", err);
-                // Ignore error, assume no deletion request
-                setHasDeletionRequest(false);
-              }
-            }
-            
-            setLoading(false);
-            
-            // Clear the safety timeout if auth completed successfully
-            if (initTimeout) {
-              clearTimeout(initTimeout);
-              setInitTimeout(null);
-            }
-          }
-        } catch (error) {
-          console.error("Session check failed:", error);
-          // Continue without error, the auth state change listener will handle authentication
-          if (isMounted) {
+        // Ensure we set loading to false regardless of session check
+        setTimeout(() => {
+          if (isMounted && loading) {
             setLoading(false);
           }
-        }
+        }, 1000);
         
         return () => {
           subscription.unsubscribe();

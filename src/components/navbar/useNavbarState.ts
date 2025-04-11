@@ -51,23 +51,19 @@ export const useNavbarState = () => {
   const handleLogout = async () => {
     try {
       setIsLoading(true);
-      await supabase.auth.signOut();
       
-      // Clear auth data from local storage
-      localStorage.removeItem('supabase.auth.token');
+      // Use the resetAuth function for a more thorough logout
+      await resetAuth();
       
       toast({
         title: "Erfolgreicher Logout",
-        description: "Du wurdest erfolgreich ausgeloggt.",
+        description: "Du wurdest erfolgreich ausgeloggt. Für vollständigen Logout bitte Cookies löschen.",
       });
-      
-      // Use the resetAuth function to ensure a clean state
-      resetAuth();
     } catch (error) {
       console.error('Error logging out:', error);
       toast({
         title: "Fehler beim Logout",
-        description: "Es gab ein Problem beim Ausloggen.",
+        description: "Es gab ein Problem beim Ausloggen. Versuche es erneut oder lösche alle Cookies manuell.",
         variant: "destructive",
       });
       setIsLoading(false);
