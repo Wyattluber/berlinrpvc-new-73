@@ -52,12 +52,19 @@ export const useNavbarState = () => {
     try {
       setIsLoading(true);
       
-      // Use the resetAuth function for a more thorough logout
+      // Show toast before logout
+      toast({
+        title: "Logout in Bearbeitung...",
+        description: "Du wirst abgemeldet.",
+      });
+      
+      // Use a more thorough logout
       await resetAuth();
       
+      // This won't be reached if resetAuth includes a redirect/reload
       toast({
         title: "Erfolgreicher Logout",
-        description: "Du wurdest erfolgreich ausgeloggt. Für vollständigen Logout bitte Cookies löschen.",
+        description: "Du wurdest erfolgreich ausgeloggt.",
       });
     } catch (error) {
       console.error('Error logging out:', error);

@@ -8,7 +8,7 @@ import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Login = () => {
@@ -67,7 +67,23 @@ const Login = () => {
   // Handle manual auth reset if needed
   const handleReset = async () => {
     await resetAuth();
-    window.location.reload();
+  };
+  
+  // Function to completely clear all cookies and local storage
+  const handleClearAllCookies = () => {
+    // Clear localStorage
+    localStorage.clear();
+    
+    // Show a toast message with instructions
+    toast({
+      title: "Cookies & Storage leeren",
+      description: "Um alle Cookies zu löschen, öffne bitte die Browser-Einstellungen und lösche alle Cookies für diese Seite.",
+    });
+    
+    // Reload the page after clearing localStorage
+    setTimeout(() => {
+      window.location.reload();
+    }, 1500);
   };
 
   return (
@@ -118,13 +134,25 @@ const Login = () => {
                 Die Anmeldung funktioniert für bestehende Benutzer und neue Benutzer gleichermaßen.
               </div>
               
-              <div className="text-center mt-4">
+              <div className="flex justify-center mt-6 space-x-4">
                 <Button 
                   variant="outline" 
                   onClick={handleReset}
-                  className="text-xs text-gray-500"
+                  className="text-xs text-gray-500 flex items-center"
+                  size="sm"
                 >
+                  <RefreshCw className="h-3 w-3 mr-1" />
                   Auth zurücksetzen
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  onClick={handleClearAllCookies}
+                  className="text-xs text-gray-500 flex items-center"
+                  size="sm"
+                >
+                  <AlertCircle className="h-3 w-3 mr-1" />
+                  Alle Daten löschen
                 </Button>
               </div>
             </CardContent>
