@@ -28,7 +28,7 @@ const Index = () => {
           <div className="container mx-auto px-4 text-center relative z-[1]">
             <div className="w-full max-w-4xl mx-auto mb-8">
               <img
-                src="https://i.postimg.cc/LXp61z61/Berlin-RP-VC-Einladungsbild-1920-x-1080-px.png"
+                src="https://i.postimg.cc/d0dV3WvF/Berlin-RP-VC-915-x-315-px.png"
                 alt="BerlinRP-VC"
                 className="w-full h-auto max-h-64 object-contain mx-auto filter drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]"
                 onError={handleImageError}
