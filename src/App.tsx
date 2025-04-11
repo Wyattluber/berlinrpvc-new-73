@@ -49,7 +49,7 @@ const AppLoadingErrorManager = () => {
   };
 
   if (loading) {
-    return <LoadingSpinner timeout={true} onReset={handleReset} message="Initialisiere Anwendung..." timeoutMs={5000} />;
+    return <LoadingSpinner timeout={true} onReset={handleReset} />;
   }
 
   return (
@@ -61,15 +61,15 @@ const AppLoadingErrorManager = () => {
             <div className="flex space-x-2">
               <button 
                 className="underline ml-2"
-                onClick={() => window.location.reload()}
+                onClick={() => resetAuth()}
               >
-                Seite neu laden
+                Ausblenden
               </button>
               <button 
                 className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600"
                 onClick={resetAuth}
               >
-                Auth zurücksetzen
+                Zurücksetzen
               </button>
             </div>
           </div>
