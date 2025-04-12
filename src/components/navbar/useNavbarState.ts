@@ -7,30 +7,20 @@ import { checkIsAdmin, checkIsModerator } from '@/lib/admin';
 import { toast } from '@/hooks/use-toast';
 
 export const useNavbarState = () => {
-  const { session, resetAuth } = useAuth();
+  const { session } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [isModerator, setIsModerator] = useState(false);
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   
   useEffect(() => {
-    let isMounted = true;
-    
     const checkAdminStatus = async () => {
       if (session?.user) {
-        setIsLoading(true);
-        try {
-          const adminStatus = await checkIsAdmin();
-          if (isMounted) setIsAdmin(adminStatus);
-          
-          const moderatorStatus = await checkIsModerator();
-          if (isMounted) setIsModerator(moderatorStatus);
-        } catch (error) {
-          console.error("Error checking admin/moderator status:", error);
-        } finally {
-          if (isMounted) setIsLoading(false);
-        }
+        const adminStatus = await checkIsAdmin();
+        setIsAdmin(adminStatus);
+        
+        const moderatorStatus = await checkIsModerator();
+        setIsModerator(moderatorStatus);
       } else {
         setIsAdmin(false);
         setIsModerator(false);
@@ -38,10 +28,6 @@ export const useNavbarState = () => {
     };
     
     checkAdminStatus();
-    
-    return () => {
-      isMounted = false;
-    };
   }, [session]);
   
   useEffect(() => {
@@ -50,30 +36,21 @@ export const useNavbarState = () => {
   
   const handleLogout = async () => {
     try {
-      setIsLoading(true);
-      
-      // Show toast before logout
-      toast({
-        title: "Logout in Bearbeitung...",
-        description: "Du wirst abgemeldet.",
-      });
-      
-      // Use a more thorough logout
-      await resetAuth();
-      
-      // This won't be reached if resetAuth includes a redirect/reload
+      await supabase.auth.signOut();
       toast({
         title: "Erfolgreicher Logout",
         description: "Du wurdest erfolgreich ausgeloggt.",
       });
+      
+      // Optionally force reload after logout to ensure clean state
+      window.location.href = '/';
     } catch (error) {
       console.error('Error logging out:', error);
       toast({
         title: "Fehler beim Logout",
-        description: "Es gab ein Problem beim Ausloggen. Versuche es erneut oder lösche alle Cookies manuell.",
+        description: "Es gab ein Problem beim Ausloggen.",
         variant: "destructive",
       });
-      setIsLoading(false);
     }
   };
   
@@ -83,7 +60,6 @@ export const useNavbarState = () => {
     isModerator,
     sidebarOpen,
     setSidebarOpen,
-    handleLogout,
-    isLoading
+    handleLogout
   };
 };

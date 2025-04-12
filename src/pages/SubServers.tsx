@@ -1,12 +1,11 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Button } from '@/components/ui/button';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, LoaderIcon } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import DataLoadingHandler from '@/components/DataLoadingHandler';
 
 interface SubServer {
   id: string;
@@ -23,42 +22,31 @@ interface SubServer {
 const SubServers = () => {
   const [subServers, setSubServers] = useState<SubServer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-
-  const fetchSubServers = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      console.log("Fetching sub servers...");
-      const { data, error } = await supabase
-        .from('sub_servers')
-        .select('*')
-        .order('status', { ascending: false }) // Active servers first, then coming_soon and inactive
-        .order('name', { ascending: true });
-
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
-
-      console.log("Sub servers data:", data);
-      setSubServers(data || []);
-    } catch (error: any) {
-      console.error('Error fetching sub servers:', error);
-      setError(error.message || 'Fehler beim Laden der Unterserver');
-    } finally {
-      setLoading(false);
-      setRetryCount(prev => prev + 1);
-    }
-  }, []);
 
   useEffect(() => {
-    fetchSubServers();
-  }, [fetchSubServers]);
+    const fetchSubServers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('sub_servers')
+          .select('*')
+          .order('status', { ascending: false }) // Active servers first, then coming_soon and inactive
+          .order('name', { ascending: true });
 
-  // Helper functions for displaying servers
+        if (error) {
+          throw error;
+        }
+
+        setSubServers(data || []);
+      } catch (error) {
+        console.error('Error fetching sub servers:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSubServers();
+  }, []);
+
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'active':
@@ -84,7 +72,7 @@ const SubServers = () => {
     }
   };
 
-  // Organize servers by status
+  // Group servers by status
   const activeServers = subServers.filter(server => server.status === 'active');
   const comingSoonServers = subServers.filter(server => server.status === 'coming_soon');
   const inactiveServers = subServers.filter(server => server.status === 'inactive');
@@ -155,16 +143,11 @@ const SubServers = () => {
             </p>
           </div>
           
-          <DataLoadingHandler
-            loading={loading}
-            error={error}
-            onRetry={fetchSubServers}
-            retryCount={retryCount}
-            loadingMessage="Lade Unterserver..."
-            showNoData={!loading && !error && subServers.length === 0}
-            noDataMessage="Keine Unterserver gefunden."
-            ignoreAuthErrors={true}
-          >
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <LoaderIcon className="h-10 w-10 animate-spin text-indigo-400" />
+            </div>
+          ) : (
             <div className="space-y-10 max-w-5xl mx-auto">
               {activeServers.length > 0 && (
                 <div>
@@ -192,8 +175,14 @@ const SubServers = () => {
                   </div>
                 </div>
               )}
+              
+              {subServers.length === 0 && (
+                <div className="col-span-2 text-center py-8">
+                  <p className="text-gray-500">Keine Unterserver gefunden.</p>
+                </div>
+              )}
             </div>
-          </DataLoadingHandler>
+          )}
         </div>
       </main>
       

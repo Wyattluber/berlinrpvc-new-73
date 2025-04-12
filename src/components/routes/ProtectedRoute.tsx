@@ -1,104 +1,64 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import LoadingSpinner from '../LoadingSpinner';
-import { toast } from '@/hooks/use-toast';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requireModerator?: boolean;
+  requiresAuth?: boolean;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireModerator = false }) => {
-  const { session, user, loading, loadingError } = useAuth();
-  const [checkingModRole, setCheckingModRole] = useState(requireModerator);
-  const [hasModerator, setHasModerator] = useState(false);
-  const [loadingMod, setLoadingMod] = useState(requireModerator);
-  const [modCheckAttempted, setModCheckAttempted] = useState(false);
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
+  children, 
+  requiresAuth = true 
+}) => {
+  const { session, loading, hasDeletionRequest } = useAuth();
   const location = useLocation();
-
+  
   useEffect(() => {
-    const checkModeratorStatus = async () => {
-      if (!requireModerator || !session) {
-        setCheckingModRole(false);
-        setLoadingMod(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('admin_users')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
-
-        if (error) {
-          console.error('Error checking moderator status:', error);
-          throw error;
-        }
-
-        setHasModerator(!!data);
-      } catch (error) {
-        console.error('Failed to check moderator status:', error);
-        toast({
-          title: 'Fehler',
-          description: 'Dein Moderatorstatus konnte nicht überprüft werden.',
-          variant: 'destructive',
-        });
-      } finally {
-        setLoadingMod(false);
-        setCheckingModRole(false);
-        setModCheckAttempted(true);
-      }
-    };
-
-    if (session && requireModerator) {
-      checkModeratorStatus();
-    } else if (!session && !loading) {
-      setLoadingMod(false);
-      setCheckingModRole(false);
+    console.log("ProtectedRoute:", { 
+      loading, 
+      authenticated: !!session, 
+      path: location.pathname,
+      hasDeletionRequest,
+      sessionData: session ? 'Session exists' : 'No session'
+    });
+  }, [loading, session, location.pathname, hasDeletionRequest]);
+  
+  // Show loading spinner while auth state is being determined
+  // Add a 5-second maximum loading time to prevent infinite loading
+  useEffect(() => {
+    if (loading) {
+      const timeoutId = setTimeout(() => {
+        console.log("Loading timeout reached - forcing authentication check");
+        // This will force a re-render and check if we have session data
+        // If not, the user will be redirected to login
+      }, 5000);
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [session, requireModerator]);
-
-  // Handle loading state
-  if (loading || (requireModerator && checkingModRole)) {
+  }, [loading]);
+  
+  // Don't render anything until we know the auth state
+  if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <LoadingSpinner 
-          message={requireModerator ? "Überprüfe Moderatorberechtigung..." : "Überprüfe Anmeldung..."} 
-          timeout={true}
-          timeoutMs={3000}
-        />
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingSpinner />
       </div>
     );
   }
-
-  // If not logged in, redirect to login
-  if (!session) {
-    // Display toast only once
-    if (!loadingError) {
-      toast({
-        title: 'Anmeldung erforderlich',
-        description: 'Du musst angemeldet sein, um auf diese Seite zuzugreifen.',
-      });
-    }
-    
-    return <Navigate to="/login" state={{ from: location }} replace />;
+  
+  if (!session && requiresAuth) {
+    console.log("Not authenticated, redirecting to login from", location.pathname);
+    return <Navigate to="/login" replace />;
   }
-
-  // If moderator role required but user doesn't have it
-  if (requireModerator && !hasModerator && modCheckAttempted) {
-    toast({
-      title: 'Zugriff verweigert',
-      description: 'Du benötigst Moderatorrechte, um auf diese Seite zuzugreifen.',
-      variant: 'destructive',
-    });
-    
-    return <Navigate to="/" replace />;
+  
+  if (session && hasDeletionRequest && location.pathname !== '/cancel-deletion') {
+    console.log("User has deletion request, redirecting to cancel-deletion");
+    return <Navigate to="/cancel-deletion" replace />;
   }
-
+  
   return <>{children}</>;
 };
 

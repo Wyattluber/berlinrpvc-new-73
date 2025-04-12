@@ -24,7 +24,8 @@ export const supabase = createClient<CustomDatabase>(SUPABASE_URL, SUPABASE_PUBL
     persistSession: true,
     autoRefreshToken: true,
     storageKey: 'supabase.auth.token',
-    detectSessionInUrl: true,
     flowType: 'pkce',
+    detectSessionInUrl: true,
+    debug: true,
   }
 });

@@ -1,22 +1,24 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, MessageSquareWarning, CheckCircle, Edit } from 'lucide-react';
+import { Loader2, MessageSquareWarning, CheckCircle, AlertCircle } from 'lucide-react';
 import { requestIdChange } from '@/lib/admin/users';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface UserDataChangeRequestProps {
   currentRobloxId: string | null;
-  currentDiscordId?: string | null;
+  currentDiscordId?: string | null; // Added this prop to match what's being passed from Profile.tsx
   userId: string;
 }
 
 export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
   currentRobloxId,
+  currentDiscordId,
   userId
 }) => {
   const [newRobloxId, setNewRobloxId] = useState('');
@@ -26,7 +28,7 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // Check for existing pending requests
-  useEffect(() => {
+  React.useEffect(() => {
     const checkPendingRequests = async () => {
       try {
         const { data, error } = await supabase
@@ -105,27 +107,29 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
     }
   };
 
-  // Render a small edit button that opens the dialog
+  // Render only the button that triggers the dialog
   return (
     <>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogTrigger asChild>
           <Button 
             size="sm" 
-            variant="ghost" 
-            className="p-0 h-auto text-gray-500 hover:text-blue-600 hover:bg-transparent" 
+            variant="outline" 
+            className="ml-2" 
             disabled={pendingRequest}
           >
             {pendingRequest ? (
               <span className="flex items-center text-amber-600">
-                <MessageSquareWarning className="h-4 w-4" />
+                <MessageSquareWarning className="h-4 w-4 mr-1" />
+                Antrag läuft
               </span>
             ) : successMessage ? (
               <span className="flex items-center text-green-600">
-                <CheckCircle className="h-4 w-4" />
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Gesendet
               </span>
             ) : (
-              <Edit className="h-3.5 w-3.5" />
+              "ID ändern"
             )}
           </Button>
         </DialogTrigger>

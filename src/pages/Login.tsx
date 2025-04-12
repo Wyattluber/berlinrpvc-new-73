@@ -7,7 +7,8 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Login = () => {
@@ -28,12 +29,11 @@ const Login = () => {
       setLoginLoading(true);
       setError(null);
       
-      // Proactively clear auth state before login
-      localStorage.removeItem('supabase.auth.token');
-      
       // Get the current domain for the redirect URL
-      const origin = window.location.origin;
-      const redirectUrl = `${origin}/profile`;
+      const isLocalhost = window.location.hostname === 'localhost';
+      const redirectUrl = isLocalhost 
+        ? 'http://localhost:5173/profile'
+        : 'https://berlinrpvc.de/profile';
       
       console.log("Using redirect URL:", redirectUrl);
       
@@ -79,9 +79,11 @@ const Login = () => {
             
             <CardContent className="pt-6">
               {error && (
-                <div className="p-3 mb-4 bg-red-50 border border-red-200 text-red-800 rounded-md">
-                  <p>{error}</p>
-                </div>
+                <Alert variant="destructive" className="my-4 bg-red-50 text-red-800 border-red-200">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle className="font-medium">Fehler</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
               
               <Button 
