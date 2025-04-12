@@ -7,6 +7,7 @@ import { toast } from '@/hooks/use-toast';
 // Create context for session
 type AuthContextType = {
   session: any;
+  user: any; // Add user property to the type definition
   loading: boolean;
   loadingError: string | null;
   hasDeletionRequest: boolean;
@@ -15,6 +16,7 @@ type AuthContextType = {
 
 export const AuthContext = createContext<AuthContextType>({
   session: null,
+  user: null, // Initialize the user property
   loading: true,
   loadingError: null,
   hasDeletionRequest: false,
@@ -28,6 +30,7 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<any>(null);
+  const [user, setUser] = useState<any>(null); // Add user state
   const [loading, setLoading] = useState(true);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [hasDeletionRequest, setHasDeletionRequest] = useState(false);
@@ -81,6 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (isMounted) {
           console.log("Initial session check:", sessionData.session ? "Logged in" : "Not logged in");
           setSession(sessionData.session);
+          setUser(sessionData.session?.user || null); // Set user state
           
           // Clear the safety timeout if session check completed successfully
           if (initTimeout) {
@@ -95,6 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (!isMounted) return;
           
           setSession(newSession);
+          setUser(newSession?.user || null); // Update user state
           
           // Create profile for new users if needed
           if (newSession?.user && _event === 'SIGNED_IN') {
@@ -182,6 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       await supabase.auth.signOut({ scope: 'global' });
       setSession(null);
+      setUser(null); // Reset user state
       setLoadingError(null);
       
       // Clear local storage auth data to ensure a clean slate
@@ -213,7 +219,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <AuthContext.Provider 
       value={{ 
-        session, 
+        session,
+        user, // Include user in the context value
         loading, 
         loadingError, 
         hasDeletionRequest, 
