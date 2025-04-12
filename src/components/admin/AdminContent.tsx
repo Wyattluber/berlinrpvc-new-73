@@ -15,6 +15,7 @@ import IdChangeRequestManager from '@/components/admin/IdChangeRequestManager';
 import AccountDeletionRequestManager from '@/components/admin/AccountDeletionRequestManager';
 import DiscordLinkManager from '@/components/admin/DiscordLinkManager';
 import PartnershipRequestsManager from '@/components/admin/PartnershipRequestsManager';
+import ApplicationTextsManager from '@/components/admin/ApplicationTextsManager';
 
 interface AdminContentProps {
   isAdmin: boolean;
@@ -60,6 +61,13 @@ const AdminContent: React.FC<AdminContentProps> = ({
           <div className="space-y-6">
             <h2 className="text-2xl font-bold">Bewerbungsverwaltung</h2>
             <ApplicationsList />
+          </div>
+        );
+      case 'application_texts':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold">Bewerbungstexte</h2>
+            <ApplicationTextsManager />
           </div>
         );
       case 'news':

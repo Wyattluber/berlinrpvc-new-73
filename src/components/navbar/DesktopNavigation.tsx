@@ -49,21 +49,13 @@ const DesktopNavigation: React.FC<DesktopNavigationProps> = ({
           </NavigationMenuItem>
           
           {session ? (
-            <NavigationMenuItem>
-              <UserDropdown 
-                session={session} 
-                isAdmin={isAdmin} 
-                handleLogout={handleLogout} 
-              />
-            </NavigationMenuItem>
-          ) : (
             <>
               <NavigationMenuItem>
-                <Link to="/login">
-                  <NavigationMenuLink className={`${navigationMenuTriggerStyle()} text-white bg-transparent hover:bg-blue-800 hover:text-white`}>
-                    Login
-                  </NavigationMenuLink>
-                </Link>
+                <UserDropdown 
+                  session={session} 
+                  isAdmin={isAdmin} 
+                  handleLogout={handleLogout} 
+                />
               </NavigationMenuItem>
               
               {!isAdmin && (
@@ -75,6 +67,24 @@ const DesktopNavigation: React.FC<DesktopNavigationProps> = ({
                   </Link>
                 </NavigationMenuItem>
               )}
+            </>
+          ) : (
+            <>
+              <NavigationMenuItem>
+                <Link to="/login">
+                  <NavigationMenuLink className={`${navigationMenuTriggerStyle()} text-white bg-transparent hover:bg-blue-800 hover:text-white`}>
+                    Login
+                  </NavigationMenuLink>
+                </Link>
+              </NavigationMenuItem>
+              
+              <NavigationMenuItem>
+                <Link to="/apply">
+                  <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0">
+                    Bewerben
+                  </Button>
+                </Link>
+              </NavigationMenuItem>
             </>
           )}
         </NavigationMenuList>

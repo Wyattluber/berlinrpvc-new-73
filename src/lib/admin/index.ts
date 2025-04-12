@@ -5,3 +5,4 @@ export * from './users';
 export * from './news';
 export * from './team';
 export * from './applications';
+export * from './applicationTexts';
