@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
@@ -103,11 +104,19 @@ const Apply = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [activeTab, setActiveTab] = useState("moderator");
+  const [authError, setAuthError] = useState(false);
 
   const checkUserStatus = async (applicationType: string) => {
     setIsLoading(true);
+    
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      // First check if there's a session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('Error checking session:', sessionError);
+        throw sessionError;
+      }
       
       if (!session) {
         toast({
@@ -118,35 +127,50 @@ const Apply = () => {
         return;
       }
       
-      const { data: adminData } = await supabase
+      // Check if user is admin
+      const { data: adminData, error: adminError } = await supabase
         .from('admin_users')
         .select('role')
         .eq('user_id', session.user.id)
         .maybeSingle();
+        
+      if (adminError) {
+        console.error('Error checking admin status:', adminError);
+        // Continue with the flow, as this is not a critical error
+      }
         
       if (adminData) {
         setShowAlert(true);
         return;
       }
       
+      // Check if user already has an application
       let existingApplication;
+      let existingAppError;
       
       if (applicationType === 'moderator') {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('applications')
           .select('id, status')
           .eq('user_id', session.user.id)
           .maybeSingle();
           
         existingApplication = data;
+        existingAppError = error;
       } else if (applicationType === 'partner') {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('partner_applications')
           .select('id, status')
           .eq('user_id', session.user.id)
           .maybeSingle();
           
         existingApplication = data;
+        existingAppError = error;
+      }
+      
+      if (existingAppError) {
+        console.error('Error checking existing application:', existingAppError);
+        // Continue with the flow if there's an error checking existing applications
       }
       
       if (existingApplication) {
@@ -158,6 +182,7 @@ const Apply = () => {
         return;
       }
       
+      // Navigate to appropriate form
       if (applicationType === 'moderator') {
         navigate('/apply/form');
       } else if (applicationType === 'partner') {
@@ -166,14 +191,23 @@ const Apply = () => {
       
     } catch (error) {
       console.error('Error checking user status:', error);
+      setAuthError(true);
       toast({
         title: "Fehler",
-        description: "Es gab ein Problem bei der Überprüfung deines Benutzerstatus.",
+        description: "Es gab ein Problem bei der Überprüfung deines Benutzerstatus. Du wirst zur Anmeldeseite weitergeleitet.",
         variant: "destructive"
       });
+      
+      // Fallback: If authentication checks fail, redirect to login
+      setTimeout(() => navigate('/login'), 1500);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Direct navigation function that skips checks in case of auth errors
+  const handleDirectNavigation = (path: string) => {
+    navigate(path);
   };
 
   return (
@@ -198,6 +232,19 @@ const Apply = () => {
               <AlertTitle>Bewerbung nicht möglich</AlertTitle>
               <AlertDescription>
                 Du bist bereits Teammitglied und kannst dich nicht erneut bewerben.
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+
+        {authError && (
+          <div className="container mx-auto px-4 py-6">
+            <Alert variant="warning" className="bg-amber-50 border-amber-200">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              <AlertTitle className="text-amber-800">Authentifizierungsproblem</AlertTitle>
+              <AlertDescription className="text-amber-700">
+                Es gibt ein Problem mit der Authentifizierung. Du kannst trotzdem fortfahren, 
+                musst dich aber später anmelden.
               </AlertDescription>
             </Alert>
           </div>
@@ -316,12 +363,18 @@ const Apply = () => {
                       <div className="text-center">
                         <Button 
                           size="lg" 
-                          onClick={() => checkUserStatus('moderator')}
-                          disabled={isLoading}
+                          onClick={() => isLoading || authError ? handleDirectNavigation('/apply/form') : checkUserStatus('moderator')}
+                          disabled={isLoading && !authError}
                           className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 border-0"
                         >
                           {isLoading ? 'Bitte warten...' : 'Als Moderator bewerben'}
                         </Button>
+                        
+                        {authError && (
+                          <p className="text-sm text-amber-600 mt-2">
+                            Bei Authentifizierungsproblemen wirst du später nach deinen Anmeldedaten gefragt.
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -373,12 +426,18 @@ const Apply = () => {
                       <div className="text-center">
                         <Button 
                           size="lg" 
-                          onClick={() => checkUserStatus('partner')}
-                          disabled={isLoading}
+                          onClick={() => isLoading || authError ? handleDirectNavigation('/apply/partner-form') : checkUserStatus('partner')}
+                          disabled={isLoading && !authError}
                           className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 border-0"
                         >
                           {isLoading ? 'Bitte warten...' : 'Als Partner bewerben'}
                         </Button>
+                        
+                        {authError && (
+                          <p className="text-sm text-amber-600 mt-2">
+                            Bei Authentifizierungsproblemen wirst du später nach deinen Anmeldedaten gefragt.
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>

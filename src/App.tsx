@@ -31,10 +31,10 @@ import { PartnerApplicationProvider } from "@/contexts/PartnerApplicationContext
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 2,
+      retry: 1,  // Reduced from 2 to speed up error detection
       refetchOnWindowFocus: false,
       staleTime: 60000, // 1 minute
-      retryDelay: attempt => Math.min(1000 * 2 ** attempt, 30000),
+      retryDelay: attempt => Math.min(1000 * 2 ** attempt, 10000), // Reduced max delay
     },
   },
 });
@@ -48,8 +48,9 @@ const AppLoadingErrorManager = () => {
     resetAuth();
   };
 
+  // Only show loading spinner for a maximum of 3 seconds on initial page load
   if (loading) {
-    return <LoadingSpinner timeout={true} onReset={handleReset} message="Initialisiere Anwendung..." timeoutMs={5000} />;
+    return <LoadingSpinner timeout={true} onReset={handleReset} message="Initialisiere Anwendung..." timeoutMs={3000} />;
   }
 
   return (
@@ -77,7 +78,7 @@ const AppLoadingErrorManager = () => {
       )}
       <BrowserRouter>
         <ScrollToTop />
-        <Suspense fallback={<LoadingSpinner message="Lade Seite..." />}>
+        <Suspense fallback={<LoadingSpinner message="Lade Seite..." timeoutMs={3000} />}>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/apply" element={<Apply />} />
