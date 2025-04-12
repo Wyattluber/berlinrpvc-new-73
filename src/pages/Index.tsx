@@ -146,7 +146,7 @@ const Index = () => {
               size="lg" 
               className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 border-0 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all duration-300"
             >
-              <Link to="/apply">Jetzt Bewerben</Link>
+              <Link to="https://berlinrpvc.de/apply">Jetzt Bewerben</Link>
             </Button>
           </div>
         </section>
