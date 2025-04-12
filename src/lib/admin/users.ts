@@ -322,7 +322,7 @@ export async function getUserApplicationsHistory(userId: string) {
 /**
  * Request ID change for user
  */
-export async function requestIdChange(userId: string, fieldName: 'discord_id' | 'roblox_id', newValue: string) {
+export async function requestIdChange(userId: string, fieldName: string, newValue: string) {
   try {
     const { data, error } = await supabase
       .from('id_change_requests')
