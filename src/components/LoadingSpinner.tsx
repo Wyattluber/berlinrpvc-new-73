@@ -13,31 +13,23 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   message = 'Laden...',
   size = 'medium',
   timeout = false,
-  timeoutMs = 5000, // Reduced from 8000 to improve user experience
+  timeoutMs = 5000,
   onReset
 }) => {
   const [showTimeout, setShowTimeout] = useState(false);
-  const [showHideButton, setShowHideButton] = useState(false);
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
-    let hideButtonTimeoutId: NodeJS.Timeout;
 
     if (timeout) {
       timeoutId = setTimeout(() => {
         console.log("LoadingSpinner timeout triggered after", timeoutMs, "ms");
         setShowTimeout(true);
       }, timeoutMs);
-
-      // Show hide button a bit later to avoid confusion
-      hideButtonTimeoutId = setTimeout(() => {
-        setShowHideButton(true);
-      }, timeoutMs + 2000); // Reduced from 3000 to improve responsiveness
     }
 
     return () => {
       clearTimeout(timeoutId);
-      clearTimeout(hideButtonTimeoutId);
     };
   }, [timeout, timeoutMs]);
 
@@ -47,11 +39,6 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
       onReset();
       setShowTimeout(false);
     }
-  };
-
-  const handleHide = () => {
-    console.log("LoadingSpinner timeout message hidden by user");
-    setShowTimeout(false);
   };
 
   const getSizeClasses = () => {
@@ -75,34 +62,16 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
         {showTimeout && (
           <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
             <p className="text-yellow-700 mb-2">
-              Ladevorgang dauert länger als erwartet. Bitte Seite neu laden oder zurücksetzen.
+              Ladevorgang dauert länger als erwartet. Bitte Seite neu laden.
             </p>
             
-            <div className="flex gap-2 justify-center mt-3">
-              {onReset && (
-                <button
-                  onClick={handleReset}
-                  className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                >
-                  Zurücksetzen
-                </button>
-              )}
-              
+            <div className="flex justify-center mt-3">
               <button
                 onClick={() => window.location.reload()}
                 className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
               >
                 Seite neu laden
               </button>
-              
-              {showHideButton && (
-                <button
-                  onClick={handleHide}
-                  className="px-3 py-1 bg-gray-400 text-white rounded hover:bg-gray-500 transition-colors"
-                >
-                  Ausblenden
-                </button>
-              )}
             </div>
           </div>
         )}

@@ -14,7 +14,7 @@ interface DataLoadingHandlerProps {
   retryCount?: number;
   noDataMessage?: string;
   showNoData?: boolean;
-  ignoreAuthErrors?: boolean; // Add option to ignore auth errors
+  ignoreAuthErrors?: boolean;
 }
 
 const DataLoadingHandler: React.FC<DataLoadingHandlerProps> = ({
@@ -26,7 +26,7 @@ const DataLoadingHandler: React.FC<DataLoadingHandlerProps> = ({
   retryCount = 0,
   noDataMessage = "Keine Daten gefunden.",
   showNoData = false,
-  ignoreAuthErrors = false // Default to false
+  ignoreAuthErrors = false
 }) => {
   const [hasAutoRetried, setHasAutoRetried] = useState(false);
   const [showError, setShowError] = useState(false);
@@ -69,7 +69,7 @@ const DataLoadingHandler: React.FC<DataLoadingHandlerProps> = ({
           size="medium" 
           message={loadingMessage} 
           timeout={true}
-          timeoutMs={3000} // Reduced from 5000 to improve responsiveness
+          timeoutMs={3000}
         />
       </div>
     );

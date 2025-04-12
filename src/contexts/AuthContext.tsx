@@ -7,7 +7,7 @@ import { toast } from '@/hooks/use-toast';
 // Create context for session
 type AuthContextType = {
   session: any;
-  user: any; // Add user property to the type definition
+  user: any;
   loading: boolean;
   loadingError: string | null;
   hasDeletionRequest: boolean;
@@ -16,7 +16,7 @@ type AuthContextType = {
 
 export const AuthContext = createContext<AuthContextType>({
   session: null,
-  user: null, // Initialize the user property
+  user: null,
   loading: true,
   loadingError: null,
   hasDeletionRequest: false,
@@ -30,76 +30,36 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<any>(null);
-  const [user, setUser] = useState<any>(null); // Add user state
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [hasDeletionRequest, setHasDeletionRequest] = useState(false);
-  const [initTimeout, setInitTimeout] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     console.log("AuthProvider initialized");
     
-    // Set a safety timeout to prevent infinite loading (reduced from 8s to 6s)
+    // Set a safety timeout to prevent infinite loading
     const timeout = setTimeout(() => {
       if (isMounted && loading) {
         console.error("Auth initialization timeout after 6 seconds");
-        setLoadingError("Authentifizierung Timeout - Bitte Seite neu laden oder Cookies löschen");
+        setLoadingError("Authentifizierung Timeout - Bitte Seite neu laden");
         setLoading(false);
       }
-    }, 6000); // 6 second timeout instead of 8
+    }, 6000);
     
-    setInitTimeout(timeout);
-    
-    // Simplified auth initialization to avoid race conditions
+    // Initialize auth
     const initializeAuth = async () => {
       try {
         console.log("Initializing auth...");
         
-        // First check current session status directly - with timeout
-        const sessionPromise = supabase.auth.getSession();
-        
-        // Add a timeout for the session retrieval to fail faster
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("Session retrieval timeout")), 3000)
-        );
-        
-        // Race between session retrieval and timeout
-        const { data: sessionData, error: sessionError } = await Promise.race([
-          sessionPromise,
-          timeoutPromise.then(() => {
-            throw new Error("Session retrieval timeout");
-          })
-        ]) as any;
-        
-        if (sessionError) {
-          console.error("Error fetching session:", sessionError);
-          if (isMounted) {
-            setLoadingError("Fehler beim Laden der Sitzung");
-            setLoading(false);
-          }
-          return;
-        }
-        
-        if (isMounted) {
-          console.log("Initial session check:", sessionData.session ? "Logged in" : "Not logged in");
-          setSession(sessionData.session);
-          setUser(sessionData.session?.user || null); // Set user state
-          
-          // Clear the safety timeout if session check completed successfully
-          if (initTimeout) {
-            clearTimeout(initTimeout);
-            setInitTimeout(null);
-          }
-        }
-        
-        // Then set up the auth state change listener
+        // Set up the auth state change listener
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
           console.log("Auth state changed:", _event, newSession ? "Session exists" : "No session");
           if (!isMounted) return;
           
           setSession(newSession);
-          setUser(newSession?.user || null); // Update user state
+          setUser(newSession?.user || null);
           
           // Create profile for new users if needed
           if (newSession?.user && _event === 'SIGNED_IN') {
@@ -146,13 +106,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         });
         
-        // Force set loading to false after a short delay regardless of session check
-        setTimeout(() => {
-          if (isMounted && loading) {
-            console.log("Forcing loading state to false after delay");
+        // Check current session status
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error("Error fetching session:", sessionError);
+          if (isMounted) {
+            setLoadingError("Fehler beim Laden der Sitzung");
             setLoading(false);
           }
-        }, 800);
+          return;
+        }
+        
+        if (isMounted) {
+          console.log("Initial session check:", sessionData.session ? "Logged in" : "Not logged in");
+          setSession(sessionData.session);
+          setUser(sessionData.session?.user || null);
+          setLoading(false);
+        }
         
         return () => {
           subscription.unsubscribe();
@@ -170,48 +141,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       isMounted = false;
-      if (initTimeout) {
-        clearTimeout(initTimeout);
-      }
+      clearTimeout(timeout);
     };
   }, []);
 
   // Helper function to reset authentication on problems
   const resetAuth = async () => {
     try {
-      // Show toast to indicate reset is in progress
-      toast({
-        title: "Authentifizierung wird zurückgesetzt",
-        description: "Bitte warten...",
-      });
-      
       await supabase.auth.signOut({ scope: 'global' });
       setSession(null);
-      setUser(null); // Reset user state
+      setUser(null);
       setLoadingError(null);
       
       // Clear local storage auth data to ensure a clean slate
       localStorage.removeItem('supabase.auth.token');
       
-      // Show success message
-      toast({
-        title: "Authentifizierung zurückgesetzt",
-        description: "Bitte lade die Seite neu oder versuche erneut einzuloggen. Lösche ggf. alle Cookies.",
-      });
-      
       // Force reload after a short delay
       setTimeout(() => {
         window.location.href = "/";
-      }, 1500);
+      }, 1000);
     } catch (error) {
       console.error("Error resetting auth:", error);
       // Fallback: On severe errors, try to clear localStorage
       localStorage.clear();
-      toast({
-        title: "Fehler beim Zurücksetzen",
-        description: "Bitte lade die Seite manuell neu und lösche alle Cookies.",
-        variant: "destructive",
-      });
       window.location.href = "/";
     }
   };
@@ -220,7 +172,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider 
       value={{ 
         session,
-        user, // Include user in the context value
+        user,
         loading, 
         loadingError, 
         hasDeletionRequest, 

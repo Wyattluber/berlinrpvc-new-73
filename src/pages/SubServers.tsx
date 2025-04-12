@@ -163,7 +163,7 @@ const SubServers = () => {
             loadingMessage="Lade Unterserver..."
             showNoData={!loading && !error && subServers.length === 0}
             noDataMessage="Keine Unterserver gefunden."
-            ignoreAuthErrors={true} // Ignore authentication errors for this public page
+            ignoreAuthErrors={true}
           >
             <div className="space-y-10 max-w-5xl mx-auto">
               {activeServers.length > 0 && (
