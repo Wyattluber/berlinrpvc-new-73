@@ -31,6 +31,7 @@ const SubServers = () => {
     setError(null);
     
     try {
+      console.log("Fetching sub servers...");
       const { data, error } = await supabase
         .from('sub_servers')
         .select('*')
@@ -42,6 +43,7 @@ const SubServers = () => {
         throw error;
       }
 
+      console.log("Sub servers data:", data);
       setSubServers(data || []);
     } catch (error: any) {
       console.error('Error fetching sub servers:', error);
@@ -56,6 +58,7 @@ const SubServers = () => {
     fetchSubServers();
   }, [fetchSubServers]);
 
+  // Helper functions for displaying servers
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'active':
@@ -81,6 +84,7 @@ const SubServers = () => {
     }
   };
 
+  // Organize servers by status
   const activeServers = subServers.filter(server => server.status === 'active');
   const comingSoonServers = subServers.filter(server => server.status === 'coming_soon');
   const inactiveServers = subServers.filter(server => server.status === 'inactive');
@@ -159,6 +163,7 @@ const SubServers = () => {
             loadingMessage="Lade Unterserver..."
             showNoData={!loading && !error && subServers.length === 0}
             noDataMessage="Keine Unterserver gefunden."
+            ignoreAuthErrors={true} // Ignore authentication errors for this public page
           >
             <div className="space-y-10 max-w-5xl mx-auto">
               {activeServers.length > 0 && (

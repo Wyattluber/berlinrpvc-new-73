@@ -1,9 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { supabase } from '@/integrations/supabase/client';
-import { LoaderIcon } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
+import DataLoadingHandler from '@/components/DataLoadingHandler';
 
 interface Partner {
   id: string;
@@ -19,29 +20,39 @@ interface Partner {
 const Partners = () => {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  const fetchPartners = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      console.log("Fetching partners...");
+      const { data, error } = await supabase
+        .from('partner_servers')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      console.log("Partners data:", data);
+      setPartners(data || []);
+    } catch (error: any) {
+      console.error('Error fetching partners:', error);
+      setError(error.message || 'Fehler beim Laden der Partner');
+    } finally {
+      setLoading(false);
+      setRetryCount(prev => prev + 1);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchPartners = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('partner_servers')
-          .select('*')
-          .order('name', { ascending: true });
-
-        if (error) {
-          throw error;
-        }
-
-        setPartners(data || []);
-      } catch (error) {
-        console.error('Error fetching partners:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchPartners();
-  }, []);
+  }, [fetchPartners]);
 
   // Helper function to map partner type to color
   const getPartnerColor = (type: string) => {
@@ -79,11 +90,16 @@ const Partners = () => {
         {/* Partners Grid */}
         <section className="mb-16">
           <div className="container mx-auto px-4">
-            {loading ? (
-              <div className="flex justify-center items-center py-12">
-                <LoaderIcon className="h-10 w-10 animate-spin text-indigo-400" />
-              </div>
-            ) : partners.length > 0 ? (
+            <DataLoadingHandler
+              loading={loading}
+              error={error}
+              onRetry={fetchPartners}
+              retryCount={retryCount}
+              loadingMessage="Lade Partner..."
+              showNoData={!loading && !error && partners.length === 0}
+              noDataMessage="Keine Partner gefunden."
+              ignoreAuthErrors={true} // Ignore authentication errors for this public page
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
                 {partners.map((partner) => (
                   <div 
@@ -137,26 +153,14 @@ const Partners = () => {
                           <span className="relative z-10 transition-colors duration-300 after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-1 after:w-0 after:bg-gradient-to-r after:from-indigo-500 after:to-purple-600 after:transition-all after:duration-300 group-hover:after:w-full">
                             Discord beitreten
                           </span>
-                          <svg 
-                            className="ml-2 w-4 h-4 transform transition-transform duration-300 group-hover:translate-x-1" 
-                            fill="none" 
-                            stroke="currentColor" 
-                            viewBox="0 0 24 24" 
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                          </svg>
+                          <ExternalLink className="ml-2 w-4 h-4 transform transition-transform duration-300 group-hover:translate-x-1" />
                         </a>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-indigo-200 text-lg">Keine Partner gefunden</p>
-              </div>
-            )}
+            </DataLoadingHandler>
           </div>
         </section>
 

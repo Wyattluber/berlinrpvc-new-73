@@ -14,6 +14,7 @@ interface DataLoadingHandlerProps {
   retryCount?: number;
   noDataMessage?: string;
   showNoData?: boolean;
+  ignoreAuthErrors?: boolean; // Add option to ignore auth errors
 }
 
 const DataLoadingHandler: React.FC<DataLoadingHandlerProps> = ({
@@ -24,14 +25,23 @@ const DataLoadingHandler: React.FC<DataLoadingHandlerProps> = ({
   loadingMessage = "Daten werden geladen...",
   retryCount = 0,
   noDataMessage = "Keine Daten gefunden.",
-  showNoData = false
+  showNoData = false,
+  ignoreAuthErrors = false // Default to false
 }) => {
   const [hasAutoRetried, setHasAutoRetried] = useState(false);
   const [showError, setShowError] = useState(false);
 
+  // Check if error is related to authentication
+  const isAuthError = error?.toLowerCase().includes('auth') || 
+                     error?.toLowerCase().includes('anmeld') || 
+                     error?.toLowerCase().includes('login');
+
+  // If we should ignore auth errors and this is an auth error, treat as if no error
+  const effectiveError = ignoreAuthErrors && isAuthError ? null : error;
+
   useEffect(() => {
     // Auto-retry logic - only run once
-    if (error && !hasAutoRetried && retryCount < 2) {
+    if (effectiveError && !hasAutoRetried && retryCount < 2) {
       setHasAutoRetried(true);
       const timer = setTimeout(() => {
         onRetry();
@@ -41,7 +51,7 @@ const DataLoadingHandler: React.FC<DataLoadingHandlerProps> = ({
     }
     
     // Show error after short delay to avoid flashing
-    if (error) {
+    if (effectiveError) {
       const timer = setTimeout(() => {
         setShowError(true);
       }, 500);
@@ -50,7 +60,7 @@ const DataLoadingHandler: React.FC<DataLoadingHandlerProps> = ({
     } else {
       setShowError(false);
     }
-  }, [error, onRetry, hasAutoRetried, retryCount]);
+  }, [effectiveError, onRetry, hasAutoRetried, retryCount]);
 
   if (loading) {
     return (
@@ -59,18 +69,18 @@ const DataLoadingHandler: React.FC<DataLoadingHandlerProps> = ({
           size="medium" 
           message={loadingMessage} 
           timeout={true}
-          timeoutMs={5000}
+          timeoutMs={3000} // Reduced from 5000 to improve responsiveness
         />
       </div>
     );
   }
 
-  if (error && showError) {
+  if (effectiveError && showError) {
     return (
       <Alert variant="destructive" className="mb-6 mx-auto max-w-2xl">
         <AlertCircle className="h-4 w-4 mr-2" />
         <AlertDescription className="flex justify-between items-center">
-          <span>{error}</span>
+          <span>{effectiveError}</span>
           <Button 
             variant="outline" 
             size="sm" 

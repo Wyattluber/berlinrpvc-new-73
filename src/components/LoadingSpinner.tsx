@@ -13,7 +13,7 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   message = 'Laden...',
   size = 'medium',
   timeout = false,
-  timeoutMs = 8000,
+  timeoutMs = 5000, // Reduced from 8000 to improve user experience
   onReset
 }) => {
   const [showTimeout, setShowTimeout] = useState(false);
@@ -25,13 +25,14 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
     if (timeout) {
       timeoutId = setTimeout(() => {
+        console.log("LoadingSpinner timeout triggered after", timeoutMs, "ms");
         setShowTimeout(true);
       }, timeoutMs);
 
       // Show hide button a bit later to avoid confusion
       hideButtonTimeoutId = setTimeout(() => {
         setShowHideButton(true);
-      }, timeoutMs + 3000);
+      }, timeoutMs + 2000); // Reduced from 3000 to improve responsiveness
     }
 
     return () => {
@@ -42,12 +43,14 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
   const handleReset = () => {
     if (onReset) {
+      console.log("LoadingSpinner manual reset triggered");
       onReset();
       setShowTimeout(false);
     }
   };
 
   const handleHide = () => {
+    console.log("LoadingSpinner timeout message hidden by user");
     setShowTimeout(false);
   };
 
@@ -72,7 +75,7 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
         {showTimeout && (
           <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
             <p className="text-yellow-700 mb-2">
-              Authentifizierung Timeout - Bitte Seite neu laden oder zurücksetzen.
+              Ladevorgang dauert länger als erwartet. Bitte Seite neu laden oder zurücksetzen.
             </p>
             
             <div className="flex gap-2 justify-center mt-3">
