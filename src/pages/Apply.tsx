@@ -1,142 +1,27 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { Shield, AlertCircle } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-const jobDescription = {
-  title: "Moderator",
-  description: "Als Moderator hilfst du, den Server für alle Mitglieder angenehm zu gestalten. Du löst Konflikte, bearbeitest Tickets und unterstützt bei Veranstaltungen.",
-  tasks: [
-    "Löse Ingame-Probleme & schlichte Konflikte",
-    "Teilnahme an wöchentlichen Team-Meetings",
-    "Unterstützung bei Server-Events",
-    "Mitarbeit im Support-Bereich"
-  ],
-  requirement: "Mindestens 14 Jahre alt, aktiv auf Discord und im Spiel",
-  details: [
-    {
-      title: "📌 Teamkleidung",
-      items: [
-        "👕 Die Teamkleidung kostet 10 Robux pro Stück und wird nicht gestellt.",
-        "💰 Falls neue Kleidung erscheint, gibt es eine teilweise Erstattung."
-      ],
-      additionalInfo: [
-        "Aktueller Stand:",
-        "👕 Shirt – Wird am 22.03.25 im Team vorgestellt.",
-        "👖 Optionale Hose – Noch nicht kaufbar."
-      ]
-    },
-    {
-      title: "📌 Teammeetings",
-      items: [
-        "📅 Wann? Jeden Samstag um 19:00 Uhr in der Teamstage.",
-        "📢 Hier besprechen die Admins wichtige Neuerungen und Änderungen.",
-        "📝 Ob das Meeting stattfindet, siehst du in den Discord-Events."
-      ],
-      warning: "⚠ Wichtig: Wenn du dich nicht abmeldest und unentschuldigt fehlst, erhältst du einen Warn."
-    },
-    {
-      title: "📌 Warnsystem für Teammitglieder",
-      items: [
-        "🔹 Warns sind nur für Teammitglieder & Admins einsehbar.",
-        "🔹 Nach drei Warns wirst du geloggt.",
-        "🔹 Beim vierten Warn: Verlust der Teamrolle & in der Regel ein Bann von allen Plattformen.",
-        "🔹 Schwerwiegendes Fehlverhalten kann zu einer direkten Sperre ohne vorherige Warnstufen führen."
-      ]
-    },
-    {
-      title: "📌 Online-Präsenz bei Serverstart",
-      items: [
-        "Wenn der Server online geht, solltest du sofort beitreten, um die Sichtbarkeit in der öffentlichen Serverliste zu verbessern."
-      ]
-    },
-    {
-      title: "📌 Tickets & Voicechat-Support",
-      items: [
-        "🎫 Tickets & Voicechat-Support können nur von Teammitgliedern mit der \"Ticket Support\"-Rolle bearbeitet werden.",
-        "👥 Diese Rolle erhältst du, wenn du Interesse zeigst und deine Aktivität von den zuständigen Leitern als geeignet bewertet wird."
-      ]
-    },
-    {
-      title: "📌 Feedback & Verbesserungsvorschläge",
-      items: [
-        "💡 Deine Ideen sind gefragt! Feedback hilft uns, das Spielerlebnis und die Teamstruktur stetig zu verbessern."
-      ]
-    },
-    {
-      title: "📌 Moderator-Aufgaben",
-      items: [
-        "🔹 Löse Ingame-Probleme & schlichte Konflikte.",
-        "🔹 Missbrauch von Mod-Rechten führt zur sofortigen Degradierung.",
-        "🔹 Schwere Regelverstöße können zu einem sofortigen Bann führen – ohne vorherige Warnstufen."
-      ]
-    }
-  ]
-};
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { InfoIcon, UserCheckIcon, ShieldAlertIcon, Users, Link as LinkIcon } from 'lucide-react';
+import PartnershipRequestForm from '@/components/PartnershipRequestForm';
 
 const Apply = () => {
+  const { session } = useAuth();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  const [showAlert, setShowAlert] = useState(false);
+  const [applicationTab, setApplicationTab] = useState('team');
 
-  const checkUserStatus = async () => {
-    setIsLoading(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        toast({
-          title: "Anmeldung erforderlich",
-          description: "Du musst angemeldet sein, um dich zu bewerben.",
-        });
-        navigate('/login');
-        return;
-      }
-      
-      const { data: adminData } = await supabase
-        .from('admin_users')
-        .select('role')
-        .eq('user_id', session.user.id)
-        .maybeSingle();
-        
-      if (adminData) {
-        setShowAlert(true);
-        return;
-      }
-      
-      const { data: applicationData } = await supabase
-        .from('applications')
-        .select('id, status')
-        .eq('user_id', session.user.id)
-        .maybeSingle();
-        
-      if (applicationData) {
-        toast({
-          title: "Bewerbung bereits eingereicht",
-          description: "Du hast bereits eine Bewerbung eingereicht. Bitte prüfe den Status in deinem Profil.",
-        });
-        navigate('/profile');
-        return;
-      }
-      
+  const handleApplyClick = () => {
+    if (session) {
       navigate('/apply/form');
-      
-    } catch (error) {
-      console.error('Error checking user status:', error);
-      toast({
-        title: "Fehler",
-        description: "Es gab ein Problem bei der Überprüfung deines Benutzerstatus.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
+    } else {
+      navigate('/login', { state: { from: '/apply/form' } });
     }
   };
 
@@ -144,145 +29,129 @@ const Apply = () => {
     <div className="flex flex-col min-h-screen">
       <Navbar />
       
-      <main className="flex-grow">
-        <section className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white py-16">
-          <div className="container mx-auto px-4 text-center">
-            <h1 className="text-4xl font-bold mb-4">Werde Teil des Teams</h1>
-            <p className="text-xl mb-6 max-w-3xl mx-auto">
-              Entdecke die verfügbaren Positionen in unserem BerlinRP-VC Team und finde heraus, 
-              welche Rolle am besten zu dir passt.
-            </p>
-          </div>
-        </section>
-
-        {showAlert && (
-          <div className="container mx-auto px-4 py-6">
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Bewerbung nicht möglich</AlertTitle>
-              <AlertDescription>
-                Du bist bereits Teammitglied und kannst dich nicht erneut bewerben.
-              </AlertDescription>
-            </Alert>
-          </div>
-        )}
-
-        <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold mb-10 text-center bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
-              Stellenbeschreibung: Moderator
-            </h2>
+      <main className="flex-grow bg-gradient-to-b from-gray-50 to-white py-10">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-12">
+              <h1 className="text-3xl md:text-4xl font-bold mb-4">Werde Teil von BerlinRP-VC</h1>
+              <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+                Es gibt verschiedene Möglichkeiten, wie du ein Teil unserer Community werden kannst. 
+                Wähle unten die Option, die am besten zu dir passt.
+              </p>
+            </div>
             
-            <div className="max-w-4xl mx-auto">
-              <Card className="flex flex-col h-full hover:shadow-lg transition-shadow duration-300 overflow-hidden bg-gradient-to-br from-white to-blue-50">
-                <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
-                  <CardTitle>{jobDescription.title}</CardTitle>
-                  <CardDescription className="text-blue-100">{jobDescription.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex-grow divide-y space-y-4">
-                  <div className="pt-2">
-                    <h4 className="font-semibold mb-2">Aufgaben:</h4>
-                    <ul className="list-disc pl-5 space-y-1">
-                      {jobDescription.tasks.map((task, i) => (
-                        <li key={i}>{task}</li>
-                      ))}
-                    </ul>
-                    <div className="mt-4">
-                      <h4 className="font-semibold mb-1">Voraussetzung:</h4>
-                      <p>{jobDescription.requirement}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="pt-4 space-y-6">
-                    <h3 className="text-lg font-bold mb-2 bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
-                      Alles über den Bereich Moderation für Interessierte
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-4">BerlinRP-VC | Stand: 04. April 2025</p>
+            <Tabs 
+              defaultValue="team" 
+              value={applicationTab} 
+              onValueChange={setApplicationTab}
+              className="mx-auto mb-10"
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="team" className="text-sm md:text-base">
+                  <UserCheckIcon className="h-4 w-4 mr-2 hidden md:inline" />
+                  Team Bewerbung
+                </TabsTrigger>
+                <TabsTrigger value="partnership" className="text-sm md:text-base">
+                  <LinkIcon className="h-4 w-4 mr-2 hidden md:inline" />
+                  Partnerschaft
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="team" className="mt-6">
+                <Card className="shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="text-2xl md:text-3xl">Bewirb dich für das Team</CardTitle>
+                    <CardDescription>
+                      Werde ein aktives Teammitglied und hilf uns den Server zu verbessern
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <Alert>
+                      <InfoIcon className="h-4 w-4" />
+                      <AlertTitle>Hinweis zur Bewerbung</AlertTitle>
+                      <AlertDescription>
+                        Bevor du dich bewirbst, stelle sicher, dass du die Regeln und Anforderungen von BerlinRP-VC kennst und akzeptierst.
+                      </AlertDescription>
+                    </Alert>
                     
-                    {jobDescription.details.map((section, index) => (
-                      <div key={index} className="space-y-2">
-                        <h4 className="font-bold mb-1">{section.title}</h4>
-                        <ul className="list-none space-y-2">
-                          {section.items.map((item, i) => (
-                            <li key={i} className="pl-1">{item}</li>
-                          ))}
-                        </ul>
-                        
-                        {section.additionalInfo && (
-                          <div className="mt-2 pl-1">
-                            <p className="font-medium">{section.additionalInfo[0]}</p>
-                            <ul className="list-none ml-1 mt-1">
-                              {section.additionalInfo.slice(1).map((info, i) => (
-                                <li key={i}>{info}</li>
-                              ))}
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <div className="flex items-start">
+                          <div className="flex-shrink-0 bg-blue-100 p-2 rounded-full mt-1">
+                            <ShieldAlertIcon className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div className="ml-3">
+                            <h3 className="font-medium">Voraussetzungen</h3>
+                            <ul className="mt-1 text-gray-600 text-sm space-y-1 list-disc list-inside">
+                              <li>Mindestens 13 Jahre alt</li>
+                              <li>Aktives Discord- und Roblox-Konto</li>
+                              <li>Verständnis der Serverregeln</li>
+                              <li>Zeitliche Verfügbarkeit für Teammeetings</li>
                             </ul>
                           </div>
-                        )}
-                        
-                        {section.warning && (
-                          <p className="mt-2 text-amber-700 font-medium pl-1">
-                            {section.warning}
-                          </p>
-                        )}
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-                <CardFooter className="border-t bg-gradient-to-r from-blue-50 to-indigo-50">
-                </CardFooter>
-              </Card>
-            </div>
-          </div>
-        </section>
-
-        <section className="py-16 bg-gradient-to-b from-white to-gray-50">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold mb-8 text-center bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
-              Allgemeine Anforderungen
-            </h2>
-            
-            <div className="bg-gradient-to-br from-white to-blue-50 shadow-md rounded-lg p-8 max-w-3xl mx-auto border border-blue-100">
-              <h3 className="font-bold text-xl mb-4 text-blue-700">Das erwarten wir von dir:</h3>
-              <ul className="space-y-3 mb-8">
-                <li className="flex items-start">
-                  <span className="text-indigo-600 font-bold mr-2">•</span>
-                  <span>Mindestalter: 14 Jahre</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-indigo-600 font-bold mr-2">•</span>
-                  <span>Aktive Teilnahme am Server und Discord</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-indigo-600 font-bold mr-2">•</span>
-                  <span>Teamfähigkeit und respektvoller Umgang</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-indigo-600 font-bold mr-2">•</span>
-                  <span>Bereitschaft, sich in neue Themen einzuarbeiten</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-indigo-600 font-bold mr-2">•</span>
-                  <span>Zuverlässigkeit und Engagement</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-indigo-600 font-bold mr-2">•</span>
-                  <span>Funktionierendes Mikrofon und Discord</span>
-                </li>
-              </ul>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-start">
+                          <div className="flex-shrink-0 bg-blue-100 p-2 rounded-full mt-1">
+                            <Users className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div className="ml-3">
+                            <h3 className="font-medium">Deine Aufgaben</h3>
+                            <ul className="mt-1 text-gray-600 text-sm space-y-1 list-disc list-inside">
+                              <li>Server Moderation und Support</li>
+                              <li>Mitwirkung an Community-Events</li>
+                              <li>Teilnahme an Team-Meetings</li>
+                              <li>Beitrag zur Verbesserung des Servers</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex justify-center pt-2 pb-6">
+                    <Button size="lg" onClick={handleApplyClick}>
+                      {session ? "Jetzt bewerben" : "Anmelden & Bewerben"}
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </TabsContent>
               
-              <div className="text-center">
-                <Button 
-                  size="lg" 
-                  onClick={checkUserStatus}
-                  disabled={isLoading}
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 border-0"
-                >
-                  {isLoading ? 'Bitte warten...' : 'Jetzt bewerben'}
-                </Button>
-              </div>
-            </div>
+              <TabsContent value="partnership" className="mt-6">
+                {session ? (
+                  <PartnershipRequestForm />
+                ) : (
+                  <Card className="shadow-lg">
+                    <CardHeader>
+                      <CardTitle className="text-2xl md:text-3xl">Partnerschaft mit BerlinRP-VC</CardTitle>
+                      <CardDescription>
+                        Beantrage eine Partnerschaft für deinen Server oder deine Community
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <Alert>
+                        <InfoIcon className="h-4 w-4" />
+                        <AlertTitle>Bitte melde dich an</AlertTitle>
+                        <AlertDescription>
+                          Du musst angemeldet sein, um eine Partnerschaftsanfrage zu stellen.
+                        </AlertDescription>
+                      </Alert>
+                    </CardContent>
+                    <CardFooter className="flex justify-center pt-2 pb-6">
+                      <Button 
+                        size="lg" 
+                        onClick={() => navigate('/login', { state: { from: '/apply' } })}
+                      >
+                        Anmelden & Partnerschaft beantragen
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                )}
+              </TabsContent>
+            </Tabs>
           </div>
-        </section>
+        </div>
       </main>
       
       <Footer />

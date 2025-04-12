@@ -64,6 +64,8 @@ export type CustomTables = {
       logo_url: string;
       created_at: string;
       updated_at: string;
+      partner_application_id: string | null;
+      is_active: boolean;
     };
     Insert: {
       id?: string;
@@ -76,6 +78,8 @@ export type CustomTables = {
       logo_url?: string;
       created_at?: string;
       updated_at?: string;
+      partner_application_id?: string | null;
+      is_active?: boolean;
     };
     Update: {
       id?: string;
@@ -88,6 +92,52 @@ export type CustomTables = {
       logo_url?: string;
       created_at?: string;
       updated_at?: string;
+      partner_application_id?: string | null;
+      is_active?: boolean;
+    };
+  };
+  partner_applications: {
+    Row: {
+      id: string;
+      user_id: string;
+      discord_id: string;
+      discord_invite: string;
+      reason: string;
+      requirements: string;
+      has_other_partners: boolean;
+      other_partners: string | null;
+      status: string;
+      created_at: string;
+      updated_at: string;
+      is_active: boolean | null;
+    };
+    Insert: {
+      id?: string;
+      user_id: string;
+      discord_id: string;
+      discord_invite: string;
+      reason: string;
+      requirements: string;
+      has_other_partners?: boolean;
+      other_partners?: string | null;
+      status?: string;
+      created_at?: string;
+      updated_at?: string;
+      is_active?: boolean | null;
+    };
+    Update: {
+      id?: string;
+      user_id?: string;
+      discord_id?: string;
+      discord_invite?: string;
+      reason?: string;
+      requirements?: string;
+      has_other_partners?: boolean;
+      other_partners?: string | null;
+      status?: string;
+      created_at?: string;
+      updated_at?: string;
+      is_active?: boolean | null;
     };
   };
   sub_servers: {

@@ -348,6 +348,51 @@ export type Database = {
         }
         Relationships: []
       }
+      partner_applications: {
+        Row: {
+          created_at: string
+          discord_id: string
+          discord_invite: string
+          has_other_partners: boolean | null
+          id: string
+          is_active: boolean | null
+          other_partners: string | null
+          reason: string
+          requirements: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          discord_id: string
+          discord_invite: string
+          has_other_partners?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          other_partners?: string | null
+          reason: string
+          requirements: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          discord_id?: string
+          discord_invite?: string
+          has_other_partners?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          other_partners?: string | null
+          reason?: string
+          requirements?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       partner_servers: {
         Row: {
           created_at: string
@@ -357,6 +402,7 @@ export type Database = {
           members: number | null
           name: string
           owner: string | null
+          partner_application_id: string | null
           type: string | null
           updated_at: string
           website: string
@@ -369,6 +415,7 @@ export type Database = {
           members?: number | null
           name: string
           owner?: string | null
+          partner_application_id?: string | null
           type?: string | null
           updated_at?: string
           website: string
@@ -381,11 +428,20 @@ export type Database = {
           members?: number | null
           name?: string
           owner?: string | null
+          partner_application_id?: string | null
           type?: string | null
           updated_at?: string
           website?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "partner_servers_partner_application_id_fkey"
+            columns: ["partner_application_id"]
+            isOneToOne: false
+            referencedRelation: "partner_applications"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

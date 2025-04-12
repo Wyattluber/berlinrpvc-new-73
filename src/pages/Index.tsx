@@ -52,6 +52,49 @@ const Index = () => {
         {/* Stats Section */}
         <ServerStats />
         
+        {/* Discord Widget Section */}
+        <section className="py-16 bg-white">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col md:flex-row items-center justify-center gap-8">
+              <div className="md:w-1/2 mb-8 md:mb-0 max-w-xl">
+                <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
+                  Tritt unserem Discord bei
+                </h2>
+                <p className="text-gray-700 mb-4">
+                  Werde Teil unserer aktiven Discord-Community und bleibe auf dem Laufenden über
+                  alle Neuigkeiten, Events und Updates. Hier findest du auch Gleichgesinnte für gemeinsame
+                  Rollenspiel-Erlebnisse.
+                </p>
+                <p className="text-gray-700 mb-6">
+                  Unser Discord-Server ist der zentrale Anlaufpunkt für alle BerlinRP-VC Aktivitäten
+                  und ein wichtiger Bestandteil unserer Community.
+                </p>
+                <Button className="bg-indigo-600 hover:bg-indigo-700">
+                  <a href="https://discord.gg/berlinrpvc" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                    <span>Jetzt beitreten</span>
+                    <ExternalLink size={16} />
+                  </a>
+                </Button>
+              </div>
+              
+              <div className="md:w-1/2 flex justify-center">
+                <div className="rounded-lg overflow-hidden shadow-lg border border-gray-200">
+                  <iframe 
+                    src="https://discord.com/widget?id=1283167094854258741&theme=dark" 
+                    width="350" 
+                    height="500" 
+                    allowTransparency={true} 
+                    frameBorder="0" 
+                    sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
+                    title="Discord BerlinRP-VC"
+                    className="w-full max-w-[350px]"
+                  ></iframe>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        
         {/* About Section */}
         <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
           <div className="container mx-auto px-4">

@@ -14,6 +14,7 @@ import ServerStats from '@/components/ServerStats';
 import IdChangeRequestManager from '@/components/admin/IdChangeRequestManager';
 import AccountDeletionRequestManager from '@/components/admin/AccountDeletionRequestManager';
 import DiscordLinkManager from '@/components/admin/DiscordLinkManager';
+import PartnershipRequestsManager from '@/components/admin/PartnershipRequestsManager';
 
 interface AdminContentProps {
   isAdmin: boolean;
@@ -65,6 +66,8 @@ const AdminContent: React.FC<AdminContentProps> = ({
         return <NewsManagement />;
       case 'partners':
         return <PartnerServersManagement />;
+      case 'partnerships':
+        return <PartnershipRequestsManager />;
       case 'sub_servers':
         return <SubServersManagement />;
       case 'change-requests':
