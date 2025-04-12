@@ -9,9 +9,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import AdminContent from '@/components/admin/AdminContent';
-import AdminSidebar from '@/components/admin/AdminSidebar';
-import AdminMobileNav from '@/components/admin/AdminMobileNav';
+import { AdminSidebar } from '@/components/admin/AdminSidebar';
+import { AdminMobileHeader, AdminMobileSidebar } from '@/components/admin/AdminMobileNav';
 import { useAuth } from '@/contexts/AuthContext';
+import { getAdminMenuItems } from '@/components/admin/AdminMenuItems';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ const AdminDashboard = () => {
   const [userCount, setUserCount] = useState(0);
   const [adminUsers, setAdminUsers] = useState([]);
   const { session } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Redirect to external admin panel if the external-admin option is selected
   useEffect(() => {
@@ -171,6 +173,7 @@ const AdminDashboard = () => {
   
   const handleSectionChange = (section) => {
     setActiveSection(section);
+    setMobileMenuOpen(false); // Close mobile menu when changing sections
   };
   
   if (loading) {
@@ -188,26 +191,35 @@ const AdminDashboard = () => {
     );
   }
   
+  const menuItems = getAdminMenuItems(isAdmin);
+  
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
       <div className="flex-1 flex">
         {/* Sidebar (hidden on mobile) */}
-        <div className="hidden md:block w-64 bg-white border-r">
-          <AdminSidebar 
-            isAdmin={isAdmin} 
-            activeSection={activeSection} 
-            onSectionChange={handleSectionChange} 
-          />
-        </div>
+        <AdminSidebar
+          isAdmin={isAdmin}
+          menuItems={menuItems}
+          activeSection={activeSection}
+          handleMenuClick={handleSectionChange}
+        />
         
         {/* Mobile navigation */}
         <div className="md:hidden">
-          <AdminMobileNav 
-            isAdmin={isAdmin} 
-            activeSection={activeSection} 
-            onSectionChange={handleSectionChange} 
+          <AdminMobileHeader
+            isAdmin={isAdmin}
+            mobileMenuOpen={mobileMenuOpen}
+            setMobileMenuOpen={setMobileMenuOpen}
           />
+          
+          {mobileMenuOpen && (
+            <AdminMobileSidebar
+              menuItems={menuItems}
+              activeSection={activeSection}
+              handleMenuClick={handleSectionChange}
+            />
+          )}
         </div>
         
         {/* Main content */}

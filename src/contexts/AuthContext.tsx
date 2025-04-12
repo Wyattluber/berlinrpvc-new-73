@@ -9,6 +9,7 @@ type AuthContextType = {
   loadingError: string | null;
   hasDeletionRequest: boolean;
   resetAuth: () => Promise<void>;
+  signOut: () => Promise<void>; // Added signOut method
 };
 
 export const AuthContext = createContext<AuthContextType>({
@@ -17,6 +18,7 @@ export const AuthContext = createContext<AuthContextType>({
   loadingError: null,
   hasDeletionRequest: false,
   resetAuth: async () => {},
+  signOut: async () => {}, // Added signOut default implementation
 });
 
 // Export SessionContext for backward compatibility
@@ -148,6 +150,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Sign out function
+  const signOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      setSession(null);
+    } catch (error) {
+      console.error("Error signing out:", error);
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider 
       value={{ 
@@ -155,7 +168,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading, 
         loadingError, 
         hasDeletionRequest, 
-        resetAuth 
+        resetAuth,
+        signOut 
       }}
     >
       <SessionContext.Provider value={session}>

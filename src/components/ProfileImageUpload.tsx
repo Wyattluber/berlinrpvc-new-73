@@ -7,12 +7,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface ProfileImageUploadProps {
-  userId: string;
-  existingImageUrl?: string;
-  onImageUploaded: (url: string) => void;
+  userId: string;  // Changed from uid to userId
+  existingImageUrl?: string; // Changed from url to existingImageUrl
+  onImageUploaded: (url: string) => void; // Changed from onUploadComplete to onImageUploaded
+  size?: number;
 }
 
-const ProfileImageUpload = ({ userId, existingImageUrl, onImageUploaded }: ProfileImageUploadProps) => {
+const ProfileImageUpload = ({ userId, existingImageUrl, onImageUploaded, size = 100 }: ProfileImageUploadProps) => {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -98,7 +99,7 @@ const ProfileImageUpload = ({ userId, existingImageUrl, onImageUploaded }: Profi
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="relative group">
-        <Avatar className="w-24 h-24 border-2 border-blue-100">
+        <Avatar className={`w-${size/4} h-${size/4} border-2 border-blue-100`} style={{ width: size, height: size }}>
           <AvatarImage src={existingImageUrl} alt="Profilbild" />
           <AvatarFallback className="bg-blue-600 text-white">
             <Image className="w-10 h-10" />

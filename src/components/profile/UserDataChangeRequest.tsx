@@ -12,16 +12,28 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 
 interface UserDataChangeRequestProps {
   currentRobloxId: string | null;
-  currentDiscordId?: string | null; // Added this prop to match what's being passed from Profile.tsx
+  currentDiscordId?: string | null; 
   userId: string;
 }
 
-export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
-  currentRobloxId,
-  currentDiscordId,
-  userId
-}) => {
-  const [newRobloxId, setNewRobloxId] = useState('');
+// Handle a more generic interface that works with how it's used in Profile.tsx
+interface GenericUserDataChangeRequestProps {
+  fieldName?: string;
+  currentValue?: string;
+  buttonText?: string;
+  currentRobloxId?: string | null;
+  currentDiscordId?: string | null;
+  userId?: string;
+}
+
+export const UserDataChangeRequest: React.FC<GenericUserDataChangeRequestProps> = (props) => {
+  // Handle both old and new prop formats
+  const userId = props.userId || '';
+  const fieldName = props.fieldName || 'roblox_id';
+  const currentValue = props.currentValue || props.currentRobloxId || null;
+  const buttonText = props.buttonText || 'ID ändern';
+  
+  const [newValue, setNewValue] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingRequest, setPendingRequest] = useState(false);
   const [successMessage, setSuccessMessage] = useState(false);
@@ -36,7 +48,7 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
           .select('*')
           .eq('user_id', userId)
           .eq('status', 'pending')
-          .eq('field_name', 'roblox_id');
+          .eq('field_name', fieldName);
         
         if (error) throw error;
         
@@ -44,17 +56,17 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
           setPendingRequest(true);
         }
       } catch (error) {
-        console.error('Error checking pending requests:', error);
+        console.error(`Error checking pending requests for ${fieldName}:`, error);
       }
     };
     
     if (userId) {
       checkPendingRequests();
     }
-  }, [userId]);
+  }, [userId, fieldName]);
 
   const handleSubmit = async () => {
-    if (!newRobloxId.trim()) {
+    if (!newValue.trim()) {
       toast({
         title: 'Fehler',
         description: 'Bitte gib einen Wert ein.',
@@ -64,7 +76,7 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
     }
 
     // Current value check to avoid unnecessary requests
-    if (currentRobloxId === newRobloxId) {
+    if (currentValue === newValue) {
       toast({
         title: 'Information',
         description: 'Der neue Wert ist identisch mit dem aktuellen Wert.',
@@ -76,7 +88,7 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
     try {
       setIsSubmitting(true);
       
-      const result = await requestIdChange(userId, 'roblox_id', newRobloxId);
+      const result = await requestIdChange(userId, fieldName, newValue);
       
       if (!result.success) throw new Error(result.message);
       
@@ -86,7 +98,7 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
       });
       
       // Reset form and update pending status
-      setNewRobloxId('');
+      setNewValue('');
       setPendingRequest(true);
       setSuccessMessage(true);
       setDialogOpen(false);
@@ -96,7 +108,7 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
         setSuccessMessage(false);
       }, 5000);
     } catch (error: any) {
-      console.error(`Error submitting roblox_id change request:`, error);
+      console.error(`Error submitting ${fieldName} change request:`, error);
       toast({
         title: 'Fehler',
         description: error.message || 'Beim Senden deines Antrags ist ein Fehler aufgetreten. Bitte versuche es später erneut.',
@@ -104,6 +116,20 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Get the field label based on the field name
+  const getFieldLabel = () => {
+    switch (fieldName) {
+      case 'username':
+        return 'Benutzername';
+      case 'discord_id':
+        return 'Discord ID';
+      case 'roblox_id':
+        return 'Roblox ID';
+      default:
+        return fieldName;
     }
   };
 
@@ -129,40 +155,42 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
                 Gesendet
               </span>
             ) : (
-              "ID ändern"
+              buttonText
             )}
           </Button>
         </DialogTrigger>
         
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Roblox ID ändern</DialogTitle>
+            <DialogTitle>{getFieldLabel()} ändern</DialogTitle>
             <DialogDescription>
-              Beantrage eine Änderung deiner Roblox-ID. Die Änderung muss von einem Administrator genehmigt werden.
+              Beantrage eine Änderung deines {getFieldLabel()}. Die Änderung muss von einem Administrator genehmigt werden.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="current-roblox-id">Aktuelle Roblox ID</Label>
+              <Label htmlFor="current-value">Aktueller {getFieldLabel()}</Label>
               <Input 
-                id="current-roblox-id" 
-                value={currentRobloxId || "Keine ID gesetzt"} 
+                id="current-value" 
+                value={currentValue || "Nicht gesetzt"} 
                 readOnly 
                 className="bg-gray-100"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="new-roblox-id">Neue Roblox ID</Label>
+              <Label htmlFor="new-value">Neuer {getFieldLabel()}</Label>
               <Input 
-                id="new-roblox-id" 
-                value={newRobloxId} 
-                onChange={(e) => setNewRobloxId(e.target.value)} 
-                placeholder="Gib deine neue Roblox ID ein"
+                id="new-value" 
+                value={newValue} 
+                onChange={(e) => setNewValue(e.target.value)} 
+                placeholder={`Gib deinen neuen ${getFieldLabel()} ein`}
               />
               <p className="text-xs text-muted-foreground">
-                Deine Roblox ID findest du in deinem Roblox-Profil. Gehe zu deinem Profil, und die ID ist die Nummer in der URL.
+                {fieldName === 'roblox_id' ? 
+                  'Deine Roblox ID findest du in deinem Roblox-Profil. Gehe zu deinem Profil, und die ID ist die Nummer in der URL.' : 
+                  `Bitte gib deinen neuen ${getFieldLabel()} ein.`}
               </p>
             </div>
           </div>
@@ -176,7 +204,7 @@ export const UserDataChangeRequest: React.FC<UserDataChangeRequestProps> = ({
             </Button>
             <Button 
               onClick={handleSubmit}
-              disabled={isSubmitting || !newRobloxId.trim()}
+              disabled={isSubmitting || !newValue.trim()}
             >
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Änderung beantragen

@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { 
   User, LogOut, Settings, Shield, ClipboardList, 
-  FileText, Clock, AlertTriangle, Loader2, HandshakeIcon
+  FileText, Clock, AlertTriangle, Loader2, HandshakeIcon 
 } from 'lucide-react';
 
 const Profile = () => {
@@ -43,7 +43,6 @@ const Profile = () => {
     const fetchProfileData = async () => {
       setLoading(true);
       try {
-        // Fetch profile data
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
@@ -58,7 +57,6 @@ const Profile = () => {
         setRobloxId(profileData?.roblox_id || '');
         setAvatarUrl(profileData?.avatar_url || '');
 
-        // Check if user is admin or moderator
         const { data: adminData, error: adminError } = await supabase
           .from('admin_users')
           .select('role')
@@ -70,7 +68,6 @@ const Profile = () => {
           setIsModerator(adminData.role === 'moderator' || adminData.role === 'admin');
         }
 
-        // Fetch applications
         const { data: applicationsData, error: applicationsError } = await supabase
           .from('applications')
           .select('*')
@@ -135,13 +132,12 @@ const Profile = () => {
       
       <main className="flex-grow py-10 bg-gray-50">
         <div className="container mx-auto px-4">
-          {/* User profile header */}
           <div className="bg-white rounded-lg shadow-md p-6 flex flex-col md:flex-row items-center md:items-start gap-6">
             <div className="flex-shrink-0">
               <ProfileImageUpload 
-                uid={session.user.id} 
-                url={avatarUrl} 
-                onUploadComplete={(url) => setAvatarUrl(url)} 
+                userId={session.user.id} 
+                existingImageUrl={avatarUrl} 
+                onImageUploaded={(url) => setAvatarUrl(url)} 
                 size={100} 
               />
             </div>
@@ -196,9 +192,7 @@ const Profile = () => {
             </div>
           </div>
           
-          {/* Main content */}
           <div className="mt-8 grid gap-8 md:grid-cols-3">
-            {/* Sidebar with tabs */}
             <div className="md:col-span-1">
               <Card>
                 <CardContent className="pt-6">
@@ -234,7 +228,6 @@ const Profile = () => {
               </Card>
             </div>
             
-            {/* Content area */}
             <div className="md:col-span-2 space-y-6">
               <TabsContent value="profile" className="m-0">
                 <Card>
@@ -267,8 +260,9 @@ const Profile = () => {
                             className="bg-gray-50"
                           />
                           <UserDataChangeRequest 
-                            fieldName="username" 
+                            userId={session.user.id}
                             currentValue={username}
+                            fieldName="username"
                             buttonText="Benutzernamen ändern"
                           />
                         </div>
@@ -286,8 +280,9 @@ const Profile = () => {
                             className="bg-gray-50"
                           />
                           <UserDataChangeRequest 
-                            fieldName="discord_id" 
+                            userId={session.user.id}
                             currentValue={discordId}
+                            fieldName="discord_id"
                             buttonText="Discord ID ändern"
                           />
                         </div>
@@ -301,8 +296,9 @@ const Profile = () => {
                             className="bg-gray-50"
                           />
                           <UserDataChangeRequest 
-                            fieldName="roblox_id" 
+                            userId={session.user.id}
                             currentValue={robloxId}
+                            fieldName="roblox_id"
                             buttonText="Roblox ID ändern"
                           />
                         </div>
