@@ -41,7 +41,7 @@ export async function logAuthEvent(eventType: string, userId: string, metadata: 
 export function setupAuthEventListeners() {
   // Listen for auth state changes
   const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    async (event, session) => {
+    (event, session) => {
       if (event === 'SIGNED_IN') {
         // Log sign in events
         if (session?.user) {
@@ -50,47 +50,6 @@ export function setupAuthEventListeners() {
             userAgent: navigator.userAgent,
             timestamp: new Date().toISOString()
           });
-          
-          // Ensure Discord ID and avatar URL are in profile
-          try {
-            // Get Discord info from user metadata
-            const discordId = session.user?.user_metadata?.provider_id || 
-                              session.user?.identities?.[0]?.identity_data?.provider_id ||
-                              null;
-            
-            const avatarUrl = session.user?.user_metadata?.avatar_url || 
-                              session.user?.identities?.[0]?.identity_data?.avatar_url ||
-                              null;
-            
-            const username = session.user?.user_metadata?.full_name || 
-                             session.user?.identities?.[0]?.identity_data?.full_name ||
-                             session.user.email;
-            
-            console.log("Auth event - Updating profile with Discord info:", { discordId, avatarUrl, username });
-            
-            // Check if profile exists
-            const { data: profileData, error: profileError } = await supabase
-              .from('profiles')
-              .select('discord_id, avatar_url')
-              .eq('id', session.user.id)
-              .maybeSingle();
-              
-            // Only update if profile is missing Discord data
-            if (profileError || !profileData || !profileData.discord_id || !profileData.avatar_url) {
-              // Update profile with Discord data
-              await supabase
-                .from('profiles')
-                .upsert({
-                  id: session.user.id,
-                  username: username,
-                  discord_id: discordId,
-                  avatar_url: avatarUrl,
-                  updated_at: new Date().toISOString()
-                });
-            }
-          } catch (error) {
-            console.error("Error updating profile with Discord data:", error);
-          }
         }
       } else if (event === 'SIGNED_OUT') {
         // Log sign out events
@@ -190,7 +149,7 @@ export async function updateUserProfile(userId: string, profileData: any) {
         delete updatedData.roblox_id;
       }
       
-      // Update the profile
+      // If profile doesn't exist, create it
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
@@ -224,38 +183,5 @@ export async function updateUserProfile(userId: string, profileData: any) {
   }
 }
 
-// Create a function to create a storage bucket for avatars if it doesn't exist
-export async function ensureAvatarsBucketExists() {
-  try {
-    // Check if the avatars bucket exists
-    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-    
-    if (listError) throw listError;
-    
-    const avatarsBucketExists = buckets?.some(bucket => bucket.name === 'avatars');
-    
-    if (!avatarsBucketExists) {
-      console.log('Creating avatars bucket...');
-      const { error: createError } = await supabase.storage.createBucket('avatars', {
-        public: true
-      });
-      
-      if (createError) throw createError;
-      
-      console.log('Avatars bucket created successfully');
-    }
-    
-    return { success: true };
-  } catch (error: any) {
-    console.error('Error ensuring avatars bucket exists:', error);
-    return { 
-      success: false, 
-      message: error.message || 'Failed to ensure avatars bucket exists' 
-    };
-  }
-}
-
 // Setup auth event listeners on module load
 setupAuthEventListeners();
-// Ensure avatars bucket exists on module load
-ensureAvatarsBucketExists();

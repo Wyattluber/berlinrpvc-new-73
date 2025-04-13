@@ -180,3 +180,4 @@ export const fetchTeamAbsences = async () => {
 
   return formattedAbsences || [];
 };
+

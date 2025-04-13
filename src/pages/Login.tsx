@@ -43,10 +43,8 @@ const Login = () => {
           redirectTo: redirectUrl,
           queryParams: {
             // Request additional Discord permissions to access user data
-            scope: 'identify email', 
-          },
-          // Ensure we get full profile info from the identity provider
-          skipBrowserRedirect: false
+            scope: 'identify email',
+          }
         }
       });
 

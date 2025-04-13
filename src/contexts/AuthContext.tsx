@@ -9,7 +9,7 @@ type AuthContextType = {
   loadingError: string | null;
   hasDeletionRequest: boolean;
   resetAuth: () => Promise<void>;
-  signOut: () => Promise<void>;
+  signOut: () => Promise<void>; // Added signOut method
 };
 
 export const AuthContext = createContext<AuthContextType>({
@@ -18,7 +18,7 @@ export const AuthContext = createContext<AuthContextType>({
   loadingError: null,
   hasDeletionRequest: false,
   resetAuth: async () => {},
-  signOut: async () => {},
+  signOut: async () => {}, // Added signOut default implementation
 });
 
 // Export SessionContext for backward compatibility
@@ -43,7 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(true);
         
         // Set up auth state change listener first to catch any auth events
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
           console.log("Auth state changed:", _event, newSession ? "Session exists" : "No session");
           if (!isMounted) return;
           
@@ -52,47 +52,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Check for deletion request if user is logged in
           if (newSession?.user) {
             try {
-              // Check for user in profiles table
-              const { data: profileData, error: profileError } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', newSession.user.id)
-                .maybeSingle();
-
-              // If user doesn't exist in profiles or discord_id is empty, update the profile
-              if (profileError || !profileData || !profileData.discord_id) {
-                // Get Discord info from user metadata
-                const discordId = newSession.user?.user_metadata?.provider_id || 
-                                  newSession.user?.identities?.[0]?.identity_data?.provider_id ||
-                                  null;
-                
-                const avatarUrl = newSession.user?.user_metadata?.avatar_url || 
-                                  newSession.user?.identities?.[0]?.identity_data?.avatar_url ||
-                                  null;
-                
-                const username = newSession.user?.user_metadata?.full_name || 
-                                 newSession.user?.identities?.[0]?.identity_data?.full_name ||
-                                 newSession.user.email;
-                
-                console.log("Updating profile with Discord info:", { discordId, avatarUrl, username });
-                
-                // Update or create profile
-                const { error: updateError } = await supabase
-                  .from('profiles')
-                  .upsert({
-                    id: newSession.user.id,
-                    username: username,
-                    discord_id: discordId,
-                    avatar_url: avatarUrl,
-                    updated_at: new Date().toISOString()
-                  });
-                  
-                if (updateError) {
-                  console.error("Error updating profile:", updateError);
-                }
-              }
-              
-              // Also check for deletion requests
               supabase
                 .from('account_deletion_requests')
                 .select('id')
@@ -135,47 +94,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Check for deletion request if user is logged in
           if (sessionData.session?.user) {
             try {
-              // Check for user in profiles table and update if needed
-              const { data: profileData, error: profileError } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', sessionData.session.user.id)
-                .maybeSingle();
-
-              // If user doesn't exist in profiles or discord_id is empty, update the profile
-              if (profileError || !profileData || !profileData.discord_id) {
-                // Get Discord info from user metadata
-                const discordId = sessionData.session.user?.user_metadata?.provider_id || 
-                                  sessionData.session.user?.identities?.[0]?.identity_data?.provider_id ||
-                                  null;
-                
-                const avatarUrl = sessionData.session.user?.user_metadata?.avatar_url || 
-                                  sessionData.session.user?.identities?.[0]?.identity_data?.avatar_url ||
-                                  null;
-                
-                const username = sessionData.session.user?.user_metadata?.full_name || 
-                                 sessionData.session.user?.identities?.[0]?.identity_data?.full_name ||
-                                 sessionData.session.user.email;
-                
-                console.log("Initial session - Updating profile with Discord info:", { discordId, avatarUrl, username });
-                
-                // Update or create profile
-                const { error: updateError } = await supabase
-                  .from('profiles')
-                  .upsert({
-                    id: sessionData.session.user.id,
-                    username: username,
-                    discord_id: discordId,
-                    avatar_url: avatarUrl,
-                    updated_at: new Date().toISOString()
-                  });
-                  
-                if (updateError) {
-                  console.error("Error updating profile:", updateError);
-                }
-              }
-              
-              // Also check for deletion requests
               const { data, error } = await supabase
                 .from('account_deletion_requests')
                 .select('id')

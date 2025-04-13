@@ -114,3 +114,4 @@ export const getApplicationSeasons = async () => {
 
   return data || [];
 };
+
