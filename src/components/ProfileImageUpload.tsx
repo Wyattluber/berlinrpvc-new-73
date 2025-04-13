@@ -7,9 +7,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface ProfileImageUploadProps {
-  userId: string;  // Changed from uid to userId
-  existingImageUrl?: string; // Changed from url to existingImageUrl
-  onImageUploaded: (url: string) => void; // Changed from onUploadComplete to onImageUploaded
+  userId: string;
+  existingImageUrl?: string;
+  onImageUploaded: (url: string) => void;
   size?: number;
 }
 
@@ -73,6 +73,19 @@ const ProfileImageUpload = ({ userId, existingImageUrl, onImageUploaded, size = 
       });
       
       if (updateError) throw updateError;
+      
+      // Also update the profiles table
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ 
+          avatar_url: urlData.publicUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+        
+      if (profileError) {
+        console.error('Error updating profile with avatar URL:', profileError);
+      }
       
       onImageUploaded(urlData.publicUrl);
       
