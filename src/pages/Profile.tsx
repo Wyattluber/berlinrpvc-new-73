@@ -250,7 +250,7 @@ const Profile = () => {
             
             <div className="md:col-span-2 space-y-6">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsContent value="profile" className="m-0">
+                <TabsContent value="profile">
                   <Card>
                     <CardHeader>
                       <CardTitle>Profil Informationen</CardTitle>
@@ -341,7 +341,7 @@ const Profile = () => {
                   </Card>
                 </TabsContent>
                 
-                <TabsContent value="admin" className="m-0">
+                <TabsContent value="admin">
                   {isAdmin && (
                     <Card>
                       <CardHeader>
@@ -360,7 +360,7 @@ const Profile = () => {
                   )}
                 </TabsContent>
                 
-                <TabsContent value="moderator" className="m-0">
+                <TabsContent value="moderator">
                   {(isAdmin || isModerator) && (
                     <Card>
                       <CardHeader>
@@ -381,7 +381,7 @@ const Profile = () => {
                   )}
                 </TabsContent>
                 
-                <TabsContent value="applications" className="m-0">
+                <TabsContent value="applications">
                   <Card>
                     <CardHeader>
                       <CardTitle>Deine Bewerbungen</CardTitle>
@@ -479,7 +479,7 @@ const Profile = () => {
                   </Card>
                 </TabsContent>
                 
-                <TabsContent value="partnership" className="m-0">
+                <TabsContent value="partnership">
                   <PartnershipStatus />
                   
                   <Card className="mt-6">
