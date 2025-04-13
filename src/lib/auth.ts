@@ -50,6 +50,9 @@ export function setupAuthEventListeners() {
             userAgent: navigator.userAgent,
             timestamp: new Date().toISOString()
           });
+          
+          // Ensure we have an avatars bucket for profile images
+          ensureAvatarsBucketExists();
         }
       } else if (event === 'SIGNED_OUT') {
         // Log sign out events
@@ -71,6 +74,38 @@ export function setupAuthEventListeners() {
   return () => {
     subscription.unsubscribe();
   };
+}
+
+/**
+ * Ensure the avatars storage bucket exists
+ */
+async function ensureAvatarsBucketExists() {
+  try {
+    // Check if the avatars bucket exists
+    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+    
+    if (bucketsError) {
+      console.error('Error checking buckets:', bucketsError);
+      return;
+    }
+    
+    // If the avatars bucket doesn't exist, create it
+    if (!buckets.find(bucket => bucket.name === 'avatars')) {
+      const { error: createError } = await supabase.storage.createBucket('avatars', {
+        public: true,
+        fileSizeLimit: 5 * 1024 * 1024, // 5MB
+        allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
+      });
+      
+      if (createError) {
+        console.error('Error creating avatars bucket:', createError);
+      } else {
+        console.log('Created avatars bucket successfully');
+      }
+    }
+  } catch (error) {
+    console.error('Error ensuring avatars bucket exists:', error);
+  }
 }
 
 /**
@@ -149,7 +184,7 @@ export async function updateUserProfile(userId: string, profileData: any) {
         delete updatedData.roblox_id;
       }
       
-      // If profile doesn't exist, create it
+      // Update existing profile
       const { error: updateError } = await supabase
         .from('profiles')
         .update({
@@ -183,5 +218,83 @@ export async function updateUserProfile(userId: string, profileData: any) {
   }
 }
 
+/**
+ * Update existing profiles with Discord data from auth metadata
+ */
+export async function updateExistingProfilesWithDiscordData() {
+  try {
+    // Get all profiles that need updating (missing discord_id or avatar_url)
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id')
+      .or('discord_id.is.null,avatar_url.is.null');
+      
+    if (profilesError) throw profilesError;
+    
+    if (!profiles || profiles.length === 0) {
+      console.log('No profiles need Discord data updates');
+      return { success: true, updated: 0 };
+    }
+    
+    let updatedCount = 0;
+    
+    // Process each profile
+    for (const profile of profiles) {
+      const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(profile.id);
+      
+      if (authError) {
+        console.error(`Error getting auth data for user ${profile.id}:`, authError);
+        continue;
+      }
+      
+      if (!authUser) continue;
+      
+      const userData = authUser.user;
+      const updates: any = {};
+      
+      // Extract Discord ID if available and missing in profile
+      if (userData.app_metadata?.provider === 'discord' && userData.app_metadata?.provider_id) {
+        updates.discord_id = userData.app_metadata.provider_id;
+      }
+      
+      // Extract avatar URL if available and missing in profile
+      if (userData.user_metadata?.avatar_url) {
+        updates.avatar_url = userData.user_metadata.avatar_url;
+      }
+      
+      // Only update if we have data to update
+      if (Object.keys(updates).length > 0) {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update(updates)
+          .eq('id', profile.id);
+          
+        if (updateError) {
+          console.error(`Error updating profile ${profile.id}:`, updateError);
+        } else {
+          updatedCount++;
+        }
+      }
+    }
+    
+    return { success: true, updated: updatedCount };
+  } catch (error: any) {
+    console.error('Error updating profiles with Discord data:', error);
+    return { 
+      success: false, 
+      message: error.message || 'Failed to update profiles with Discord data' 
+    };
+  }
+}
+
 // Setup auth event listeners on module load
 setupAuthEventListeners();
+
+// Update existing profiles with Discord data
+// This will update profiles for users who have already logged in
+setTimeout(() => {
+  // Don't block initial load with this operation
+  updateExistingProfilesWithDiscordData().then(result => {
+    console.log('Updated existing profiles with Discord data:', result);
+  });
+}, 5000);

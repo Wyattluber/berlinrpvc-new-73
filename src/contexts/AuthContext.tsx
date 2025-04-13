@@ -1,6 +1,7 @@
 
 import React, { createContext, useState, useEffect, useContext } from "react";
 import { supabase } from '@/integrations/supabase/client';
+import { updateUserProfile } from '@/lib/auth';
 
 // Create context for session
 type AuthContextType = {
@@ -43,33 +44,83 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(true);
         
         // Set up auth state change listener first to catch any auth events
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
           console.log("Auth state changed:", _event, newSession ? "Session exists" : "No session");
           if (!isMounted) return;
           
           setSession(newSession);
           
+          // Update user profile with Discord data when signing in
+          if (_event === 'SIGNED_IN' && newSession?.user) {
+            setTimeout(async () => {
+              try {
+                const userData = newSession.user;
+                
+                // Extract Discord ID from user metadata if available
+                let discordId = '';
+                let avatarUrl = '';
+                
+                if (userData.app_metadata?.provider === 'discord') {
+                  discordId = userData.app_metadata?.provider_id || '';
+                }
+                
+                if (userData.user_metadata?.avatar_url) {
+                  avatarUrl = userData.user_metadata.avatar_url;
+                }
+                
+                // Get existing profile data
+                const { data: existingProfile } = await supabase
+                  .from('profiles')
+                  .select('discord_id, avatar_url')
+                  .eq('id', userData.id)
+                  .maybeSingle();
+                  
+                // Only update if we have data and it's different from what's stored
+                const shouldUpdateDiscordId = discordId && (!existingProfile || !existingProfile.discord_id);
+                const shouldUpdateAvatarUrl = avatarUrl && (!existingProfile || !existingProfile.avatar_url);
+                
+                if (shouldUpdateDiscordId || shouldUpdateAvatarUrl) {
+                  const updates: any = {};
+                  
+                  if (shouldUpdateDiscordId) {
+                    updates.discord_id = discordId;
+                  }
+                  
+                  if (shouldUpdateAvatarUrl) {
+                    updates.avatar_url = avatarUrl;
+                  }
+                  
+                  await updateUserProfile(userData.id, updates);
+                  console.log("Updated profile with Discord data:", updates);
+                }
+              } catch (err) {
+                console.error("Error updating profile with Discord data:", err);
+              }
+            }, 0);
+          }
+          
           // Check for deletion request if user is logged in
           if (newSession?.user) {
-            try {
-              supabase
-                .from('account_deletion_requests')
-                .select('id')
-                .eq('user_id', newSession.user.id)
-                .eq('status', 'pending')
-                .maybeSingle()
-                .then(({ data, error }) => {
-                  if (error) {
-                    console.error("Error checking deletion requests:", error);
-                    return;
-                  }
-                  if (isMounted) {
-                    setHasDeletionRequest(!!data);
-                  }
-                });
-            } catch (err) {
-              console.error("Error checking deletion requests:", err);
-            }
+            setTimeout(async () => {
+              try {
+                const { data, error } = await supabase
+                  .from('account_deletion_requests')
+                  .select('id')
+                  .eq('user_id', newSession.user.id)
+                  .eq('status', 'pending')
+                  .maybeSingle();
+                  
+                if (isMounted) {
+                  setHasDeletionRequest(!!data);
+                }
+                
+                if (error) {
+                  console.error("Error checking deletion requests:", error);
+                }
+              } catch (err) {
+                console.error("Error checking deletion requests:", err);
+              }
+            }, 0);
           } else {
             setHasDeletionRequest(false);
           }

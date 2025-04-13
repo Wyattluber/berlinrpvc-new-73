@@ -7,9 +7,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface ProfileImageUploadProps {
-  userId: string;  // Changed from uid to userId
-  existingImageUrl?: string; // Changed from url to existingImageUrl
-  onImageUploaded: (url: string) => void; // Changed from onUploadComplete to onImageUploaded
+  userId: string;
+  existingImageUrl?: string;
+  onImageUploaded: (url: string) => void;
   size?: number;
 }
 
@@ -48,7 +48,21 @@ const ProfileImageUpload = ({ userId, existingImageUrl, onImageUploaded, size = 
     setUploading(true);
     
     try {
-      // Create storage bucket if it doesn't exist (this will be handled by SQL migration)
+      // Ensure avatars bucket exists
+      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+      
+      if (bucketsError) throw bucketsError;
+      
+      // Create the bucket if it doesn't exist
+      if (!buckets.find(bucket => bucket.name === 'avatars')) {
+        const { error: createError } = await supabase.storage.createBucket('avatars', {
+          public: true,
+          fileSizeLimit: 5 * 1024 * 1024, // 5MB
+          allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
+        });
+        
+        if (createError) throw createError;
+      }
       
       // Upload image to Supabase Storage
       const fileName = `avatar-${userId}-${Date.now()}`;
@@ -66,13 +80,19 @@ const ProfileImageUpload = ({ userId, existingImageUrl, onImageUploaded, size = 
       if (!urlData.publicUrl) throw new Error("Couldn't get public URL");
       
       // Update user metadata with avatar URL
-      const { error: updateError } = await supabase.auth.updateUser({
+      await supabase.auth.updateUser({
         data: { 
           avatar_url: urlData.publicUrl
         }
       });
       
-      if (updateError) throw updateError;
+      // Update the profile table as well
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: urlData.publicUrl })
+        .eq('id', userId);
+      
+      if (profileError) throw profileError;
       
       onImageUploaded(urlData.publicUrl);
       
