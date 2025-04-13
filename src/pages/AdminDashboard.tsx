@@ -12,7 +12,7 @@ import AdminContent from '@/components/admin/AdminContent';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { AdminMobileHeader, AdminMobileSidebar } from '@/components/admin/AdminMobileNav';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAdminMenuItems } from '@/components/admin/AdminMenuItems';
+import { getAdminMenuItems, type MenuItem } from '@/components/admin/AdminMenuItems';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -191,7 +191,15 @@ const AdminDashboard = () => {
     );
   }
   
-  const menuItems = getAdminMenuItems(isAdmin);
+  // Pass both parameters to getAdminMenuItems
+  const menuItems = getAdminMenuItems(isAdmin, isModerator);
+
+  // Convert the menu items to the format required by AdminSidebar and AdminMobileSidebar
+  const sidebarItems = menuItems.map(item => ({
+    title: item.label,
+    id: item.value,
+    icon: item.icon
+  }));
   
   return (
     <div className="flex flex-col min-h-screen">
@@ -200,7 +208,7 @@ const AdminDashboard = () => {
         {/* Sidebar (hidden on mobile) */}
         <AdminSidebar
           isAdmin={isAdmin}
-          menuItems={menuItems}
+          menuItems={sidebarItems}
           activeSection={activeSection}
           handleMenuClick={handleSectionChange}
         />
@@ -215,7 +223,7 @@ const AdminDashboard = () => {
           
           {mobileMenuOpen && (
             <AdminMobileSidebar
-              menuItems={menuItems}
+              menuItems={sidebarItems}
               activeSection={activeSection}
               handleMenuClick={handleSectionChange}
             />
