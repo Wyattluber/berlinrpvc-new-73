@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useApplication } from '@/contexts/ApplicationContext';
 import { Button } from '@/components/ui/button';
@@ -38,7 +39,7 @@ const Step2RulesUnderstanding: React.FC<Step2Props> = ({ onNext, onBack }) => {
       vdm_understanding: applicationData.vdmUnderstanding || '',
       taschen_rp_understanding: applicationData.taschenRpUnderstanding || '',
       bodycam_understanding: applicationData.bodycamUnderstanding || '',
-      server_age_understanding: applicationData.serverAgeUnderstanding || undefined,
+      server_age_understanding: applicationData.serverAgeUnderstanding ? Number(applicationData.serverAgeUnderstanding) : undefined,
       friend_rule_violation: applicationData.friendRuleViolation || '',
     },
   });

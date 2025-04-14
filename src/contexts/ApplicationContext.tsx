@@ -14,7 +14,7 @@ type ApplicationData = {
   frpUnderstanding: string;
   vdmUnderstanding: string;
   taschenRpUnderstanding: string;
-  serverAgeUnderstanding: string;
+  serverAgeUnderstanding: number;
   
   // Step 3 - Situation Handling
   situationHandling: string;
@@ -54,7 +54,7 @@ const defaultApplicationData: ApplicationData = {
   frpUnderstanding: '',
   vdmUnderstanding: '',
   taschenRpUnderstanding: '',
-  serverAgeUnderstanding: '',
+  serverAgeUnderstanding: 0,
   situationHandling: '',
   bodycamUnderstanding: '',
   friendRuleViolation: '',
