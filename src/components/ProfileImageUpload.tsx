@@ -119,7 +119,7 @@ const ProfileImageUpload = ({ userId, existingImageUrl, onImageUploaded, size = 
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="relative group">
-        <Avatar className={`w-${size/4} h-${size/4} border-2 border-blue-100`} style={{ width: size, height: size }}>
+        <Avatar className="border-2 border-blue-100" style={{ width: size, height: size }}>
           <AvatarImage src={existingImageUrl} alt="Profilbild" />
           <AvatarFallback className="bg-blue-600 text-white">
             <Image className="w-10 h-10" />
