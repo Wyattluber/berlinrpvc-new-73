@@ -26,6 +26,10 @@ interface GenericUserDataChangeRequestProps {
   userId?: string;
 }
 
+// Validation for Discord ID and Roblox ID
+const isValidDiscordId = (value: string) => /^\d{17,19}$/.test(value);
+const isValidRobloxId = (value: string) => /^\d{1,10}$/.test(value);
+
 export const UserDataChangeRequest: React.FC<GenericUserDataChangeRequestProps> = (props) => {
   // Handle both old and new prop formats
   const userId = props.userId || '';
@@ -38,6 +42,7 @@ export const UserDataChangeRequest: React.FC<GenericUserDataChangeRequestProps> 
   const [pendingRequest, setPendingRequest] = useState(false);
   const [successMessage, setSuccessMessage] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Check for existing pending requests
   React.useEffect(() => {
@@ -65,11 +70,38 @@ export const UserDataChangeRequest: React.FC<GenericUserDataChangeRequestProps> 
     }
   }, [userId, fieldName]);
 
+  const validateInput = (value: string): boolean => {
+    if (fieldName === 'discord_id') {
+      if (!isValidDiscordId(value)) {
+        setValidationError('Die Discord ID sollte aus 17-19 Ziffern bestehen.');
+        return false;
+      }
+    } else if (fieldName === 'roblox_id') {
+      if (!isValidRobloxId(value)) {
+        setValidationError('Die Roblox ID sollte nur aus Zahlen bestehen (maximal 10 Ziffern).');
+        return false;
+      }
+    }
+    
+    setValidationError(null);
+    return true;
+  };
+
   const handleSubmit = async () => {
     if (!newValue.trim()) {
       toast({
         title: 'Fehler',
         description: 'Bitte gib einen Wert ein.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate input based on field type
+    if (!validateInput(newValue)) {
+      toast({
+        title: 'Validierungsfehler',
+        description: validationError || 'Ungültiger Wert für dieses Feld.',
         variant: 'destructive',
       });
       return;

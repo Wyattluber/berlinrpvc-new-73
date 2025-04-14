@@ -51,6 +51,9 @@ export function setupAuthEventListeners() {
             timestamp: new Date().toISOString()
           });
           
+          // Ensure profile data is up to date
+          ensureProfileData(session.user);
+          
           // Ensure we have an avatars bucket for profile images
           ensureAvatarsBucketExists();
         }
@@ -105,6 +108,88 @@ async function ensureAvatarsBucketExists() {
     }
   } catch (error) {
     console.error('Error ensuring avatars bucket exists:', error);
+  }
+}
+
+/**
+ * Ensure user profile data is complete
+ */
+async function ensureProfileData(user: any) {
+  try {
+    if (!user) return;
+    
+    // Extract Discord ID and avatar URL from user metadata
+    let discordId = '';
+    let avatarUrl = '';
+    
+    if (user.app_metadata?.provider === 'discord') {
+      discordId = user.app_metadata?.provider_id || '';
+    }
+    
+    if (user.user_metadata?.avatar_url) {
+      avatarUrl = user.user_metadata.avatar_url;
+    }
+    
+    // Check if profile exists
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle();
+      
+    if (error) {
+      console.error('Error checking user profile:', error);
+      return;
+    }
+    
+    // Create profile if it doesn't exist
+    if (!profile) {
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .insert([{
+          id: user.id,
+          discord_id: discordId,
+          avatar_url: avatarUrl,
+          username: user.user_metadata?.full_name || user.email
+        }]);
+        
+      if (insertError) {
+        console.error('Error creating user profile:', insertError);
+      } else {
+        console.log('Created new profile for user');
+      }
+      
+      return;
+    }
+    
+    // Update profile if missing data
+    const updates: any = {};
+    let needsUpdate = false;
+    
+    if (discordId && !profile.discord_id) {
+      updates.discord_id = discordId;
+      needsUpdate = true;
+    }
+    
+    if (avatarUrl && !profile.avatar_url) {
+      updates.avatar_url = avatarUrl;
+      needsUpdate = true;
+    }
+    
+    if (needsUpdate) {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id);
+        
+      if (updateError) {
+        console.error('Error updating user profile:', updateError);
+      } else {
+        console.log('Updated user profile with missing data:', updates);
+      }
+    }
+  } catch (error) {
+    console.error('Error ensuring profile data:', error);
   }
 }
 
@@ -176,11 +261,12 @@ export async function updateUserProfile(userId: string, profileData: any) {
     if (existingProfile) {
       const updatedData = { ...profileData };
       
-      if (existingProfile.discord_id && profileData.discord_id) {
+      // Only prevent updates if the values are non-empty
+      if (existingProfile.discord_id && existingProfile.discord_id.trim() !== '' && profileData.discord_id) {
         delete updatedData.discord_id;
       }
       
-      if (existingProfile.roblox_id && profileData.roblox_id) {
+      if (existingProfile.roblox_id && existingProfile.roblox_id.trim() !== '' && profileData.roblox_id) {
         delete updatedData.roblox_id;
       }
       

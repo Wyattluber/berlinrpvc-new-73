@@ -19,11 +19,19 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
+// Validation for Discord ID and Roblox ID
+const isValidDiscordId = (value: string) => /^\d{17,19}$/.test(value);
+const isValidRobloxId = (value: string) => /^\d{1,10}$/.test(value);
+
 // Define the form schema with Zod - updated minimum age to 14
 const step1Schema = z.object({
   roblox_username: z.string().min(1, { message: "Bitte gib deinen Roblox Benutzernamen ein." }),
-  roblox_id: z.string().min(1, { message: "Bitte gib deine Roblox ID ein." }),
-  discord_id: z.string().min(1, { message: "Bitte gib deine Discord ID ein." }),
+  roblox_id: z.string()
+    .min(1, { message: "Bitte gib deine Roblox ID ein." })
+    .refine(isValidRobloxId, { message: "Die Roblox ID sollte nur aus Zahlen bestehen (maximal 10 Ziffern)." }),
+  discord_id: z.string()
+    .min(1, { message: "Bitte gib deine Discord ID ein." })
+    .refine(isValidDiscordId, { message: "Die Discord ID sollte aus 17-19 Ziffern bestehen." }),
   age: z.coerce
     .number({ required_error: "Bitte gib dein Alter ein.", invalid_type_error: "Bitte gib eine gültige Zahl ein." })
     .min(12, { message: "Du musst mindestens 12 Jahre alt sein." })

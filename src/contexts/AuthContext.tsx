@@ -10,7 +10,7 @@ type AuthContextType = {
   loadingError: string | null;
   hasDeletionRequest: boolean;
   resetAuth: () => Promise<void>;
-  signOut: () => Promise<void>; // Added signOut method
+  signOut: () => Promise<void>; 
 };
 
 export const AuthContext = createContext<AuthContextType>({
@@ -19,7 +19,7 @@ export const AuthContext = createContext<AuthContextType>({
   loadingError: null,
   hasDeletionRequest: false,
   resetAuth: async () => {},
-  signOut: async () => {}, // Added signOut default implementation
+  signOut: async () => {},
 });
 
 // Export SessionContext for backward compatibility
@@ -51,12 +51,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setSession(newSession);
           
           // Update user profile with Discord data when signing in
-          if (_event === 'SIGNED_IN' && newSession?.user) {
+          if (newSession?.user) {
             setTimeout(async () => {
               try {
                 const userData = newSession.user;
                 
-                // Extract Discord ID from user metadata if available
+                // Extract Discord ID and avatar URL from user metadata
                 let discordId = '';
                 let avatarUrl = '';
                 
@@ -75,23 +75,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   .eq('id', userData.id)
                   .maybeSingle();
                   
-                // Only update if we have data and it's different from what's stored
-                const shouldUpdateDiscordId = discordId && (!existingProfile || !existingProfile.discord_id);
-                const shouldUpdateAvatarUrl = avatarUrl && (!existingProfile || !existingProfile.avatar_url);
-                
-                if (shouldUpdateDiscordId || shouldUpdateAvatarUrl) {
+                // Check if profile exists, if not, create it
+                if (!existingProfile) {
+                  await updateUserProfile(userData.id, {
+                    discord_id: discordId,
+                    avatar_url: avatarUrl,
+                    username: userData.user_metadata?.full_name || userData.email
+                  });
+                  console.log("Created new profile with Discord data");
+                } else {
+                  // Determine what needs to be updated
                   const updates: any = {};
                   
-                  if (shouldUpdateDiscordId) {
+                  if (discordId && !existingProfile.discord_id) {
                     updates.discord_id = discordId;
                   }
                   
-                  if (shouldUpdateAvatarUrl) {
+                  if (avatarUrl && !existingProfile.avatar_url) {
                     updates.avatar_url = avatarUrl;
                   }
                   
-                  await updateUserProfile(userData.id, updates);
-                  console.log("Updated profile with Discord data:", updates);
+                  // Only update if there are changes to make
+                  if (Object.keys(updates).length > 0) {
+                    await updateUserProfile(userData.id, updates);
+                    console.log("Updated profile with Discord data:", updates);
+                  }
                 }
               } catch (err) {
                 console.error("Error updating profile with Discord data:", err);
