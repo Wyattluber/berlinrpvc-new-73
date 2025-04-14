@@ -33,7 +33,7 @@ const ProfileContent: React.FC<ProfileContentProps> = ({
   navigate
 }) => {
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+    <Tabs value={activeTab} onValueChange={setActiveTab}>
       <TabsContent value="profile">
         <ProfileTab 
           session={session}
