@@ -50,10 +50,10 @@ const Footer: React.FC<FooterProps> = ({ hideApplyButton = false }) => {
                 <Link to="/" className="text-gray-300 hover:text-white">Startseite</Link>
               </li>
               <li>
-                <Link to="/partners" className="text-gray-300 hover:text-white">Partner</Link>
+                <Link to="https://berlinrpvc.de/partners" className="text-gray-300 hover:text-white">Partner</Link>
               </li>
               <li>
-                <Link to="/subservers" className="text-gray-300 hover:text-white">Subserver</Link>
+                <Link to="https://berlinrpvc.de/subservers" className="text-gray-300 hover:text-white">Subserver</Link>
               </li>
               {session ? (
                 <li>
@@ -61,7 +61,7 @@ const Footer: React.FC<FooterProps> = ({ hideApplyButton = false }) => {
                 </li>
               ) : (
                 <li>
-                  <Link to="/login" className="text-gray-300 hover:text-white">Login</Link>
+                  <Link to="https://berlinrpvc.de/login" className="text-gray-300 hover:text-white">Login</Link>
                 </li>
               )}
             </ul>
@@ -92,11 +92,11 @@ const Footer: React.FC<FooterProps> = ({ hideApplyButton = false }) => {
         
         <div className="border-t border-gray-700 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center">
           <p className="text-gray-400 text-sm mb-4 md:mb-0">
-            &copy; {new Date().getFullYear()} BerlinRP-VC. Alle Rechte vorbehalten.
+             &copy; {new Date().getFullYear()} BerlinRP-VC • Seit September 2024 • Alle Rechte vorbehalten.
           </p>
           <div className="flex space-x-4">
-            <Link to="/datenschutz" className="text-gray-400 hover:text-white text-sm">Datenschutz</Link>
-            <Link to="/impressum" className="text-gray-400 hover:text-white text-sm">Impressum</Link>
+            <Link to="https://berlinrpvc.de/datenschutz" className="text-gray-400 hover:text-white text-sm">Datenschutz</Link>
+            <Link to="https://berlinrpvc.de/impressum" className="text-gray-400 hover:text-white text-sm">Impressum</Link>
           </div>
         </div>
       </div>
