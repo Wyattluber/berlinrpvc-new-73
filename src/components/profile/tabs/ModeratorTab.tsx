@@ -3,17 +3,12 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ClipboardList } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 interface ModeratorTabProps {
-  navigate?: any;
+  navigate: any;
 }
 
-const ModeratorTab: React.FC<ModeratorTabProps> = ({ navigate: externalNavigate }) => {
-  // Use either the provided navigate function or get one from useNavigate
-  const internalNavigate = useNavigate();
-  const navigate = externalNavigate || internalNavigate;
-  
+const ModeratorTab: React.FC<ModeratorTabProps> = ({ navigate }) => {
   return (
     <Card>
       <CardHeader>
