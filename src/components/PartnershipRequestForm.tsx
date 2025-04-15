@@ -12,7 +12,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { AlertTriangle, CheckCircle, Loader2, Calendar } from 'lucide-react';
+import { format, addMonths } from 'date-fns';
+import { de } from 'date-fns/locale';
 
 const partnershipFormSchema = z.object({
   discord_id: z.string().min(1, { message: "Discord ID ist erforderlich" }),
@@ -29,12 +32,13 @@ const partnershipFormSchema = z.object({
 
 type PartnershipFormValues = z.infer<typeof partnershipFormSchema>;
 
-const PartnershipRequestForm = () => {
+const PartnershipRequestForm = ({ partnershipDescription = '' }) => {
   const { session } = useAuth();
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [existingApplication, setExistingApplication] = useState(null);
   const [userDiscordId, setUserDiscordId] = useState('');
+  const expirationDate = addMonths(new Date(), 1);
 
   const form = useForm<PartnershipFormValues>({
     resolver: zodResolver(partnershipFormSchema),
@@ -119,7 +123,8 @@ const PartnershipRequestForm = () => {
         requirements: values.requirements,
         has_other_partners: hasOtherPartnersBoolean,
         other_partners: hasOtherPartnersBoolean ? values.other_partners : null,
-        status: 'pending'
+        status: 'pending',
+        is_active: true
       };
 
       const { error } = await supabase
@@ -181,6 +186,18 @@ const PartnershipRequestForm = () => {
                 'In Bearbeitung'}
               </span></h4>
               <p className="text-sm text-gray-500">Eingereicht am: {new Date(existingApplication.created_at).toLocaleDateString('de-DE')}</p>
+              
+              {existingApplication.status === 'approved' && (
+                <div className="mt-2 p-3 bg-blue-50 rounded-md border border-blue-100">
+                  <div className="flex items-center text-blue-700 mb-1">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    <p className="font-medium">Gültigkeitszeitraum</p>
+                  </div>
+                  <p className="text-sm text-blue-600">
+                    Deine Partnerschaft ist gültig bis: {format(addMonths(new Date(existingApplication.created_at), 1), 'PPP', { locale: de })}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </CardContent>
@@ -197,6 +214,21 @@ const PartnershipRequestForm = () => {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {partnershipDescription && (
+          <div className="prose max-w-none text-gray-700 mb-6">
+            <div className="whitespace-pre-line">{partnershipDescription}</div>
+          </div>
+        )}
+
+        <Alert className="mb-6 bg-blue-50 border-blue-200">
+          <Calendar className="h-4 w-4 text-blue-500" />
+          <AlertTitle className="text-blue-700">Zeitlich begrenzte Partnerschaft</AlertTitle>
+          <AlertDescription className="text-blue-600">
+            Bitte beachte, dass Partnerschaften für einen Zeitraum von einem Monat gültig sind und danach automatisch enden.
+            Die Partnerschaft ist gültig bis: {format(expirationDate, 'PPP', { locale: de })}
+          </AlertDescription>
+        </Alert>
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField

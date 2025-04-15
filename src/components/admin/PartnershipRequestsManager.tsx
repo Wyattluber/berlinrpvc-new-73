@@ -17,8 +17,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, 
   AlertDialogTrigger 
 } from '@/components/ui/alert-dialog';
-import { Loader2, CheckCircle, XCircle, ExternalLink, Edit, Trash } from 'lucide-react';
-import { format } from 'date-fns';
+import { Loader2, CheckCircle, XCircle, ExternalLink, Edit, Trash, Calendar } from 'lucide-react';
+import { format, addMonths, isPast } from 'date-fns';
 import { de } from 'date-fns/locale';
 
 const PartnershipRequestsManager = () => {
@@ -45,10 +45,25 @@ const PartnershipRequestsManager = () => {
 
       if (requestsError) throw requestsError;
 
+      // Process requests - check expiration dates
+      const processedRequests = requestsData.map(request => {
+        const createdDate = new Date(request.created_at);
+        const expirationDate = addMonths(createdDate, 1);
+        const isExpired = isPast(expirationDate);
+        
+        return {
+          ...request,
+          expirationDate,
+          isExpired,
+          // If it's expired, it's not active
+          is_active: request.is_active && !isExpired
+        };
+      });
+
       // Group requests by status
-      const pending = requestsData.filter(req => req.status === 'pending');
-      const approved = requestsData.filter(req => req.status === 'approved');
-      const rejected = requestsData.filter(req => req.status === 'rejected');
+      const pending = processedRequests.filter(req => req.status === 'pending');
+      const approved = processedRequests.filter(req => req.status === 'approved');
+      const rejected = processedRequests.filter(req => req.status === 'rejected');
 
       setPendingRequests(pending);
       setApprovedRequests(approved);
@@ -79,7 +94,10 @@ const PartnershipRequestsManager = () => {
       // Update the request status
       const { error: updateError } = await supabase
         .from('partner_applications')
-        .update({ status: 'approved' })
+        .update({ 
+          status: 'approved',
+          is_active: true 
+        })
         .eq('id', request.id);
 
       if (updateError) throw updateError;
@@ -132,7 +150,10 @@ const PartnershipRequestsManager = () => {
     try {
       const { error } = await supabase
         .from('partner_applications')
-        .update({ status: 'rejected' })
+        .update({ 
+          status: 'rejected',
+          is_active: false 
+        })
         .eq('id', request.id);
 
       if (error) throw error;
@@ -156,6 +177,14 @@ const PartnershipRequestsManager = () => {
 
   const handleEndPartnership = async (request) => {
     try {
+      // Update the partner application to inactive
+      const { error: appError } = await supabase
+        .from('partner_applications')
+        .update({ is_active: false })
+        .eq('id', request.id);
+
+      if (appError) throw appError;
+
       // Update the partner server to inactive
       const { error: serverError } = await supabase
         .from('partner_servers')
@@ -197,6 +226,11 @@ const PartnershipRequestsManager = () => {
             server => server.partner_application_id === request.id
           );
           
+          const createdDate = new Date(request.created_at);
+          const expirationDate = addMonths(createdDate, 1);
+          const isExpired = request.isExpired;
+          const isActive = request.status === 'approved' && request.is_active && !isExpired;
+          
           return (
             <Card key={request.id} className="overflow-hidden">
               <CardHeader className="pb-4">
@@ -206,13 +240,18 @@ const PartnershipRequestsManager = () => {
                       Discord: {request.discord_id}
                     </CardTitle>
                     <CardDescription>
-                      Eingereicht am {format(new Date(request.created_at), 'PPP', { locale: de })}
+                      Eingereicht am {format(createdDate, 'PPP', { locale: de })}
+                      {request.status === 'approved' && (
+                        <span className="block mt-1">
+                          Gültig bis: {format(expirationDate, 'PPP', { locale: de })}
+                        </span>
+                      )}
                     </CardDescription>
                   </div>
                   <div className="flex items-center">
                     {request.status === 'approved' && (
-                      <Badge className={partnerServer?.is_active ? "bg-green-500" : "bg-gray-500"}>
-                        {partnerServer?.is_active ? 'Aktiv' : 'Inaktiv'}
+                      <Badge className={isActive ? "bg-green-500" : "bg-gray-500"}>
+                        {isActive ? 'Aktiv' : isExpired ? 'Abgelaufen' : 'Inaktiv'}
                       </Badge>
                     )}
                     <Badge className={
@@ -291,6 +330,23 @@ const PartnershipRequestsManager = () => {
                           </div>
                         </div>
                         
+                        {selectedRequest.status === 'approved' && (
+                          <div className="mt-4 p-3 bg-blue-50 rounded-md border border-blue-100">
+                            <div className="flex items-center">
+                              <Calendar className="h-5 w-5 text-blue-600 mr-3" />
+                              <div>
+                                <p className="font-medium text-blue-800">Gültigkeitszeitraum</p>
+                                <p className="text-sm text-blue-600">
+                                  {selectedRequest.isExpired ? 
+                                    `Die Partnerschaft ist am ${format(selectedRequest.expirationDate, 'PPP', { locale: de })} abgelaufen.` :
+                                    `Die Partnerschaft ist gültig bis: ${format(selectedRequest.expirationDate, 'PPP', { locale: de })}`
+                                  }
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
                         <div className="mt-4">
                           <Label className="text-gray-500">Grund für die Partnerschaft</Label>
                           <div className="p-3 bg-gray-50 rounded-md mt-1">
@@ -333,8 +389,7 @@ const PartnershipRequestsManager = () => {
                             </>
                           )}
                           
-                          {selectedRequest.status === 'approved' && 
-                            partnerServers.find(s => s.partner_application_id === selectedRequest.id)?.is_active && (
+                          {selectedRequest.status === 'approved' && !selectedRequest.isExpired && selectedRequest.is_active && (
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="destructive">
@@ -386,21 +441,15 @@ const PartnershipRequestsManager = () => {
                   </div>
                 )}
                 
-                {request.status === 'approved' && (
+                {request.status === 'approved' && !isExpired && request.is_active && (
                   <div>
-                    {partnerServer?.is_active ? (
-                      <Button 
-                        variant="destructive" 
-                        size="sm"
-                        onClick={() => handleEndPartnership(request)}
-                      >
-                        Partnerschaft beenden
-                      </Button>
-                    ) : (
-                      <Badge variant="outline" className="text-gray-500">
-                        Beendet
-                      </Badge>
-                    )}
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      onClick={() => handleEndPartnership(request)}
+                    >
+                      Partnerschaft beenden
+                    </Button>
                   </div>
                 )}
               </CardFooter>

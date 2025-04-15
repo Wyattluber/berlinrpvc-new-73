@@ -4,7 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Link, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Loader2, Link, CheckCircle, XCircle, Clock, Calendar } from 'lucide-react';
+import { format, addMonths, isPast } from 'date-fns';
+import { de } from 'date-fns/locale';
 
 const PartnershipStatus = () => {
   const { session } = useAuth();
@@ -83,25 +85,36 @@ const PartnershipStatus = () => {
     );
   }
 
+  const createdDate = new Date(partnerApplication.created_at);
+  const expirationDate = addMonths(createdDate, 1);
+  const isExpired = isPast(expirationDate);
+  
+  // If partnership is approved but expired, show as inactive
+  const isActivePartnership = partnerApplication.status === 'approved' && 
+                             partnerApplication.is_active && 
+                             !isExpired;
+
   const renderStatusBadge = () => {
-    switch (partnerApplication.status) {
-      case 'approved':
-        return <Badge className="bg-green-500">Angenommen</Badge>;
-      case 'rejected':
-        return <Badge className="bg-red-500">Abgelehnt</Badge>;
-      default:
-        return <Badge className="bg-yellow-500">In Bearbeitung</Badge>;
+    if (partnerApplication.status === 'approved') {
+      return isActivePartnership ? 
+        <Badge className="bg-green-500">Aktiv</Badge> : 
+        <Badge className="bg-gray-500">Inaktiv</Badge>;
+    } else if (partnerApplication.status === 'rejected') {
+      return <Badge className="bg-red-500">Abgelehnt</Badge>;
+    } else {
+      return <Badge className="bg-yellow-500">In Bearbeitung</Badge>;
     }
   };
 
   const renderStatusIcon = () => {
-    switch (partnerApplication.status) {
-      case 'approved':
-        return <CheckCircle className="h-6 w-6 text-green-500" />;
-      case 'rejected':
-        return <XCircle className="h-6 w-6 text-red-500" />;
-      default:
-        return <Clock className="h-6 w-6 text-yellow-500" />;
+    if (partnerApplication.status === 'approved') {
+      return isActivePartnership ? 
+        <CheckCircle className="h-6 w-6 text-green-500" /> : 
+        <XCircle className="h-6 w-6 text-gray-500" />;
+    } else if (partnerApplication.status === 'rejected') {
+      return <XCircle className="h-6 w-6 text-red-500" />;
+    } else {
+      return <Clock className="h-6 w-6 text-yellow-500" />;
     }
   };
 
@@ -122,22 +135,37 @@ const PartnershipStatus = () => {
             {renderStatusIcon()}
             <div>
               <h3 className="font-medium">Status: {
-                partnerApplication.status === 'approved' ? 'Angenommen' :
+                partnerApplication.status === 'approved' ? (isActivePartnership ? 'Aktiv' : 'Inaktiv') :
                 partnerApplication.status === 'rejected' ? 'Abgelehnt' :
                 'In Bearbeitung'
               }</h3>
               <p className="text-sm text-gray-500">
-                Eingereicht am: {new Date(partnerApplication.created_at).toLocaleDateString('de-DE')}
+                Eingereicht am: {format(createdDate, 'PPP', { locale: de })}
               </p>
             </div>
           </div>
+
+          {partnerApplication.status === 'approved' && (
+            <div className="flex items-center p-3 bg-blue-50 rounded-md border border-blue-100 mt-3">
+              <Calendar className="h-5 w-5 text-blue-600 mr-3 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-blue-800">Gültigkeitszeitraum</p>
+                <p className="text-sm text-blue-600">
+                  {isExpired ? 
+                    `Deine Partnerschaft ist am ${format(expirationDate, 'PPP', { locale: de })} abgelaufen.` :
+                    `Deine Partnerschaft ist gültig bis: ${format(expirationDate, 'PPP', { locale: de })}`
+                  }
+                </p>
+              </div>
+            </div>
+          )}
 
           {partnerServer && (
             <div className="mt-4 pt-4 border-t border-gray-200">
               <h3 className="font-medium mb-2">Partnerschaft Details</h3>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="text-gray-500">Aktiv:</div>
-                <div>{partnerServer.is_active ? 'Ja' : 'Nein'}</div>
+                <div>{isActivePartnership ? 'Ja' : 'Nein'}</div>
                 <div className="text-gray-500">Server:</div>
                 <div>{partnerServer.name}</div>
                 {partnerServer.website && (

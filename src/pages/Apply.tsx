@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import Navbar from '@/components/Navbar';
@@ -21,6 +21,7 @@ import {
 const Apply = () => {
   const { session } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [applicationTab, setApplicationTab] = useState('team');
   const [loading, setLoading] = useState(true);
   const [teamDescription, setTeamDescription] = useState(DEFAULT_TEAM_DESCRIPTION);
@@ -28,6 +29,13 @@ const Apply = () => {
   const [requirementsDescription, setRequirementsDescription] = useState(DEFAULT_REQUIREMENTS_DESCRIPTION);
 
   useEffect(() => {
+    // Set initial tab from URL query parameter if present
+    const searchParams = new URLSearchParams(location.search);
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'partnership') {
+      setApplicationTab('partnership');
+    }
+    
     const loadTexts = async () => {
       setLoading(true);
       try {
@@ -45,7 +53,7 @@ const Apply = () => {
     };
 
     loadTexts();
-  }, []);
+  }, [location.search]);
 
   const handleApplyClick = () => {
     if (session) {
@@ -142,7 +150,7 @@ const Apply = () => {
                 
                 <TabsContent value="partnership" className="mt-6">
                   {session ? (
-                    <PartnershipRequestForm />
+                    <PartnershipRequestForm partnershipDescription={partnershipDescription} />
                   ) : (
                     <Card className="shadow-lg">
                       <CardHeader>
