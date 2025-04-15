@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useApplication } from '@/contexts/ApplicationContext';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -59,17 +58,32 @@ const Step1BasicInfo: React.FC<Step1Props> = ({
 }) => {
   const { applicationData, updateApplicationData, setIsUnder12 } = useApplication();
   const [ageWarning, setAgeWarning] = useState(false);
+  const [formInitialized, setFormInitialized] = useState(false);
 
   const form = useForm<Step1FormData>({
     resolver: zodResolver(step1Schema),
     defaultValues: {
-      roblox_username: userRobloxUsername || applicationData.robloxUsername,
-      roblox_id: userRobloxId || applicationData.robloxId,
-      discord_id: userDiscordId || applicationData.discordId,
-      age: applicationData.age as number || undefined,
-      activity_level: applicationData.activityLevel || 5,
+      roblox_username: '',
+      roblox_id: '',
+      discord_id: '',
+      age: undefined,
+      activity_level: 5,
     },
   });
+
+  // Initialize form with values from props and applicationData
+  useEffect(() => {
+    if (!formInitialized) {
+      form.reset({
+        roblox_username: userRobloxUsername || applicationData.robloxUsername || '',
+        roblox_id: userRobloxId || applicationData.robloxId || '',
+        discord_id: userDiscordId || applicationData.discordId || '',
+        age: applicationData.age as number || undefined,
+        activity_level: applicationData.activityLevel || 5,
+      });
+      setFormInitialized(true);
+    }
+  }, [userDiscordId, userRobloxId, userRobloxUsername, applicationData, form, formInitialized]);
 
   // Watch the age field to detect underage users
   const age = form.watch('age');
@@ -100,6 +114,11 @@ const Step1BasicInfo: React.FC<Step1Props> = ({
     onNext();
   };
 
+  // Check if Discord ID and Roblox ID are provided and should be readonly
+  const hasDiscordId = Boolean(userDiscordId || applicationData.discordId);
+  const hasRobloxId = Boolean(userRobloxId || applicationData.robloxId);
+  const hasRobloxUsername = Boolean(userRobloxUsername || applicationData.robloxUsername);
+
   return (
     <TooltipProvider>
       <Form {...form}>
@@ -117,16 +136,15 @@ const Step1BasicInfo: React.FC<Step1Props> = ({
                         <Input 
                           placeholder="Dein Roblox Benutzername" 
                           {...field} 
-                          value={field.value || userRobloxUsername}
-                          className="pr-10"
-                          readOnly={!!userRobloxUsername}
+                          className={hasRobloxUsername ? "pr-10 bg-gray-100" : "pr-10"}
+                          readOnly={hasRobloxUsername}
                         />
-                        {userRobloxUsername && (
+                        {hasRobloxUsername && (
                           <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                         )}
                       </div>
                     </FormControl>
-                    {userRobloxUsername && (
+                    {hasRobloxUsername && (
                       <FormDescription>
                         Automatisch aus deinem Profil übernommen
                       </FormDescription>
@@ -157,16 +175,15 @@ const Step1BasicInfo: React.FC<Step1Props> = ({
                         <Input 
                           placeholder="Deine Roblox ID" 
                           {...field} 
-                          value={field.value || userRobloxId}
-                          className="pr-10"
-                          readOnly={!!userRobloxId}
+                          className={hasRobloxId ? "pr-10 bg-gray-100" : "pr-10"}
+                          readOnly={hasRobloxId}
                         />
-                        {userRobloxId && (
+                        {hasRobloxId && (
                           <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                         )}
                       </div>
                     </FormControl>
-                    {userRobloxId && (
+                    {hasRobloxId && (
                       <FormDescription>
                         Automatisch aus deinem Profil übernommen
                       </FormDescription>
@@ -203,16 +220,15 @@ const Step1BasicInfo: React.FC<Step1Props> = ({
                         <Input 
                           placeholder="Deine Discord ID" 
                           {...field} 
-                          value={field.value || userDiscordId}
-                          className="pr-10"
-                          readOnly={!!userDiscordId}
+                          className={hasDiscordId ? "pr-10 bg-gray-100" : "pr-10"}
+                          readOnly={hasDiscordId}
                         />
-                        {userDiscordId && (
+                        {hasDiscordId && (
                           <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                         )}
                       </div>
                     </FormControl>
-                    {userDiscordId && (
+                    {hasDiscordId && (
                       <FormDescription>
                         Automatisch aus deinem Profil übernommen
                       </FormDescription>

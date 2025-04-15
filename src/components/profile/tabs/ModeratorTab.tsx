@@ -3,12 +3,17 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ClipboardList } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface ModeratorTabProps {
-  navigate: any;
+  navigate?: any;
 }
 
-const ModeratorTab: React.FC<ModeratorTabProps> = ({ navigate }) => {
+const ModeratorTab: React.FC<ModeratorTabProps> = ({ navigate: navProp }) => {
+  // Use the navigate prop if provided, otherwise use the hook
+  const navigateHook = useNavigate();
+  const navigate = navProp || navigateHook;
+  
   return (
     <Card>
       <CardHeader>

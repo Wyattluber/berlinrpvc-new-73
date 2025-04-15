@@ -21,7 +21,7 @@ const ApplicationForm = () => {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [hasSubmittedApplication, setHasSubmittedApplication] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const { currentStep, goToNextStep, goToPreviousStep, applicationData } = useApplication();
+  const { currentStep, goToNextStep, goToPreviousStep, applicationData, updateApplicationData } = useApplication();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -43,16 +43,49 @@ const ApplicationForm = () => {
 
       setAuthenticated(true);
 
-      // Get the user's Discord ID and other info from metadata
+      // Get user profile data including Discord ID and Roblox ID
+      try {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('discord_id, roblox_id, username')
+          .eq('id', session.user.id)
+          .single();
+          
+        if (profileError) {
+          console.error("Error fetching profile:", profileError);
+        } else if (profileData) {
+          setUserDiscordId(profileData.discord_id || '');
+          setUserRobloxId(profileData.roblox_id || '');
+          setUserRobloxUsername(profileData.username || '');
+          
+          // Also update the application context with this data
+          updateApplicationData({
+            discordId: profileData.discord_id || '',
+            robloxId: profileData.roblox_id || '',
+            robloxUsername: profileData.username || ''
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching profile data:", error);
+      }
+
+      // Get the user's Discord ID and other info from metadata as a fallback
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const discordId = user.user_metadata?.discord_id || '';
-        const robloxId = user.user_metadata?.roblox_id || '';
-        const robloxUsername = user.user_metadata?.roblox_username || '';
+        const discordId = user.user_metadata?.discord_id || userDiscordId;
+        const robloxId = user.user_metadata?.roblox_id || userRobloxId;
+        const robloxUsername = user.user_metadata?.roblox_username || userRobloxUsername;
         
         setUserDiscordId(discordId);
         setUserRobloxId(robloxId);
         setUserRobloxUsername(robloxUsername);
+        
+        // Also update the application context with this data
+        updateApplicationData({
+          discordId: discordId,
+          robloxId: robloxId,
+          robloxUsername: robloxUsername
+        });
       }
 
       // Check if the user has already submitted an application
@@ -91,7 +124,7 @@ const ApplicationForm = () => {
     };
 
     checkAuth();
-  }, [navigate]);
+  }, [navigate, updateApplicationData, userDiscordId, userRobloxId, userRobloxUsername]);
 
   if (loading) {
     return (
