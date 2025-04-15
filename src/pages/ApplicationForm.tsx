@@ -21,7 +21,7 @@ const ApplicationForm = () => {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [hasSubmittedApplication, setHasSubmittedApplication] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const { currentStep, goToNextStep, goToPreviousStep, applicationData, updateApplicationData } = useApplication();
+  const { currentStep, goToNextStep, goToPreviousStep, applicationData } = useApplication();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -43,35 +43,16 @@ const ApplicationForm = () => {
 
       setAuthenticated(true);
 
-      try {
-        // Get user profile data from the profiles table
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('discord_id, roblox_id, username')
-          .eq('id', session.user.id)
-          .single();
-
-        if (profileError) {
-          console.error('Error fetching profile:', profileError);
-        } else if (profileData) {
-          // Set the Discord ID and Roblox ID from the profile
-          const discordId = profileData.discord_id || '';
-          const robloxId = profileData.roblox_id || '';
-          const robloxUsername = profileData.username || '';
-          
-          setUserDiscordId(discordId);
-          setUserRobloxId(robloxId);
-          setUserRobloxUsername(robloxUsername);
-          
-          // Update application context with the user data
-          updateApplicationData({
-            discordId: discordId,
-            robloxId: robloxId,
-            robloxUsername: robloxUsername
-          });
-        }
-      } catch (error) {
-        console.error('Error getting user profile data:', error);
+      // Get the user's Discord ID and other info from metadata
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const discordId = user.user_metadata?.discord_id || '';
+        const robloxId = user.user_metadata?.roblox_id || '';
+        const robloxUsername = user.user_metadata?.roblox_username || '';
+        
+        setUserDiscordId(discordId);
+        setUserRobloxId(robloxId);
+        setUserRobloxUsername(robloxUsername);
       }
 
       // Check if the user has already submitted an application
@@ -110,7 +91,7 @@ const ApplicationForm = () => {
     };
 
     checkAuth();
-  }, [navigate, updateApplicationData]);
+  }, [navigate]);
 
   if (loading) {
     return (
@@ -127,6 +108,47 @@ const ApplicationForm = () => {
   if (authenticated === false || hasSubmittedApplication || userRole) {
     return null;
   }
+
+  if (applicationData.isUnder12) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Navbar />
+        <main className="flex-grow py-10 bg-gradient-to-b from-gray-50 to-white flex items-center justify-center">
+          <UnderageAlert />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <Step1BasicInfo 
+            onNext={goToNextStep} 
+            userDiscordId={userDiscordId} 
+            userRobloxId={userRobloxId} 
+            userRobloxUsername={userRobloxUsername} 
+          />
+        );
+      case 2:
+        return (
+          <Step2RulesUnderstanding 
+            onNext={goToNextStep} 
+            onBack={goToPreviousStep} 
+          />
+        );
+      case 3:
+        return (
+          <Step3Situation 
+            onBack={goToPreviousStep} 
+          />
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -164,11 +186,7 @@ const ApplicationForm = () => {
                 </div>
               </div>
               
-              {applicationData.isUnder12 ? (
-                <UnderageAlert />
-              ) : (
-                renderStepContent()
-              )}
+              {renderStepContent()}
             </CardContent>
           </Card>
         </div>
@@ -177,35 +195,6 @@ const ApplicationForm = () => {
       <Footer />
     </div>
   );
-
-  function renderStepContent() {
-    switch (currentStep) {
-      case 1:
-        return (
-          <Step1BasicInfo 
-            onNext={goToNextStep} 
-            userDiscordId={userDiscordId} 
-            userRobloxId={userRobloxId} 
-            userRobloxUsername={userRobloxUsername} 
-          />
-        );
-      case 2:
-        return (
-          <Step2RulesUnderstanding 
-            onNext={goToNextStep} 
-            onBack={goToPreviousStep} 
-          />
-        );
-      case 3:
-        return (
-          <Step3Situation 
-            onBack={goToPreviousStep} 
-          />
-        );
-      default:
-        return null;
-    }
-  }
 };
 
 export default ApplicationForm;
