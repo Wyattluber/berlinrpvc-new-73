@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,13 +6,12 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info } from 'lucide-react';
+import { Info, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useApplication } from '@/contexts/ApplicationContext';
 import Step1BasicInfo from '@/components/application/Step1BasicInfo';
 import Step2RulesUnderstanding from '@/components/application/Step2RulesUnderstanding';
 import Step3Situation from '@/components/application/Step3Situation';
 import UnderageAlert from '@/components/application/UnderageAlert';
-import LoadingSpinner from '@/components/LoadingSpinner';
 
 const ApplicationForm = () => {
   const [loading, setLoading] = useState(true);
@@ -26,33 +24,32 @@ const ApplicationForm = () => {
   const { currentStep, goToNextStep, goToPreviousStep, applicationData, updateApplicationData } = useApplication();
   const navigate = useNavigate();
 
-  // Diese useEffect-Funktion für Authentifizierung und Datenabruf
   useEffect(() => {
     const checkAuth = async () => {
       setLoading(true);
       
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        setAuthenticated(false);
+        toast({
+          title: "Nicht angemeldet",
+          description: "Du musst angemeldet sein, um eine Bewerbung einzureichen.",
+          variant: "destructive"
+        });
+        navigate('/login');
+        return;
+      }
+
+      setAuthenticated(true);
+
+      // Get user profile data including Discord ID and Roblox ID
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          setAuthenticated(false);
-          toast({
-            title: "Nicht angemeldet",
-            description: "Du musst angemeldet sein, um eine Bewerbung einzureichen.",
-            variant: "destructive"
-          });
-          navigate('/login');
-          return;
-        }
-
-        setAuthenticated(true);
-
-        // Get user profile data including Discord ID and Roblox ID
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('discord_id, roblox_id, username')
           .eq('id', session.user.id)
-          .maybeSingle();
+          .single();
           
         if (profileError) {
           console.error("Error fetching profile:", profileError);
@@ -68,61 +65,73 @@ const ApplicationForm = () => {
             robloxUsername: profileData.username || ''
           });
         }
-
-        // Check if the user has already submitted an application
-        const { data: applications } = await supabase
-          .from('applications')
-          .select('id, status')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
-
-        if (applications && applications.id) {
-          setHasSubmittedApplication(true);
-          toast({
-            title: "Bewerbung bereits eingereicht",
-            description: "Du hast bereits eine Bewerbung eingereicht. Überprüfe den Status im Profil-Dashboard.",
-          });
-          navigate('/profile');
-          return;
-        }
-
-        // Check if user is admin or moderator
-        const { data: adminData } = await supabase
-          .from('admin_users')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
-
-        if (adminData && adminData.role) {
-          setUserRole(adminData.role);
-          toast({
-            title: "Admin/Moderator-Zugriff",
-            description: "Als Teammitglied kannst du keine Bewerbung einreichen.",
-          });
-          navigate('/profile');
-          return;
-        }
       } catch (error) {
-        console.error("Error during authentication check:", error);
-        toast({
-          title: "Fehler",
-          description: "Es gab ein Problem bei der Überprüfung deiner Anmeldung.",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
+        console.error("Error fetching profile data:", error);
       }
+
+      // Get the user's Discord ID and other info from metadata as a fallback
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const discordId = user.user_metadata?.discord_id || userDiscordId;
+        const robloxId = user.user_metadata?.roblox_id || userRobloxId;
+        const robloxUsername = user.user_metadata?.roblox_username || userRobloxUsername;
+        
+        setUserDiscordId(discordId);
+        setUserRobloxId(robloxId);
+        setUserRobloxUsername(robloxUsername);
+        
+        // Also update the application context with this data
+        updateApplicationData({
+          discordId: discordId,
+          robloxId: robloxId,
+          robloxUsername: robloxUsername
+        });
+      }
+
+      // Check if the user has already submitted an application
+      const { data: applications } = await supabase
+        .from('applications')
+        .select('id, status')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (applications && applications.id) {
+        setHasSubmittedApplication(true);
+        toast({
+          title: "Bewerbung bereits eingereicht",
+          description: "Du hast bereits eine Bewerbung eingereicht. Überprüfe den Status im Profil-Dashboard.",
+        });
+        navigate('/profile');
+      }
+
+      // Check if user is admin or moderator
+      const { data: adminData } = await supabase
+        .from('admin_users')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (adminData && adminData.role) {
+        setUserRole(adminData.role);
+        toast({
+          title: "Admin/Moderator-Zugriff",
+          description: "Als Teammitglied kannst du keine Bewerbung einreichen.",
+        });
+        navigate('/profile');
+      }
+      
+      setLoading(false);
     };
 
     checkAuth();
-  }, [navigate, updateApplicationData]);
+  }, [navigate, updateApplicationData, userDiscordId, userRobloxId, userRobloxUsername]);
 
   if (loading) {
     return (
       <div className="flex flex-col min-h-screen">
         <Navbar />
         <div className="flex-grow flex items-center justify-center">
-          <LoadingSpinner />
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-blue-500 border-t-transparent"></div>
         </div>
         <Footer />
       </div>
