@@ -17,9 +17,6 @@ const ModeratorTab: React.FC<ModeratorTabProps> = ({ navigate: navProp }) => {
   const handleNavigation = (path: string) => {
     // Verwende navigate-Funktion für korrekte Router-Navigation
     navigate(path);
-    
-    // Zum Seitenanfang scrollen
-    window.scrollTo(0, 0);
   };
   
   return (

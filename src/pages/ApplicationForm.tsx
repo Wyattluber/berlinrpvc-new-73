@@ -7,12 +7,13 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { useApplication } from '@/contexts/ApplicationContext';
 import Step1BasicInfo from '@/components/application/Step1BasicInfo';
 import Step2RulesUnderstanding from '@/components/application/Step2RulesUnderstanding';
 import Step3Situation from '@/components/application/Step3Situation';
 import UnderageAlert from '@/components/application/UnderageAlert';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 const ApplicationForm = () => {
   const [loading, setLoading] = useState(true);
@@ -51,7 +52,7 @@ const ApplicationForm = () => {
           .from('profiles')
           .select('discord_id, roblox_id, username')
           .eq('id', session.user.id)
-          .single();
+          .maybeSingle();
           
         if (profileError) {
           console.error("Error fetching profile:", profileError);
@@ -65,26 +66,6 @@ const ApplicationForm = () => {
             discordId: profileData.discord_id || '',
             robloxId: profileData.roblox_id || '',
             robloxUsername: profileData.username || ''
-          });
-        }
-
-        // Get the user's Discord ID and other info from metadata as a fallback
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const discordId = user.user_metadata?.discord_id || userDiscordId;
-          const robloxId = user.user_metadata?.roblox_id || userRobloxId;
-          const robloxUsername = user.user_metadata?.roblox_username || userRobloxUsername;
-          
-          // Nur setzen, wenn die Werte nicht leer sind
-          if (discordId) setUserDiscordId(discordId);
-          if (robloxId) setUserRobloxId(robloxId);
-          if (robloxUsername) setUserRobloxUsername(robloxUsername);
-          
-          // Auch ApplicationContext aktualisieren
-          updateApplicationData({
-            discordId: discordId || applicationData.discordId || '',
-            robloxId: robloxId || applicationData.robloxId || '',
-            robloxUsername: robloxUsername || applicationData.robloxUsername || ''
           });
         }
 
@@ -134,11 +115,6 @@ const ApplicationForm = () => {
     };
 
     checkAuth();
-    
-    // Cleanup-Funktion, um Speicher freizugeben
-    return () => {
-      // Nichts zu bereinigen
-    };
   }, [navigate, updateApplicationData]);
 
   if (loading) {
@@ -146,7 +122,7 @@ const ApplicationForm = () => {
       <div className="flex flex-col min-h-screen">
         <Navbar />
         <div className="flex-grow flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-blue-500 border-t-transparent"></div>
+          <LoadingSpinner />
         </div>
         <Footer />
       </div>
