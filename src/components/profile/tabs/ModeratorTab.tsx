@@ -14,6 +14,14 @@ const ModeratorTab: React.FC<ModeratorTabProps> = ({ navigate: navProp }) => {
   const navigateHook = useNavigate();
   const navigate = navProp || navigateHook;
   
+  const handleNavigation = (path: string) => {
+    // Verwende navigate-Funktion für korrekte Router-Navigation
+    navigate(path);
+    
+    // Zum Seitenanfang scrollen
+    window.scrollTo(0, 0);
+  };
+  
   return (
     <Card>
       <CardHeader>
@@ -24,7 +32,7 @@ const ModeratorTab: React.FC<ModeratorTabProps> = ({ navigate: navProp }) => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <Button onClick={() => navigate('/admin/applications')}>
+          <Button onClick={() => handleNavigation('/admin/applications')}>
             <ClipboardList className="h-4 w-4 mr-2" />
             Bewerbungen verwalten
           </Button>

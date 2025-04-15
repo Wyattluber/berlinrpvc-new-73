@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,27 +25,28 @@ const ApplicationForm = () => {
   const { currentStep, goToNextStep, goToPreviousStep, applicationData, updateApplicationData } = useApplication();
   const navigate = useNavigate();
 
+  // Diese useEffect-Funktion für Authentifizierung und Datenabruf
   useEffect(() => {
     const checkAuth = async () => {
       setLoading(true);
       
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        setAuthenticated(false);
-        toast({
-          title: "Nicht angemeldet",
-          description: "Du musst angemeldet sein, um eine Bewerbung einzureichen.",
-          variant: "destructive"
-        });
-        navigate('/login');
-        return;
-      }
-
-      setAuthenticated(true);
-
-      // Get user profile data including Discord ID and Roblox ID
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          setAuthenticated(false);
+          toast({
+            title: "Nicht angemeldet",
+            description: "Du musst angemeldet sein, um eine Bewerbung einzureichen.",
+            variant: "destructive"
+          });
+          navigate('/login');
+          return;
+        }
+
+        setAuthenticated(true);
+
+        // Get user profile data including Discord ID and Roblox ID
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('discord_id, roblox_id, username')
@@ -65,66 +67,79 @@ const ApplicationForm = () => {
             robloxUsername: profileData.username || ''
           });
         }
+
+        // Get the user's Discord ID and other info from metadata as a fallback
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const discordId = user.user_metadata?.discord_id || userDiscordId;
+          const robloxId = user.user_metadata?.roblox_id || userRobloxId;
+          const robloxUsername = user.user_metadata?.roblox_username || userRobloxUsername;
+          
+          // Nur setzen, wenn die Werte nicht leer sind
+          if (discordId) setUserDiscordId(discordId);
+          if (robloxId) setUserRobloxId(robloxId);
+          if (robloxUsername) setUserRobloxUsername(robloxUsername);
+          
+          // Auch ApplicationContext aktualisieren
+          updateApplicationData({
+            discordId: discordId || applicationData.discordId || '',
+            robloxId: robloxId || applicationData.robloxId || '',
+            robloxUsername: robloxUsername || applicationData.robloxUsername || ''
+          });
+        }
+
+        // Check if the user has already submitted an application
+        const { data: applications } = await supabase
+          .from('applications')
+          .select('id, status')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        if (applications && applications.id) {
+          setHasSubmittedApplication(true);
+          toast({
+            title: "Bewerbung bereits eingereicht",
+            description: "Du hast bereits eine Bewerbung eingereicht. Überprüfe den Status im Profil-Dashboard.",
+          });
+          navigate('/profile');
+          return;
+        }
+
+        // Check if user is admin or moderator
+        const { data: adminData } = await supabase
+          .from('admin_users')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        if (adminData && adminData.role) {
+          setUserRole(adminData.role);
+          toast({
+            title: "Admin/Moderator-Zugriff",
+            description: "Als Teammitglied kannst du keine Bewerbung einreichen.",
+          });
+          navigate('/profile');
+          return;
+        }
       } catch (error) {
-        console.error("Error fetching profile data:", error);
-      }
-
-      // Get the user's Discord ID and other info from metadata as a fallback
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const discordId = user.user_metadata?.discord_id || userDiscordId;
-        const robloxId = user.user_metadata?.roblox_id || userRobloxId;
-        const robloxUsername = user.user_metadata?.roblox_username || userRobloxUsername;
-        
-        setUserDiscordId(discordId);
-        setUserRobloxId(robloxId);
-        setUserRobloxUsername(robloxUsername);
-        
-        // Also update the application context with this data
-        updateApplicationData({
-          discordId: discordId,
-          robloxId: robloxId,
-          robloxUsername: robloxUsername
-        });
-      }
-
-      // Check if the user has already submitted an application
-      const { data: applications } = await supabase
-        .from('applications')
-        .select('id, status')
-        .eq('user_id', session.user.id)
-        .maybeSingle();
-
-      if (applications && applications.id) {
-        setHasSubmittedApplication(true);
+        console.error("Error during authentication check:", error);
         toast({
-          title: "Bewerbung bereits eingereicht",
-          description: "Du hast bereits eine Bewerbung eingereicht. Überprüfe den Status im Profil-Dashboard.",
+          title: "Fehler",
+          description: "Es gab ein Problem bei der Überprüfung deiner Anmeldung.",
+          variant: "destructive"
         });
-        navigate('/profile');
+      } finally {
+        setLoading(false);
       }
-
-      // Check if user is admin or moderator
-      const { data: adminData } = await supabase
-        .from('admin_users')
-        .select('role')
-        .eq('user_id', session.user.id)
-        .maybeSingle();
-
-      if (adminData && adminData.role) {
-        setUserRole(adminData.role);
-        toast({
-          title: "Admin/Moderator-Zugriff",
-          description: "Als Teammitglied kannst du keine Bewerbung einreichen.",
-        });
-        navigate('/profile');
-      }
-      
-      setLoading(false);
     };
 
     checkAuth();
-  }, [navigate, updateApplicationData, userDiscordId, userRobloxId, userRobloxUsername]);
+    
+    // Cleanup-Funktion, um Speicher freizugeben
+    return () => {
+      // Nichts zu bereinigen
+    };
+  }, [navigate, updateApplicationData]);
 
   if (loading) {
     return (
