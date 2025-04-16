@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogTrigger
 } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea'; // Corrected import
 import { toast } from '@/hooks/use-toast';
 
 const PartnershipStatus = () => {
