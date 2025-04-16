@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, CalendarIcon, MessageSquare } from 'lucide-react';
 
 interface ModeratorTabProps {
   navigate: any;
@@ -19,9 +19,19 @@ const ModeratorTab: React.FC<ModeratorTabProps> = ({ navigate }) => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <Button onClick={() => navigate('/admin/applications')}>
+          <Button onClick={() => navigate('/admin/applications')} className="w-full justify-start">
             <ClipboardList className="h-4 w-4 mr-2" />
             Bewerbungen verwalten
+          </Button>
+          
+          <Button onClick={() => navigate('/admin/partnerships')} className="w-full justify-start">
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Partnerschaften verwalten
+          </Button>
+          
+          <Button onClick={() => navigate('/admin/team-settings')} className="w-full justify-start">
+            <CalendarIcon className="h-4 w-4 mr-2" />
+            Teammeetings verwalten
           </Button>
         </div>
       </CardContent>

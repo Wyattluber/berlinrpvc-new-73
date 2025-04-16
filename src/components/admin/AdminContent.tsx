@@ -50,7 +50,22 @@ const AdminContent: React.FC<AdminContentProps> = ({
     );
   }
 
+  // Common sections for both admins and moderators
+  if (activeSection === 'partnerships') {
+    return <PartnershipRequestsManager />;
+  }
+
+  if (activeSection === 'team-settings') {
+    return (
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold">Teameinstellungen</h2>
+        <TeamSettingsForm />
+      </div>
+    );
+  }
+
   if (isAdmin) {
+    // Admin-specific sections
     switch (activeSection) {
       case 'dashboard':
         return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
@@ -74,8 +89,6 @@ const AdminContent: React.FC<AdminContentProps> = ({
         return <NewsManagement />;
       case 'partners':
         return <PartnerServersManagement />;
-      case 'partnerships':
-        return <PartnershipRequestsManager />;
       case 'sub_servers':
         return <SubServersManagement />;
       case 'change-requests':
@@ -97,13 +110,6 @@ const AdminContent: React.FC<AdminContentProps> = ({
           <div className="space-y-6">
             <h2 className="text-2xl font-bold">Kontolöschungsanträge</h2>
             <AccountDeletionRequestManager />
-          </div>
-        );
-      case 'team-settings':
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Teameinstellungen</h2>
-            <TeamSettingsForm />
           </div>
         );
       case 'absences':
@@ -128,6 +134,7 @@ const AdminContent: React.FC<AdminContentProps> = ({
         return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
     }
   } else if (isModerator) {
+    // Moderator-specific sections
     switch (activeSection) {
       case 'dashboard':
         return (

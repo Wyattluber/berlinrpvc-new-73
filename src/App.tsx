@@ -10,6 +10,7 @@ import { AuthProvider, useAuth, SessionContext } from "./contexts/AuthContext";
 import ErrorFallback from "./components/ErrorFallback";
 import LoadingSpinner from "./components/LoadingSpinner";
 import ProtectedRoute from "./components/routes/ProtectedRoute";
+import ScrollToTop from "./components/ScrollToTop";
 
 import Index from "./pages/Index";
 import Apply from "./pages/Apply";
@@ -64,6 +65,7 @@ const AppLoadingErrorManager = () => {
         </div>
       )}
       <BrowserRouter>
+        <ScrollToTop />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/apply" element={<Apply />} />

@@ -13,7 +13,8 @@ import {
   Link as LinkIcon,
   MessageSquare,
   Calendar,
-  PenLine
+  PenLine,
+  Handshake
 } from "lucide-react";
 
 export interface MenuItem {
@@ -37,6 +38,16 @@ export const getAdminMenuItems = (isAdmin: boolean, isModerator: boolean): MenuI
       value: "applications",
       icon: <ScrollText className="h-5 w-5" />,
     },
+    {
+      label: "Partnerschaften",
+      value: "partnerships",
+      icon: <Handshake className="h-5 w-5" />,
+    },
+    {
+      label: "Team-Meetings",
+      value: "team-settings",
+      icon: <Calendar className="h-5 w-5" />,
+    }
   ];
 
   // Add admin-only items
@@ -68,12 +79,6 @@ export const getAdminMenuItems = (isAdmin: boolean, isModerator: boolean): MenuI
         adminOnly: true
       },
       {
-        label: "Partnerschaftsanfragen",
-        value: "partnerships",
-        icon: <MessageSquare className="h-5 w-5" />,
-        adminOnly: true
-      },
-      {
         label: "Subserver",
         value: "sub_servers",
         icon: <Server className="h-5 w-5" />,
@@ -98,13 +103,7 @@ export const getAdminMenuItems = (isAdmin: boolean, isModerator: boolean): MenuI
         adminOnly: true
       },
       {
-        label: "Teameinstellungen",
-        value: "team-settings",
-        icon: <Settings className="h-5 w-5" />,
-        adminOnly: true
-      },
-      {
-        label: "Team-Abmeldungen",
+        label: "Abmeldungen",
         value: "absences",
         icon: <Calendar className="h-5 w-5" />,
         adminOnly: true

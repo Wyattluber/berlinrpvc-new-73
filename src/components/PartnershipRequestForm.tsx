@@ -13,8 +13,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, CheckCircle, Loader2, Calendar } from 'lucide-react';
-import { format, addMonths } from 'date-fns';
+import { AlertTriangle, CheckCircle, Loader2, Calendar, RefreshCw } from 'lucide-react';
+import { format, addMonths, isPast } from 'date-fns';
 import { de } from 'date-fns/locale';
 
 const partnershipFormSchema = z.object({
@@ -24,8 +24,13 @@ const partnershipFormSchema = z.object({
     .regex(/^[a-zA-Z0-9]+$/, { 
       message: "Bitte nur den Einladungscode eingeben (z.B. 'abcdef123')" 
     }),
+  member_count: z.string()
+    .min(1, { message: "Anzahl der Mitglieder ist erforderlich" })
+    .refine((val) => !isNaN(Number(val)), { message: "Muss eine Zahl sein" }),
   reason: z.string().min(20, { message: "Bitte gib mindestens 20 Zeichen an" }),
   requirements: z.string().min(10, { message: "Bitte gib mindestens 10 Zeichen an" }),
+  expectations: z.string().min(10, { message: "Bitte gib mindestens 10 Zeichen an" }),
+  advertisement: z.string().min(10, { message: "Bitte gib mindestens 10 Zeichen an" }),
   has_other_partners: z.enum(["true", "false"]),
   other_partners: z.string().optional(),
 });
@@ -39,14 +44,18 @@ const PartnershipRequestForm = ({ partnershipDescription = '' }) => {
   const [existingApplication, setExistingApplication] = useState(null);
   const [userDiscordId, setUserDiscordId] = useState('');
   const expirationDate = addMonths(new Date(), 1);
+  const [isRenewal, setIsRenewal] = useState(false);
 
   const form = useForm<PartnershipFormValues>({
     resolver: zodResolver(partnershipFormSchema),
     defaultValues: {
       discord_id: '',
       discord_invite: '',
+      member_count: '',
       reason: '',
       requirements: '',
+      expectations: '',
+      advertisement: '',
       has_other_partners: 'false',
       other_partners: '',
     },
@@ -69,6 +78,15 @@ const PartnershipRequestForm = ({ partnershipDescription = '' }) => {
 
         if (data) {
           setExistingApplication(data);
+          
+          // Check if the application is expired or inactive
+          const createdDate = new Date(data.created_at);
+          const expirationDate = addMonths(createdDate, 1);
+          const isExpired = isPast(expirationDate);
+          
+          if (data.status === 'approved' && (isExpired || !data.is_active)) {
+            setIsRenewal(true);
+          }
         }
 
         // Get user discord ID from profile
@@ -119,23 +137,41 @@ const PartnershipRequestForm = ({ partnershipDescription = '' }) => {
         user_id: session.user.id,
         discord_id: values.discord_id,
         discord_invite: values.discord_invite,
+        member_count: parseInt(values.member_count),
         reason: values.reason,
         requirements: values.requirements,
+        expectations: values.expectations,
+        advertisement: values.advertisement,
         has_other_partners: hasOtherPartnersBoolean,
         other_partners: hasOtherPartnersBoolean ? values.other_partners : null,
         status: 'pending',
-        is_active: true
+        is_active: true,
+        is_renewal: isRenewal
       };
 
-      const { error } = await supabase
-        .from('partner_applications')
-        .insert([partnershipData]);
+      let action;
+      
+      if (isRenewal && existingApplication) {
+        // Update existing record for renewal
+        action = supabase
+          .from('partner_applications')
+          .update(partnershipData)
+          .eq('id', existingApplication.id);
+      } else {
+        // Insert new record
+        action = supabase
+          .from('partner_applications')
+          .insert([partnershipData]);
+      }
 
+      const { error } = await action;
       if (error) throw error;
 
       toast({
-        title: 'Erfolgreich eingereicht',
-        description: 'Deine Partnerschaftsanfrage wurde erfolgreich eingereicht.',
+        title: isRenewal ? 'Verlängerung eingereicht' : 'Erfolgreich eingereicht',
+        description: isRenewal 
+          ? 'Deine Partnerschaftsverlängerung wurde erfolgreich eingereicht.' 
+          : 'Deine Partnerschaftsanfrage wurde erfolgreich eingereicht.',
       });
       
       setSubmitted(true);
@@ -151,6 +187,22 @@ const PartnershipRequestForm = ({ partnershipDescription = '' }) => {
     }
   };
 
+  const handleRenewal = () => {
+    // Pre-fill form with existing data
+    if (existingApplication) {
+      form.setValue('discord_id', existingApplication.discord_id || '');
+      form.setValue('discord_invite', existingApplication.discord_invite || '');
+      form.setValue('member_count', existingApplication.member_count?.toString() || '');
+      form.setValue('reason', existingApplication.reason || '');
+      form.setValue('requirements', existingApplication.requirements || '');
+      form.setValue('expectations', existingApplication.expectations || '');
+      form.setValue('advertisement', existingApplication.advertisement || '');
+      form.setValue('has_other_partners', existingApplication.has_other_partners ? 'true' : 'false');
+      form.setValue('other_partners', existingApplication.other_partners || '');
+    }
+    setSubmitted(false);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center p-8">
@@ -160,7 +212,7 @@ const PartnershipRequestForm = ({ partnershipDescription = '' }) => {
     );
   }
 
-  if (submitted || existingApplication) {
+  if (submitted || (existingApplication && !isRenewal)) {
     return (
       <Card className="w-full max-w-3xl mx-auto">
         <CardHeader>
@@ -188,15 +240,29 @@ const PartnershipRequestForm = ({ partnershipDescription = '' }) => {
               <p className="text-sm text-gray-500">Eingereicht am: {new Date(existingApplication.created_at).toLocaleDateString('de-DE')}</p>
               
               {existingApplication.status === 'approved' && (
-                <div className="mt-2 p-3 bg-blue-50 rounded-md border border-blue-100">
-                  <div className="flex items-center text-blue-700 mb-1">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    <p className="font-medium">Gültigkeitszeitraum</p>
+                <>
+                  <div className="mt-2 p-3 bg-blue-50 rounded-md border border-blue-100">
+                    <div className="flex items-center text-blue-700 mb-1">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      <p className="font-medium">Gültigkeitszeitraum</p>
+                    </div>
+                    <p className="text-sm text-blue-600">
+                      Deine Partnerschaft ist gültig bis: {format(addMonths(new Date(existingApplication.created_at), 1), 'PPP', { locale: de })}
+                    </p>
                   </div>
-                  <p className="text-sm text-blue-600">
-                    Deine Partnerschaft ist gültig bis: {format(addMonths(new Date(existingApplication.created_at), 1), 'PPP', { locale: de })}
-                  </p>
-                </div>
+                  
+                  {isRenewal && (
+                    <div className="mt-4">
+                      <Button 
+                        onClick={handleRenewal}
+                        className="w-full"
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Partnerschaft verlängern
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -208,9 +274,13 @@ const PartnershipRequestForm = ({ partnershipDescription = '' }) => {
   return (
     <Card className="w-full max-w-3xl mx-auto">
       <CardHeader>
-        <CardTitle className="text-center text-2xl">Partnerschaft mit BerlinRP-VC</CardTitle>
+        <CardTitle className="text-center text-2xl">
+          {isRenewal ? 'Partnerschaft mit BerlinRP-VC verlängern' : 'Partnerschaft mit BerlinRP-VC'}
+        </CardTitle>
         <CardDescription className="text-center">
-          Fülle das Formular aus, um eine Partnerschaft mit unserem Server zu beantragen
+          {isRenewal 
+            ? 'Fülle das Formular aus, um deine bestehende Partnerschaft zu verlängern' 
+            : 'Fülle das Formular aus, um eine Partnerschaft mit unserem Server zu beantragen'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -225,7 +295,9 @@ const PartnershipRequestForm = ({ partnershipDescription = '' }) => {
           <AlertTitle className="text-blue-700">Zeitlich begrenzte Partnerschaft</AlertTitle>
           <AlertDescription className="text-blue-600">
             Bitte beachte, dass Partnerschaften für einen Zeitraum von einem Monat gültig sind und danach automatisch enden.
-            Die Partnerschaft ist gültig bis: {format(expirationDate, 'PPP', { locale: de })}
+            {isRenewal 
+              ? ' Mit dieser Verlängerung kannst du die Partnerschaft fortsetzen.' 
+              : ` Die Partnerschaft ist gültig bis: ${format(expirationDate, 'PPP', { locale: de })}`}
           </AlertDescription>
         </Alert>
 
@@ -280,6 +352,27 @@ const PartnershipRequestForm = ({ partnershipDescription = '' }) => {
 
             <FormField
               control={form.control}
+              name="member_count"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Anzahl der Mitglieder</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Anzahl der Mitglieder auf deinem Server" 
+                      type="number"
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Gib die aktuelle Anzahl der Mitglieder auf deinem Discord-Server an
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="reason"
               render={({ field }) => (
                 <FormItem>
@@ -287,6 +380,24 @@ const PartnershipRequestForm = ({ partnershipDescription = '' }) => {
                   <FormControl>
                     <Textarea 
                       placeholder="Beschreibe warum du eine Partnerschaft mit uns möchtest..." 
+                      {...field} 
+                      rows={4}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="expectations"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Was erwartest du von dieser Partnerschaft?</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Beschreibe, was du von dieser Partnerschaft erwartest..." 
                       {...field} 
                       rows={4}
                     />
@@ -309,6 +420,27 @@ const PartnershipRequestForm = ({ partnershipDescription = '' }) => {
                       rows={4}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="advertisement"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Deine Partnerwerbung</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Schreibe eine kurze Werbung für deinen Server, die wir in unserem Partnerbereich verwenden können..." 
+                      {...field} 
+                      rows={4}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Dieser Text wird in unserem Partnerbereich angezeigt
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -375,7 +507,7 @@ const PartnershipRequestForm = ({ partnershipDescription = '' }) => {
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Wird eingereicht...
                 </>
-              ) : "Partnerschaftsanfrage einreichen"}
+              ) : isRenewal ? "Partnerschaftsverlängerung beantragen" : "Partnerschaftsanfrage einreichen"}
             </Button>
           </form>
         </Form>
