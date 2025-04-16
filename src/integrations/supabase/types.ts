@@ -350,12 +350,17 @@ export type Database = {
       }
       partner_applications: {
         Row: {
+          advertisement: string | null
           created_at: string
           discord_id: string
           discord_invite: string
+          expectations: string | null
+          expiration_date: string | null
           has_other_partners: boolean | null
           id: string
           is_active: boolean | null
+          is_renewal: boolean | null
+          member_count: number | null
           other_partners: string | null
           reason: string
           requirements: string
@@ -364,12 +369,17 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          advertisement?: string | null
           created_at?: string
           discord_id: string
           discord_invite: string
+          expectations?: string | null
+          expiration_date?: string | null
           has_other_partners?: boolean | null
           id?: string
           is_active?: boolean | null
+          is_renewal?: boolean | null
+          member_count?: number | null
           other_partners?: string | null
           reason: string
           requirements: string
@@ -378,12 +388,17 @@ export type Database = {
           user_id: string
         }
         Update: {
+          advertisement?: string | null
           created_at?: string
           discord_id?: string
           discord_invite?: string
+          expectations?: string | null
+          expiration_date?: string | null
           has_other_partners?: boolean | null
           id?: string
           is_active?: boolean | null
+          is_renewal?: boolean | null
+          member_count?: number | null
           other_partners?: string | null
           reason?: string
           requirements?: string
@@ -398,6 +413,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_active: boolean | null
           logo_url: string | null
           members: number | null
           name: string
@@ -411,6 +427,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_active?: boolean | null
           logo_url?: string | null
           members?: number | null
           name: string
@@ -424,6 +441,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_active?: boolean | null
           logo_url?: string | null
           members?: number | null
           name?: string

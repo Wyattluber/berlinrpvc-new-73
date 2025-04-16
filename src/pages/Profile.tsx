@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,11 +43,24 @@ const Profile = () => {
 
         if (profileError) throw profileError;
         
+        const discordAvatar = session.user.user_metadata?.avatar_url;
+        if (discordAvatar && discordAvatar !== profileData.avatar_url) {
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ avatar_url: discordAvatar })
+            .eq('id', session.user.id);
+
+          if (updateError) throw updateError;
+          
+          setAvatarUrl(discordAvatar);
+        } else {
+          setAvatarUrl(profileData?.avatar_url || '');
+        }
+
         setProfile(profileData);
         setUsername(profileData?.username || '');
         setDiscordId(profileData?.discord_id || '');
         setRobloxId(profileData?.roblox_id || '');
-        setAvatarUrl(profileData?.avatar_url || '');
 
         const { data: adminData, error: adminError } = await supabase
           .from('admin_users')
