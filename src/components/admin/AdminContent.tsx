@@ -16,6 +16,7 @@ import AccountDeletionRequestManager from '@/components/admin/AccountDeletionReq
 import DiscordLinkManager from '@/components/admin/DiscordLinkManager';
 import PartnershipRequestsManager from '@/components/admin/PartnershipRequestsManager';
 import ApplicationTextsManager from '@/components/admin/ApplicationTextsManager';
+import StoreItemsManager from '@/components/admin/StoreItemsManager';
 
 interface AdminContentProps {
   isAdmin: boolean;
@@ -62,6 +63,10 @@ const AdminContent: React.FC<AdminContentProps> = ({
         <TeamSettingsForm />
       </div>
     );
+  }
+  
+  if (activeSection === 'store') {
+    return <StoreItemsManager />;
   }
 
   if (isAdmin) {
@@ -144,20 +149,13 @@ const AdminContent: React.FC<AdminContentProps> = ({
               <CardHeader>
                 <CardTitle>Willkommen im Moderatorenbereich</CardTitle>
                 <CardDescription>
-                  Hier kannst du Bewerbungen einsehen und dich von Team-Meetings abmelden
+                  Hier kannst du Partnerschaften verwalten und dich von Team-Meetings abmelden
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ServerStats isAdmin={false} />
               </CardContent>
             </Card>
-          </div>
-        );
-      case 'applications':
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Bewerbungsverwaltung</h2>
-            <ApplicationsList />
           </div>
         );
       case 'absence-form':

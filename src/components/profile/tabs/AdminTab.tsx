@@ -9,6 +9,10 @@ interface AdminTabProps {
 }
 
 const AdminTab: React.FC<AdminTabProps> = ({ navigate }) => {
+  const goToAdminPanel = () => {
+    window.location.href = 'https://berlinrpvc-new-51.lovable.app/login';
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -18,7 +22,7 @@ const AdminTab: React.FC<AdminTabProps> = ({ navigate }) => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Button onClick={() => navigate('/admin/dashboard')}>
+        <Button onClick={goToAdminPanel}>
           <Shield className="h-4 w-4 mr-2" />
           Admin Dashboard öffnen
         </Button>

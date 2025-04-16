@@ -5,7 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth, SessionContext } from "./contexts/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
 import ErrorFallback from "./components/ErrorFallback";
 import LoadingSpinner from "./components/LoadingSpinner";
@@ -23,7 +23,11 @@ import SubServers from "./pages/SubServers";
 import Impressum from "./pages/Impressum";
 import Datenschutz from "./pages/Datenschutz";
 import CancelDeletion from "./pages/CancelDeletion";
+import ClothingStore from "./pages/ClothingStore";
 import { ApplicationProvider } from "@/contexts/ApplicationContext";
+
+// External admin panel URL
+const EXTERNAL_ADMIN_URL = "https://berlinrpvc-new-51.lovable.app/login";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -96,12 +100,16 @@ const AppLoadingErrorManager = () => {
             } 
           />
           <Route path="/subservers" element={<SubServers />} />
+          <Route path="/clothingstore" element={<ClothingStore />} />
           <Route path="/impressum" element={<Impressum />} />
           <Route path="/datenschutz" element={<Datenschutz />} />
+          
+          {/* Redirect all admin paths to the external admin panel */}
           <Route 
             path="/admin/*" 
-            element={<Navigate to="https://berlinrpvc-new-51.lovable.app/login" />} 
+            element={<Navigate to={EXTERNAL_ADMIN_URL} replace />} 
           />
+          
           {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />
         </Routes>

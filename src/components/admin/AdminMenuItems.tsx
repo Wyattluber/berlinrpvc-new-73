@@ -14,7 +14,8 @@ import {
   MessageSquare,
   Calendar,
   PenLine,
-  Handshake
+  Handshake,
+  ShoppingBag
 } from "lucide-react";
 
 export interface MenuItem {
@@ -34,11 +35,6 @@ export const getAdminMenuItems = (isAdmin: boolean, isModerator: boolean): MenuI
       icon: <LayoutDashboard className="h-5 w-5" />,
     },
     {
-      label: "Bewerbungen",
-      value: "applications",
-      icon: <ScrollText className="h-5 w-5" />,
-    },
-    {
       label: "Partnerschaften",
       value: "partnerships",
       icon: <Handshake className="h-5 w-5" />,
@@ -47,6 +43,11 @@ export const getAdminMenuItems = (isAdmin: boolean, isModerator: boolean): MenuI
       label: "Team-Meetings",
       value: "team-settings",
       icon: <Calendar className="h-5 w-5" />,
+    },
+    {
+      label: "Clothing Store",
+      value: "store",
+      icon: <ShoppingBag className="h-5 w-5" />,
     }
   ];
 
@@ -64,6 +65,12 @@ export const getAdminMenuItems = (isAdmin: boolean, isModerator: boolean): MenuI
         label: "Bewerbungstexte",
         value: "application_texts",
         icon: <PenLine className="h-5 w-5" />,
+        adminOnly: true
+      },
+      {
+        label: "Bewerbungen",
+        value: "applications",
+        icon: <ScrollText className="h-5 w-5" />,
         adminOnly: true
       },
       {

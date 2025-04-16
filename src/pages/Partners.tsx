@@ -1,24 +1,17 @@
 
-import React, { useState, useEffect } from 'react';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { LoaderIcon } from 'lucide-react';
-
-interface Partner {
-  id: string;
-  name: string;
-  description: string | null;
-  website: string;
-  owner: string | null;
-  type: string;
-  logo_url: string;
-  members: number;
-}
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
+import { Loader2, ExternalLink } from 'lucide-react';
+import PartnershipRequestForm from '@/components/PartnershipRequestForm';
 
 const Partners = () => {
-  const [partners, setPartners] = useState<Partner[]>([]);
+  const [partners, setPartners] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showRequestForm, setShowRequestForm] = useState(false);
 
   useEffect(() => {
     const fetchPartners = async () => {
@@ -26,159 +19,106 @@ const Partners = () => {
         const { data, error } = await supabase
           .from('partner_servers')
           .select('*')
-          .order('name', { ascending: true });
-
-        if (error) {
-          throw error;
-        }
-
-        setPartners(data || []);
+          .eq('is_active', true)
+          .order('created_at', { ascending: false });
+          
+        if (error) throw error;
+        
+        setPartners(data);
       } catch (error) {
         console.error('Error fetching partners:', error);
       } finally {
         setLoading(false);
       }
     };
-
+    
     fetchPartners();
   }, []);
 
-  // Helper function to map partner type to color
-  const getPartnerColor = (type: string) => {
-    switch (type) {
-      case 'large':
-        return 'from-blue-600 to-indigo-700';
-      case 'cooperation':
-        return 'from-purple-600 to-pink-700';
-      case 'small':
-      default:
-        return 'from-indigo-600 to-purple-700';
-    }
+  const closeForm = () => {
+    setShowRequestForm(false);
   };
-
+  
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-white">
       <Navbar />
       
-      <main className="flex-grow py-12 bg-gradient-to-b from-blue-50 to-white text-gray-800">
-        {/* Header Section */}
-        <section className="mb-12">
-          <div className="container mx-auto px-4">
-            <div className="text-center max-w-3xl mx-auto">
-              <h1 className="text-4xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
-                Unsere Partner
-              </h1>
-              <p className="text-gray-600 text-lg mb-8">
-                BerlinRP-VC arbeitet mit verschiedenen Discord-Servern zusammen, um das bestmögliche 
-                Roleplay-Erlebnis zu bieten.
-              </p>
-            </div>
+      <main className="flex-grow py-8 md:py-12">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-8 md:mb-12">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+              Unsere Partner
+            </h1>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Wir arbeiten mit verschiedenen Partnern zusammen, um dir ein besseres Erlebnis zu bieten.
+            </p>
           </div>
-        </section>
-
-        {/* Partners Grid */}
-        <section className="mb-16">
-          <div className="container mx-auto px-4">
-            {loading ? (
-              <div className="flex justify-center items-center py-12">
-                <LoaderIcon className="h-10 w-10 animate-spin text-blue-500" />
-              </div>
-            ) : partners.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                {partners.map((partner) => (
-                  <div 
-                    key={partner.id} 
-                    className="group relative overflow-hidden rounded-xl bg-white shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 border border-blue-100"
-                  >
-                    {/* Colorful top border */}
-                    <div className={`h-2 bg-gradient-to-r ${getPartnerColor(partner.type)} w-full`}></div>
-                    
-                    {/* Background gradient effect on hover */}
-                    <div className={`absolute inset-0 bg-gradient-to-br ${getPartnerColor(partner.type)} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}></div>
-                    
-                    <div className="p-8">
-                      <div className="flex items-center justify-between mb-6">
-                        <h3 className={`text-xl font-bold bg-gradient-to-r ${getPartnerColor(partner.type)} bg-clip-text text-transparent group-hover:scale-105 transition-transform duration-300`}>
-                          {partner.name}
-                        </h3>
-                        <div className={`w-14 h-14 rounded-full flex items-center justify-center overflow-hidden bg-gradient-to-br ${getPartnerColor(partner.type)} bg-opacity-30 p-1 group-hover:scale-110 transition-transform duration-300`}>
-                          <img 
-                            src={partner.logo_url || "/placeholder.svg"} 
-                            alt={partner.name} 
-                            className="w-10 h-10 object-contain" 
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = "/placeholder.svg";
-                            }}
-                          />
-                        </div>
-                      </div>
-                      
-                      <p className="text-gray-600 mb-4 whitespace-pre-line">{partner.description || ''}</p>
-                      
-                      <div className="flex justify-between items-center mb-6">
-                        {partner.owner && (
-                          <p className="text-sm text-gray-500">
-                            <span className="font-medium">Owner:</span> {partner.owner}
-                          </p>
-                        )}
-                        
-                        <p className="text-sm text-gray-500">
-                          <span className="font-medium">Mitglieder:</span> {partner.members}
-                        </p>
-                      </div>
-                      
-                      <div className="mt-auto pt-4 border-t border-gray-200">
-                        <a 
-                          href={partner.website} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className={`inline-flex items-center font-medium relative bg-gradient-to-r ${getPartnerColor(partner.type)} bg-clip-text text-transparent`}
-                        >
-                          <span className="relative z-10 transition-colors duration-300 after:content-[''] after:absolute after:-bottom-1 after:left-0 after:h-1 after:w-0 after:bg-gradient-to-r after:from-indigo-500 after:to-purple-600 after:transition-all after:duration-300 group-hover:after:w-full">
-                            Discord beitreten
-                          </span>
-                          <svg 
-                            className="ml-2 w-4 h-4 transform transition-transform duration-300 group-hover:translate-x-1" 
-                            fill="none" 
-                            stroke="currentColor" 
-                            viewBox="0 0 24 24" 
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                          </svg>
-                        </a>
-                      </div>
+          
+          <div className="mb-8 flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-4">
+            <Button 
+              onClick={() => setShowRequestForm(true)}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Partner werden
+            </Button>
+            
+            <Button 
+              variant="outline"
+              asChild
+            >
+              <Link to="/profile">Anfrage verwalten</Link>
+            </Button>
+          </div>
+          
+          {loading ? (
+            <div className="flex justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+          ) : partners.length === 0 ? (
+            <div className="text-center py-16">
+              <h3 className="text-xl font-medium text-gray-700 mb-2">Keine Partner gefunden</h3>
+              <p className="text-gray-500">Derzeit haben wir keine aktiven Partnerschaften.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {partners.map((partner) => (
+                <div 
+                  key={partner.id} 
+                  className="bg-white shadow-sm border rounded-lg overflow-hidden hover:shadow-md transition-shadow duration-200"
+                >
+                  <div className="p-6 flex flex-col items-center text-center">
+                    <div className="w-24 h-24 mb-4 overflow-hidden rounded-full border-2 border-gray-200">
+                      <img 
+                        src={partner.logo_url || '/placeholder.svg'} 
+                        alt={partner.name} 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2">{partner.name}</h3>
+                    {partner.description && (
+                      <p className="text-gray-600 mb-4">{partner.description}</p>
+                    )}
+                    <div className="mt-auto pt-4">
+                      <a 
+                        href={partner.website} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="inline-flex items-center text-blue-600 hover:text-blue-800"
+                      >
+                        Besuchen <ExternalLink className="ml-1 h-4 w-4" />
+                      </a>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-gray-600 text-lg">Keine Partner gefunden</p>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Become a Partner - with lighter colors */}
-        <section className="bg-gradient-to-r from-blue-50 to-indigo-50 py-16 rounded-3xl mx-4 md:mx-8 lg:mx-16 shadow-lg border border-blue-100">
-          <div className="container mx-auto px-4 text-center">
-            <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
-              Möchtest du Partner werden?
-            </h2>
-            <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
-              Wir sind immer auf der Suche nach neuen Discord-Servern, mit denen wir zusammenarbeiten können, 
-              um unsere Community zu erweitern und das Spielerlebnis zu verbessern.
-            </p>
-            <a 
-              href="mailto:kontakt@berlinrpvc.de" 
-              className="inline-block px-6 py-3 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 hover:shadow-lg hover:scale-105 transform"
-            >
-              Kontaktiere uns
-            </a>
-          </div>
-        </section>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </main>
+      
+      {showRequestForm && (
+        <PartnershipRequestForm onClose={closeForm} />
+      )}
       
       <Footer />
     </div>

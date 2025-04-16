@@ -3,31 +3,19 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Loader2, Link, CheckCircle, XCircle, Clock, Calendar, RefreshCw } from 'lucide-react';
+import { Loader2, Calendar } from 'lucide-react';
 import { format, addMonths, isPast, differenceInDays } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { Button } from '@/components/ui/button';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle,
-  DialogTrigger
-} from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea'; // Corrected import
-import { toast } from '@/hooks/use-toast';
+
+import { PartnerStatusBadge, PartnerStatusIcon } from './partnership/PartnerStatusBadge';
+import PartnershipRenewalDialog from './partnership/PartnershipRenewalDialog';
+import PartnershipDetails from './partnership/PartnershipDetails';
 
 const PartnershipStatus = () => {
   const { session } = useAuth();
   const [loading, setLoading] = useState(true);
   const [partnerApplication, setPartnerApplication] = useState(null);
   const [partnerServer, setPartnerServer] = useState(null);
-  const [renewalOpen, setRenewalOpen] = useState(false);
-  const [renewalReason, setRenewalReason] = useState('');
-  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchPartnershipDetails = async () => {
@@ -70,66 +58,6 @@ const PartnershipStatus = () => {
 
     fetchPartnershipDetails();
   }, [session]);
-
-  const handleRenewalSubmit = async () => {
-    if (!session || !partnerApplication) return;
-    
-    if (renewalReason.trim().length < 10) {
-      toast({
-        title: "Fehler",
-        description: "Bitte gib eine ausführlichere Begründung für deine Verlängerungsanfrage an.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setSubmitting(true);
-    
-    try {
-      // Create a renewal application based on the original
-      const { error } = await supabase
-        .from('partner_applications')
-        .update({
-          is_renewal: true,
-          reason: renewalReason,
-          status: 'pending',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', partnerApplication.id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Anfrage gesendet",
-        description: "Deine Partnerschaftsverlängerung wurde beantragt und wird geprüft.",
-      });
-      
-      // Refresh data
-      const { data } = await supabase
-        .from('partner_applications')
-        .select('*')
-        .eq('id', partnerApplication.id)
-        .single();
-        
-      if (data) {
-        setPartnerApplication(data);
-      }
-      
-      setRenewalOpen(false);
-      setRenewalReason('');
-      
-    } catch (error) {
-      console.error('Error submitting renewal:', error);
-      toast({
-        title: "Fehler",
-        description: "Die Verlängerungsanfrage konnte nicht gesendet werden.",
-        variant: "destructive"
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -176,32 +104,12 @@ const PartnershipStatus = () => {
   // Check if application is a renewal that's pending
   const isPendingRenewal = partnerApplication.status === 'pending' && partnerApplication.is_renewal;
 
-  const renderStatusBadge = () => {
-    if (isPendingRenewal) {
-      return <Badge className="bg-orange-500">Verlängerung läuft</Badge>;
-    } else if (partnerApplication.status === 'approved') {
-      return isActivePartnership ? 
-        <Badge className="bg-green-500">Aktiv</Badge> : 
-        <Badge className="bg-gray-500">Inaktiv</Badge>;
-    } else if (partnerApplication.status === 'rejected') {
-      return <Badge className="bg-red-500">Abgelehnt</Badge>;
-    } else {
-      return <Badge className="bg-yellow-500">In Bearbeitung</Badge>;
-    }
-  };
+  const statusText = isPendingRenewal ? 'Verlängerung läuft' :
+    partnerApplication.status === 'approved' ? (isActivePartnership ? 'Aktiv' : 'Inaktiv') :
+    partnerApplication.status === 'rejected' ? 'Abgelehnt' : 'In Bearbeitung';
 
-  const renderStatusIcon = () => {
-    if (isPendingRenewal) {
-      return <RefreshCw className="h-6 w-6 text-orange-500" />;
-    } else if (partnerApplication.status === 'approved') {
-      return isActivePartnership ? 
-        <CheckCircle className="h-6 w-6 text-green-500" /> : 
-        <XCircle className="h-6 w-6 text-gray-500" />;
-    } else if (partnerApplication.status === 'rejected') {
-      return <XCircle className="h-6 w-6 text-red-500" />;
-    } else {
-      return <Clock className="h-6 w-6 text-yellow-500" />;
-    }
+  const handleRenewalSubmitted = (updatedApplication) => {
+    setPartnerApplication(updatedApplication);
   };
 
   return (
@@ -212,20 +120,25 @@ const PartnershipStatus = () => {
             <CardTitle>Partnerschaft</CardTitle>
             <CardDescription>Details zu deiner Partnerschaftsanfrage</CardDescription>
           </div>
-          {renderStatusBadge()}
+          <PartnerStatusBadge 
+            status={partnerApplication.status} 
+            isActive={isActivePartnership} 
+            isExpired={isExpired}
+            isPendingRenewal={isPendingRenewal}
+          />
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <div className="flex items-center space-x-3">
-            {renderStatusIcon()}
+            <PartnerStatusIcon 
+              status={partnerApplication.status}
+              isActive={isActivePartnership}
+              isExpired={isExpired}
+              isPendingRenewal={isPendingRenewal}
+            />
             <div>
-              <h3 className="font-medium">Status: {
-                isPendingRenewal ? 'Verlängerung läuft' :
-                partnerApplication.status === 'approved' ? (isActivePartnership ? 'Aktiv' : 'Inaktiv') :
-                partnerApplication.status === 'rejected' ? 'Abgelehnt' :
-                'In Bearbeitung'
-              }</h3>
+              <h3 className="font-medium">Status: {statusText}</h3>
               <p className="text-sm text-gray-500">
                 Eingereicht am: {format(createdDate, 'PPP', { locale: de })}
               </p>
@@ -255,32 +168,10 @@ const PartnershipStatus = () => {
             </div>
           )}
 
-          {partnerServer && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <h3 className="font-medium mb-2">Partnerschaft Details</h3>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="text-gray-500">Aktiv:</div>
-                <div>{isActivePartnership ? 'Ja' : 'Nein'}</div>
-                <div className="text-gray-500">Server:</div>
-                <div>{partnerServer.name}</div>
-                {partnerServer.website && (
-                  <>
-                    <div className="text-gray-500">Website:</div>
-                    <div className="flex items-center">
-                      <a 
-                        href={partnerServer.website} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline flex items-center"
-                      >
-                        Öffnen <Link className="h-3 w-3 ml-1" />
-                      </a>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
+          <PartnershipDetails 
+            partnerServer={partnerServer} 
+            isActivePartnership={isActivePartnership}
+          />
 
           {partnerApplication.status === 'rejected' && (
             <div className="mt-4 p-3 bg-red-50 rounded-md">
@@ -293,56 +184,11 @@ const PartnershipStatus = () => {
           {/* Renewal Button */}
           {partnerApplication.status === 'approved' && isActivePartnership && (isExpirationSoon || isExpired) && !isPendingRenewal && (
             <div className="mt-4 pt-4 border-t border-gray-200">
-              <Dialog open={renewalOpen} onOpenChange={setRenewalOpen}>
-                <DialogTrigger asChild>
-                  <Button 
-                    variant={isExpired ? "destructive" : "default"}
-                    className="w-full"
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    {isExpired ? "Partnerschaft erneuern" : "Verlängerung beantragen"}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Partnerschaft verlängern</DialogTitle>
-                    <DialogDescription>
-                      Erkläre bitte, warum du deine Partnerschaft verlängern möchtest und was du dir von der weiteren Zusammenarbeit erhoffst.
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <label htmlFor="reason" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                        Grund für die Verlängerung
-                      </label>
-                      <Textarea
-                        id="reason"
-                        placeholder="Gib hier deine Begründung ein..."
-                        className="min-h-[120px]"
-                        value={renewalReason}
-                        onChange={(e) => setRenewalReason(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setRenewalOpen(false)}>
-                      Abbrechen
-                    </Button>
-                    <Button onClick={handleRenewalSubmit} disabled={submitting}>
-                      {submitting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Wird gesendet
-                        </>
-                      ) : (
-                        "Verlängerung beantragen"
-                      )}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <PartnershipRenewalDialog 
+                partnerApplication={partnerApplication}
+                isExpired={isExpired}
+                onRenewalSubmitted={handleRenewalSubmitted}
+              />
             </div>
           )}
           
