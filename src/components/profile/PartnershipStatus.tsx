@@ -2,17 +2,24 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Link, CheckCircle, XCircle, Clock, Calendar } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Loader2, Link, CheckCircle, XCircle, Clock, Calendar, RefreshCw } from 'lucide-react';
 import { format, addMonths, isPast } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { toast } from '@/hooks/use-toast';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 const PartnershipStatus = () => {
   const { session } = useAuth();
   const [loading, setLoading] = useState(true);
   const [partnerApplication, setPartnerApplication] = useState(null);
   const [partnerServer, setPartnerServer] = useState(null);
+  const [showRenewalForm, setShowRenewalForm] = useState(false);
+  const [renewalReason, setRenewalReason] = useState('');
+  const [submittingRenewal, setSubmittingRenewal] = useState(false);
 
   useEffect(() => {
     const fetchPartnershipDetails = async () => {
@@ -56,6 +63,62 @@ const PartnershipStatus = () => {
     fetchPartnershipDetails();
   }, [session]);
 
+  const handleRenewalRequest = async () => {
+    if (!renewalReason.trim()) {
+      toast({
+        title: "Fehler",
+        description: "Bitte gib einen Grund für die Verlängerung an.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSubmittingRenewal(true);
+    try {
+      // Create a new partner application that's marked as a renewal
+      const { data, error } = await supabase
+        .from('partner_applications')
+        .insert({
+          user_id: session.user.id,
+          status: 'pending',
+          discord_id: partnerApplication.discord_id,
+          discord_invite: partnerApplication.discord_invite,
+          reason: renewalReason,
+          requirements: partnerApplication.requirements,
+          has_other_partners: partnerApplication.has_other_partners,
+          other_partners: partnerApplication.other_partners,
+          advertisement: partnerApplication.advertisement,
+          member_count: partnerApplication.member_count,
+          expectations: partnerApplication.expectations,
+          is_renewal: true
+        })
+        .select();
+
+      if (error) throw error;
+
+      toast({
+        title: "Erfolg",
+        description: "Deine Verlängerungsanfrage wurde eingereicht.",
+      });
+
+      // Update the current application in the state
+      setPartnerApplication({
+        ...data[0]
+      });
+      
+      setShowRenewalForm(false);
+    } catch (error) {
+      console.error('Error submitting renewal request:', error);
+      toast({
+        title: "Fehler",
+        description: "Deine Verlängerungsanfrage konnte nicht eingereicht werden.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmittingRenewal(false);
+    }
+  };
+
   if (loading) {
     return (
       <Card>
@@ -86,7 +149,9 @@ const PartnershipStatus = () => {
   }
 
   const createdDate = new Date(partnerApplication.created_at);
-  const expirationDate = addMonths(createdDate, 1);
+  const expirationDate = partnerApplication.expiration_date 
+    ? new Date(partnerApplication.expiration_date)
+    : addMonths(createdDate, 1);
   const isExpired = isPast(expirationDate);
   
   // If partnership is approved but expired, show as inactive
@@ -118,6 +183,9 @@ const PartnershipStatus = () => {
     }
   };
 
+  const canRequestRenewal = isActivePartnership && 
+    isPast(new Date(expirationDate.getTime() - (7 * 24 * 60 * 60 * 1000))); // Within 7 days of expiration
+
   return (
     <Card>
       <CardHeader>
@@ -142,6 +210,9 @@ const PartnershipStatus = () => {
               <p className="text-sm text-gray-500">
                 Eingereicht am: {format(createdDate, 'PPP', { locale: de })}
               </p>
+              {partnerApplication.is_renewal && (
+                <Badge className="mt-1 bg-blue-500">Verlängert</Badge>
+              )}
             </div>
           </div>
 
@@ -168,6 +239,20 @@ const PartnershipStatus = () => {
                 <div>{isActivePartnership ? 'Ja' : 'Nein'}</div>
                 <div className="text-gray-500">Server:</div>
                 <div>{partnerServer.name}</div>
+                <div className="text-gray-500">Mitglieder:</div>
+                <div>{partnerApplication.member_count || 'Keine Angabe'}</div>
+                {partnerApplication.advertisement && (
+                  <>
+                    <div className="text-gray-500">Werbung:</div>
+                    <div className="col-span-1">{partnerApplication.advertisement}</div>
+                  </>
+                )}
+                {partnerApplication.expectations && (
+                  <>
+                    <div className="text-gray-500">Erwartungen:</div>
+                    <div className="col-span-1">{partnerApplication.expectations}</div>
+                  </>
+                )}
                 {partnerServer.website && (
                   <>
                     <div className="text-gray-500">Website:</div>
@@ -194,8 +279,54 @@ const PartnershipStatus = () => {
               </p>
             </div>
           )}
+
+          {showRenewalForm && (
+            <div className="mt-4 p-4 bg-blue-50 rounded-md">
+              <h3 className="font-medium mb-2">Partnerschaft verlängern</h3>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="renewal-reason">Grund für die Verlängerung</Label>
+                  <Textarea 
+                    id="renewal-reason"
+                    value={renewalReason}
+                    onChange={(e) => setRenewalReason(e.target.value)}
+                    placeholder="Warum möchtest du die Partnerschaft verlängern?"
+                    className="mt-1"
+                  />
+                </div>
+                <div className="flex space-x-2">
+                  <Button 
+                    onClick={handleRenewalRequest}
+                    disabled={submittingRenewal}
+                  >
+                    {submittingRenewal && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Verlängerung beantragen
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowRenewalForm(false)}
+                    disabled={submittingRenewal}
+                  >
+                    Abbrechen
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
+
+      {partnerApplication.status === 'approved' && isActivePartnership && canRequestRenewal && !showRenewalForm && (
+        <CardFooter className="border-t border-gray-200 pt-4">
+          <Button 
+            onClick={() => setShowRenewalForm(true)}
+            className="w-full"
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Partnerschaft verlängern
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   );
 };
