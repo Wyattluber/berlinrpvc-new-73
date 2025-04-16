@@ -60,15 +60,15 @@ const Partners = () => {
     <div className="flex flex-col min-h-screen">
       <Navbar />
       
-      <main className="flex-grow py-12 bg-gradient-to-b from-gray-900 to-indigo-900 text-white">
+      <main className="flex-grow py-12 bg-gradient-to-b from-blue-50 to-white text-gray-800">
         {/* Header Section */}
         <section className="mb-12">
           <div className="container mx-auto px-4">
             <div className="text-center max-w-3xl mx-auto">
-              <h1 className="text-4xl font-bold mb-6 bg-gradient-to-r from-indigo-400 to-purple-300 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
                 Unsere Partner
               </h1>
-              <p className="text-indigo-100 text-lg mb-8">
+              <p className="text-gray-600 text-lg mb-8">
                 BerlinRP-VC arbeitet mit verschiedenen Discord-Servern zusammen, um das bestmögliche 
                 Roleplay-Erlebnis zu bieten.
               </p>
@@ -81,20 +81,20 @@ const Partners = () => {
           <div className="container mx-auto px-4">
             {loading ? (
               <div className="flex justify-center items-center py-12">
-                <LoaderIcon className="h-10 w-10 animate-spin text-indigo-400" />
+                <LoaderIcon className="h-10 w-10 animate-spin text-blue-500" />
               </div>
             ) : partners.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
                 {partners.map((partner) => (
                   <div 
                     key={partner.id} 
-                    className="group relative overflow-hidden rounded-xl bg-gray-800/70 backdrop-blur-sm shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 border border-indigo-500/20"
+                    className="group relative overflow-hidden rounded-xl bg-white shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 border border-blue-100"
                   >
                     {/* Colorful top border */}
                     <div className={`h-2 bg-gradient-to-r ${getPartnerColor(partner.type)} w-full`}></div>
                     
                     {/* Background gradient effect on hover */}
-                    <div className={`absolute inset-0 bg-gradient-to-br ${getPartnerColor(partner.type)} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
+                    <div className={`absolute inset-0 bg-gradient-to-br ${getPartnerColor(partner.type)} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}></div>
                     
                     <div className="p-8">
                       <div className="flex items-center justify-between mb-6">
@@ -113,21 +113,21 @@ const Partners = () => {
                         </div>
                       </div>
                       
-                      <p className="text-indigo-100 mb-4 whitespace-pre-line">{partner.description || ''}</p>
+                      <p className="text-gray-600 mb-4 whitespace-pre-line">{partner.description || ''}</p>
                       
                       <div className="flex justify-between items-center mb-6">
                         {partner.owner && (
-                          <p className="text-sm text-indigo-200">
+                          <p className="text-sm text-gray-500">
                             <span className="font-medium">Owner:</span> {partner.owner}
                           </p>
                         )}
                         
-                        <p className="text-sm text-indigo-200">
+                        <p className="text-sm text-gray-500">
                           <span className="font-medium">Mitglieder:</span> {partner.members}
                         </p>
                       </div>
                       
-                      <div className="mt-auto pt-4 border-t border-indigo-500/20">
+                      <div className="mt-auto pt-4 border-t border-gray-200">
                         <a 
                           href={partner.website} 
                           target="_blank" 
@@ -154,19 +154,19 @@ const Partners = () => {
               </div>
             ) : (
               <div className="text-center py-12">
-                <p className="text-indigo-200 text-lg">Keine Partner gefunden</p>
+                <p className="text-gray-600 text-lg">Keine Partner gefunden</p>
               </div>
             )}
           </div>
         </section>
 
-        {/* Become a Partner - with darker colors */}
-        <section className="bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-900 py-16 rounded-3xl mx-4 md:mx-8 lg:mx-16 shadow-lg border border-indigo-500/20 backdrop-blur-sm">
+        {/* Become a Partner - with lighter colors */}
+        <section className="bg-gradient-to-r from-blue-50 to-indigo-50 py-16 rounded-3xl mx-4 md:mx-8 lg:mx-16 shadow-lg border border-blue-100">
           <div className="container mx-auto px-4 text-center">
-            <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-indigo-400 to-purple-300 bg-clip-text text-transparent">
+            <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
               Möchtest du Partner werden?
             </h2>
-            <p className="text-indigo-100 mb-8 max-w-2xl mx-auto">
+            <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
               Wir sind immer auf der Suche nach neuen Discord-Servern, mit denen wir zusammenarbeiten können, 
               um unsere Community zu erweitern und das Spielerlebnis zu verbessern.
             </p>
