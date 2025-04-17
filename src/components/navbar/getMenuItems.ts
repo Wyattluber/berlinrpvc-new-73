@@ -1,5 +1,4 @@
-
-import { Home, Users, Server, BookOpen, Shield, User, ShoppingBag } from 'lucide-react';
+import { Home, Users, Server, BookOpen, ShoppingBag } from 'lucide-react';
 
 export const getMenuItems = () => [
   { to: "/", icon: Home, label: "Startseite" },

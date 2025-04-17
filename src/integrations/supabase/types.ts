@@ -542,6 +542,42 @@ export type Database = {
         }
         Relationships: []
       }
+      store_items: {
+        Row: {
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          price: number
+          product_url: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          price: number
+          product_url: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          price?: number
+          product_url?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sub_servers: {
         Row: {
           color: string
