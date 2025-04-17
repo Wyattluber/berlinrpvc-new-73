@@ -1,18 +1,86 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
-import { Loader2, ExternalLink } from 'lucide-react';
-import PartnershipRequestForm from '@/components/PartnershipRequestForm';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { HandshakeIcon, ExternalLink, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+
+interface Partner {
+  id: string;
+  name: string;
+  description: string;
+  logo_url: string;
+  website: string;
+  members: number;
+}
+
+interface PartnerDetailModalProps {
+  partner?: Partner;
+  onClose: () => void;
+}
+
+const PartnerDetailModal: React.FC<PartnerDetailModalProps> = ({ partner, onClose }) => {
+  if (!partner) return null;
+  
+  return (
+    <DialogContent className="sm:max-w-md">
+      <DialogHeader>
+        <DialogTitle>{partner.name}</DialogTitle>
+        <DialogDescription>Partnerschaftsdetails</DialogDescription>
+      </DialogHeader>
+      <div className="space-y-4">
+        <div className="flex justify-center">
+          <div className="w-24 h-24 rounded-full overflow-hidden">
+            <img 
+              src={partner.logo_url || '/placeholder.svg'} 
+              alt={partner.name} 
+              className="w-full h-full object-cover"
+            />
+          </div>
+        </div>
+        
+        <div className="text-center">
+          <h3 className="text-lg font-semibold">{partner.name}</h3>
+          <p className="text-sm text-gray-500">{partner.members} Mitglieder</p>
+        </div>
+        
+        {partner.description && (
+          <div>
+            <h4 className="font-medium mb-1">Über den Server</h4>
+            <p className="text-sm">{partner.description}</p>
+          </div>
+        )}
+        
+        <div className="flex justify-center mt-4">
+          <Button asChild>
+            <a 
+              href={partner.website} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="flex items-center"
+            >
+              Zum Discord <ExternalLink className="ml-2 h-4 w-4" />
+            </a>
+          </Button>
+        </div>
+      </div>
+    </DialogContent>
+  );
+};
 
 const Partners = () => {
-  const [partners, setPartners] = useState([]);
+  const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showRequestForm, setShowRequestForm] = useState(false);
-
+  const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
+  const [showPartnerModal, setShowPartnerModal] = useState(false);
+  const navigate = useNavigate();
+  const { session } = useAuth();
+  
   useEffect(() => {
     const fetchPartners = async () => {
       try {
@@ -20,11 +88,11 @@ const Partners = () => {
           .from('partner_servers')
           .select('*')
           .eq('is_active', true)
-          .order('created_at', { ascending: false });
+          .order('name');
           
         if (error) throw error;
         
-        setPartners(data);
+        setPartners(data || []);
       } catch (error) {
         console.error('Error fetching partners:', error);
       } finally {
@@ -34,39 +102,43 @@ const Partners = () => {
     
     fetchPartners();
   }, []);
-
-  const closeForm = () => {
-    setShowRequestForm(false);
+  
+  const openPartnerDetail = (partner: Partner) => {
+    setSelectedPartner(partner);
+    setShowPartnerModal(true);
+  };
+  
+  const closePartnerDetail = () => {
+    setShowPartnerModal(false);
+    setSelectedPartner(null);
+  };
+  
+  const applyForPartnership = () => {
+    if (session) {
+      navigate('/apply?tab=partnership');
+    } else {
+      navigate('/login', { state: { from: '/apply?tab=partnership' } });
+    }
   };
   
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen">
       <Navbar />
       
-      <main className="flex-grow py-8 md:py-12">
+      <main className="flex-grow py-10 bg-gray-50">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-8 md:mb-12">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-              Unsere Partner
-            </h1>
+          <div className="text-center mb-10">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Unsere Partner</h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Wir arbeiten mit verschiedenen Partnern zusammen, um dir ein besseres Erlebnis zu bieten.
+              Entdecke unsere Partnerserver und -communities. Wir arbeiten mit verschiedenen Servern zusammen, 
+              um ein besseres Erlebnis für alle zu schaffen.
             </p>
-          </div>
-          
-          <div className="mb-8 flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-4">
             <Button 
-              onClick={() => setShowRequestForm(true)}
-              className="bg-blue-600 hover:bg-blue-700"
+              onClick={applyForPartnership}
+              className="mt-6"
             >
-              Partner werden
-            </Button>
-            
-            <Button 
-              variant="outline"
-              asChild
-            >
-              <Link to="/profile">Anfrage verwalten</Link>
+              <HandshakeIcon className="mr-2 h-4 w-4" />
+              Partnerschaft beantragen
             </Button>
           </div>
           
@@ -77,48 +149,51 @@ const Partners = () => {
           ) : partners.length === 0 ? (
             <div className="text-center py-16">
               <h3 className="text-xl font-medium text-gray-700 mb-2">Keine Partner gefunden</h3>
-              <p className="text-gray-500">Derzeit haben wir keine aktiven Partnerschaften.</p>
+              <p className="text-gray-500">Aktuell sind keine aktiven Partnerschaften verfügbar.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {partners.map((partner) => (
-                <div 
+                <Card 
                   key={partner.id} 
-                  className="bg-white shadow-sm border rounded-lg overflow-hidden hover:shadow-md transition-shadow duration-200"
+                  className="hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => openPartnerDetail(partner)}
                 >
-                  <div className="p-6 flex flex-col items-center text-center">
-                    <div className="w-24 h-24 mb-4 overflow-hidden rounded-full border-2 border-gray-200">
-                      <img 
-                        src={partner.logo_url || '/placeholder.svg'} 
-                        alt={partner.name} 
-                        className="w-full h-full object-cover"
-                      />
+                  <CardHeader className="pb-2 text-center">
+                    <div className="flex justify-center mb-2">
+                      <div className="w-16 h-16 rounded-full overflow-hidden">
+                        <img 
+                          src={partner.logo_url || '/placeholder.svg'} 
+                          alt={partner.name} 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-800 mb-2">{partner.name}</h3>
-                    {partner.description && (
-                      <p className="text-gray-600 mb-4">{partner.description}</p>
-                    )}
-                    <div className="mt-auto pt-4">
-                      <a 
-                        href={partner.website} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
-                        className="inline-flex items-center text-blue-600 hover:text-blue-800"
-                      >
-                        Besuchen <ExternalLink className="ml-1 h-4 w-4" />
-                      </a>
-                    </div>
-                  </div>
-                </div>
+                    <CardTitle className="text-xl">{partner.name}</CardTitle>
+                    <CardDescription>
+                      {partner.members} Mitglieder
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-600 line-clamp-3">
+                      {partner.description || 'Keine Beschreibung verfügbar.'}
+                    </p>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           )}
         </div>
       </main>
       
-      {showRequestForm && (
-        <PartnershipRequestForm onClose={closeForm} />
-      )}
+      <Dialog open={showPartnerModal} onOpenChange={setShowPartnerModal}>
+        {selectedPartner && (
+          <PartnerDetailModal 
+            partner={selectedPartner} 
+            onClose={closePartnerDetail} 
+          />
+        )}
+      </Dialog>
       
       <Footer />
     </div>

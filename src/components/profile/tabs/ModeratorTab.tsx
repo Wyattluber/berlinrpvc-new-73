@@ -9,9 +9,9 @@ interface ModeratorTabProps {
 }
 
 const ModeratorTab: React.FC<ModeratorTabProps> = ({ navigate }) => {
-  // Redirect to external admin panel
-  const redirectToAdminPanel = (path: string) => {
-    window.location.href = `https://berlinrpvc-new-51.lovable.app/login${path}`;
+  // Redirect to admin panel dashboard with specific section
+  const redirectToAdminPanel = (section: string) => {
+    window.location.href = `https://berlinrpvc-new-51.lovable.app/login?section=${section}`;
   };
   
   return (
@@ -25,7 +25,7 @@ const ModeratorTab: React.FC<ModeratorTabProps> = ({ navigate }) => {
       <CardContent>
         <div className="space-y-4">
           <Button 
-            onClick={() => redirectToAdminPanel('/partnerships')} 
+            onClick={() => redirectToAdminPanel('partnerships')} 
             className="w-full justify-start"
           >
             <Handshake className="h-4 w-4 mr-2" />
@@ -33,7 +33,7 @@ const ModeratorTab: React.FC<ModeratorTabProps> = ({ navigate }) => {
           </Button>
           
           <Button 
-            onClick={() => redirectToAdminPanel('/team-settings')} 
+            onClick={() => redirectToAdminPanel('team-settings')} 
             className="w-full justify-start"
           >
             <Calendar className="h-4 w-4 mr-2" />
@@ -41,7 +41,7 @@ const ModeratorTab: React.FC<ModeratorTabProps> = ({ navigate }) => {
           </Button>
           
           <Button 
-            onClick={() => redirectToAdminPanel('/store')} 
+            onClick={() => redirectToAdminPanel('store')} 
             className="w-full justify-start"
           >
             <ShoppingBag className="h-4 w-4 mr-2" />

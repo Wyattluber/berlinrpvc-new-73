@@ -1,10 +1,11 @@
 
-import { Home, Users, Server, BookOpen, Shield, User } from 'lucide-react';
+import { Home, Users, Server, BookOpen, Shield, User, ShoppingBag } from 'lucide-react';
 
 export const getMenuItems = () => [
   { to: "/", icon: Home, label: "Startseite" },
   { to: "/subservers", icon: Server, label: "Subserver" },
   { to: "/partners", icon: Users, label: "Partner" },
+  { to: "/clothingstore", icon: ShoppingBag, label: "Clothing Store" },
 ];
 
 export const getUserMenuItems = (session: any, isAdmin: boolean) => {

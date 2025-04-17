@@ -1,19 +1,22 @@
 
 import React, { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle,
-  DialogTrigger
-} from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Calendar, ChevronsRight } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { addMonths } from 'date-fns';
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
 
 interface PartnershipRenewalDialogProps {
   partnerApplication: any;
@@ -21,121 +24,156 @@ interface PartnershipRenewalDialogProps {
   onRenewalSubmitted: (updatedApplication: any) => void;
 }
 
-const PartnershipRenewalDialog = ({ 
-  partnerApplication, 
-  isExpired,
-  onRenewalSubmitted
-}: PartnershipRenewalDialogProps) => {
-  const [renewalOpen, setRenewalOpen] = useState(false);
-  const [renewalReason, setRenewalReason] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+const PartnershipRenewalDialog = ({ partnerApplication, isExpired, onRenewalSubmitted }: PartnershipRenewalDialogProps) => {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const handleRenewalSubmit = async () => {
-    if (!partnerApplication) return;
-    
-    if (renewalReason.trim().length < 10) {
+  const handleSubmit = async () => {
+    if (!reason.trim()) {
       toast({
-        title: "Fehler",
-        description: "Bitte gib eine ausführlichere Begründung für deine Verlängerungsanfrage an.",
-        variant: "destructive"
+        title: "Bitte gib einen Grund an",
+        description: "Bitte erkläre warum du die Partnerschaft verlängern möchtest.",
+        variant: "destructive",
       });
       return;
     }
-    
-    setSubmitting(true);
-    
+
+    setConfirmOpen(true);
+  };
+
+  const confirmSubmit = async () => {
+    setIsSubmitting(true);
     try {
-      // Create a renewal application based on the original
+      // Create a new application as a renewal
       const { data, error } = await supabase
         .from('partner_applications')
         .update({
-          is_renewal: true,
-          reason: renewalReason,
           status: 'pending',
-          created_at: new Date().toISOString(),
+          reason: reason,
+          is_renewal: true,
+          is_active: false,
           updated_at: new Date().toISOString()
         })
         .eq('id', partnerApplication.id)
         .select()
         .single();
-      
+
       if (error) throw error;
-      
+
       toast({
         title: "Anfrage gesendet",
-        description: "Deine Partnerschaftsverlängerung wurde beantragt und wird geprüft.",
+        description: "Deine Verlängerungsanfrage wurde erfolgreich gesendet!",
       });
-      
-      if (data) {
-        onRenewalSubmitted(data);
-      }
-      
-      setRenewalOpen(false);
-      setRenewalReason('');
-      
+
+      setOpen(false);
+      setConfirmOpen(false);
+      onRenewalSubmitted(data);
     } catch (error) {
       console.error('Error submitting renewal:', error);
       toast({
         title: "Fehler",
-        description: "Die Verlängerungsanfrage konnte nicht gesendet werden.",
-        variant: "destructive"
+        description: "Beim Senden deiner Anfrage ist ein Fehler aufgetreten.",
+        variant: "destructive",
       });
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
+  const suggestedNewDate = addMonths(new Date(), 1);
+
   return (
-    <Dialog open={renewalOpen} onOpenChange={setRenewalOpen}>
-      <DialogTrigger asChild>
-        <Button 
-          variant={isExpired ? "destructive" : "default"}
-          className="w-full"
-        >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          {isExpired ? "Partnerschaft erneuern" : "Verlängerung beantragen"}
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Partnerschaft verlängern</DialogTitle>
-          <DialogDescription>
-            Erkläre bitte, warum du deine Partnerschaft verlängern möchtest und was du dir von der weiteren Zusammenarbeit erhoffst.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <label htmlFor="reason" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-              Grund für die Verlängerung
-            </label>
-            <Textarea
-              id="reason"
-              placeholder="Gib hier deine Begründung ein..."
-              className="min-h-[120px]"
-              value={renewalReason}
-              onChange={(e) => setRenewalReason(e.target.value)}
-            />
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" className="w-full">
+            <Calendar className="h-4 w-4 mr-2" />
+            {isExpired ? 'Partnerschaft erneuern' : 'Partnerschaft verlängern'}
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {isExpired ? 'Partnerschaft erneuern' : 'Partnerschaft verlängern'}
+            </DialogTitle>
+            <DialogDescription>
+              Reiche eine Anfrage ein, um deine Partnerschaft zu {isExpired ? 'erneuern' : 'verlängern'}.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="flex items-center space-x-2">
+              <Calendar className="h-5 w-5 text-blue-600" />
+              <div>
+                <p className="text-sm font-medium">Neues vorgeschlagenes Ablaufdatum</p>
+                <p className="text-sm text-gray-500">
+                  {format(suggestedNewDate, 'PPP', { locale: de })}
+                </p>
+              </div>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Grund für die Verlängerung</label>
+              <Textarea 
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Warum möchtest du die Partnerschaft verlängern?"
+                className="mt-1"
+              />
+            </div>
           </div>
-        </div>
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setRenewalOpen(false)}>
-            Abbrechen
-          </Button>
-          <Button onClick={handleRenewalSubmit} disabled={submitting}>
-            {submitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Wird gesendet
-              </>
-            ) : (
-              "Verlängerung beantragen"
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Abbrechen
+            </Button>
+            <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>
+              Anfrage senden
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Bestätigung</DialogTitle>
+            <DialogDescription>
+              Bist du sicher, dass du die Verlängerungsanfrage senden möchtest?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <p className="text-sm">
+              Durch das Absenden dieser Anfrage wird deine Partnerschaft als "In Bearbeitung" markiert, 
+              bis das Team deine Anfrage geprüft hat.
+            </p>
+          </div>
+          
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setConfirmOpen(false)}>
+              Abbrechen
+            </Button>
+            <Button 
+              type="button" 
+              onClick={confirmSubmit} 
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Wird gesendet...
+                </>
+              ) : (
+                'Bestätigen'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
