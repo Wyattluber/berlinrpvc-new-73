@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Calendar, ChevronsRight } from 'lucide-react';
+import { Calendar, ChevronsRight, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -46,7 +45,6 @@ const PartnershipRenewalDialog = ({ partnerApplication, isExpired, onRenewalSubm
   const confirmSubmit = async () => {
     setIsSubmitting(true);
     try {
-      // Create a new application as a renewal
       const { data, error } = await supabase
         .from('partner_applications')
         .update({
