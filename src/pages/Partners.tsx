@@ -6,9 +6,10 @@ import Footer from '@/components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { HandshakeIcon, ExternalLink, Loader2 } from 'lucide-react';
+import { HandshakeIcon, ExternalLink, Loader2, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { Badge } from '@/components/ui/badge';
 
 interface Partner {
   id: string;
@@ -46,13 +47,16 @@ const PartnerDetailModal: React.FC<PartnerDetailModalProps> = ({ partner, onClos
         
         <div className="text-center">
           <h3 className="text-lg font-semibold">{partner.name}</h3>
-          <p className="text-sm text-gray-500">{partner.members} Mitglieder</p>
+          <div className="flex items-center justify-center mt-1">
+            <Users className="h-4 w-4 mr-1 text-gray-500" />
+            <p className="text-sm text-gray-500">{partner.members} Mitglieder</p>
+          </div>
         </div>
         
         {partner.description && (
-          <div>
-            <h4 className="font-medium mb-1">Über den Server</h4>
-            <p className="text-sm">{partner.description}</p>
+          <div className="bg-gray-50 p-4 rounded-md">
+            <h4 className="font-medium mb-2">Über den Server</h4>
+            <p className="text-sm whitespace-pre-line">{partner.description}</p>
           </div>
         )}
         
@@ -171,13 +175,18 @@ const Partners = () => {
                     </div>
                     <CardTitle className="text-xl">{partner.name}</CardTitle>
                     <CardDescription>
-                      {partner.members} Mitglieder
+                      <div className="flex items-center justify-center">
+                        <Users className="h-4 w-4 mr-1" />
+                        {partner.members} Mitglieder
+                      </div>
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-gray-600 line-clamp-3">
-                      {partner.description || 'Keine Beschreibung verfügbar.'}
-                    </p>
+                    <div className="bg-gray-50 p-3 rounded-md">
+                      <p className="text-sm text-gray-600 line-clamp-3">
+                        {partner.description || 'Keine Beschreibung verfügbar.'}
+                      </p>
+                    </div>
                   </CardContent>
                 </Card>
               ))}

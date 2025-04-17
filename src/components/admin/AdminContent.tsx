@@ -1,176 +1,128 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import DashboardOverview from '@/components/admin/DashboardOverview';
-import UsersManagement from '@/components/admin/UsersManagement';
-import ApplicationsList from '@/components/ApplicationsList';
-import NewsManagement from '@/components/NewsManagement';
-import PartnerServersManagement from '@/components/PartnerServersManagement';
-import SubServersManagement from '@/components/SubServersManagement';
-import TeamSettingsForm from '@/components/admin/TeamSettingsForm';
-import TeamAbsencesList from '@/components/admin/TeamAbsencesList';
-import ModeratorAbsencePanel from '@/components/admin/ModeratorAbsencePanel';
-import ServerStats from '@/components/ServerStats';
-import IdChangeRequestManager from '@/components/admin/IdChangeRequestManager';
-import AccountDeletionRequestManager from '@/components/admin/AccountDeletionRequestManager';
-import DiscordLinkManager from '@/components/admin/DiscordLinkManager';
-import PartnershipRequestsManager from '@/components/admin/PartnershipRequestsManager';
-import ApplicationTextsManager from '@/components/admin/ApplicationTextsManager';
-import StoreItemsManager from '@/components/admin/StoreItemsManager';
+import { Badge } from '@/components/ui/badge';
+import { Users } from 'lucide-react';
+import AdminUsersManager from './AdminUsersManager';
+import NewsManager from './NewsManager';
+import SubServerManager from './SubServerManager';
+import ApplicationSeasonsManager from './ApplicationSeasonsManager';
+import AccountDeletionRequestsManager from './AccountDeletionRequestsManager';
+import IdChangeRequestsManager from './IdChangeRequestsManager';
+import StoreItemsWrapper from './StoreItemsWrapper';
+import PartnershipRequestsManager from './PartnershipRequestsManager';
 
-interface AdminContentProps {
-  isAdmin: boolean;
-  isModerator: boolean;
-  activeSection: string;
-  userCount: number;
-  adminUsers: any[];
-  handleUpdateRole: (userId: string, role: string) => Promise<void>;
-  handleDeleteUser: (userId: string) => Promise<void>;
-}
-
-const AdminContent: React.FC<AdminContentProps> = ({
-  isAdmin,
+const AdminContent = ({ 
+  isAdmin, 
   isModerator,
-  activeSection,
+  activeSection, 
   userCount,
   adminUsers,
   handleUpdateRole,
   handleDeleteUser
 }) => {
-  // Only moderators and admins should see team-related content
-  if (!isModerator && !isAdmin) {
+  const renderDashboardContent = () => {
     return (
-      <Card className="mt-4">
-        <CardHeader>
-          <CardTitle>Zugriff verweigert</CardTitle>
-          <CardDescription>
-            Du benötigst Administrator- oder Moderator-Berechtigungen, um auf diesen Inhalt zuzugreifen.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
-
-  // Common sections for both admins and moderators
-  if (activeSection === 'partnerships') {
-    return <PartnershipRequestsManager />;
-  }
-
-  if (activeSection === 'team-settings') {
-    return (
-      <div className="space-y-6">
-        <h2 className="text-2xl font-bold">Teameinstellungen</h2>
-        <TeamSettingsForm />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Benutzerstatistik</CardTitle>
+            <CardDescription>Anzahl registrierter Benutzer</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center space-x-2">
+              <Users className="h-4 w-4 text-gray-500" />
+              <span className="text-2xl font-bold">{userCount}</span>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Admin-Team</CardTitle>
+            <CardDescription>Administratoren und Moderatoren</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-none pl-0">
+              {adminUsers.map(admin => (
+                <li key={admin.id} className="py-2 border-b last:border-b-0">
+                  <div className="flex items-center justify-between">
+                    <span>{admin.user_id}</span>
+                    <Badge variant="secondary">{admin.role}</Badge>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       </div>
     );
-  }
-  
-  if (activeSection === 'store') {
-    return <StoreItemsManager />;
-  }
+  };
 
-  if (isAdmin) {
-    // Admin-specific sections
-    switch (activeSection) {
+  // Render content based on active section
+  const renderContent = () => {
+    switch(activeSection) {
       case 'dashboard':
-        return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
-      case 'users':
-        return <UsersManagement adminUsers={adminUsers} handleUpdateRole={handleUpdateRole} handleDeleteUser={handleDeleteUser} />;
-      case 'applications':
+        return renderDashboardContent();
+      
+      case 'admin-users':
         return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Bewerbungsverwaltung</h2>
-            <ApplicationsList />
-          </div>
+          <AdminUsersManager 
+            adminUsers={adminUsers}
+            handleUpdateRole={handleUpdateRole}
+            handleDeleteUser={handleDeleteUser}
+          />
         );
-      case 'application_texts':
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Bewerbungstexte</h2>
-            <ApplicationTextsManager />
-          </div>
-        );
+      
       case 'news':
-        return <NewsManagement />;
-      case 'partners':
-        return <PartnerServersManagement />;
-      case 'sub_servers':
-        return <SubServersManagement />;
-      case 'change-requests':
         return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Änderungsanträge</h2>
-            <IdChangeRequestManager />
-          </div>
+          <NewsManager />
         );
-      case 'discord-link':
+      
+      case 'sub-server':
         return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Discord-Link verwalten</h2>
-            <DiscordLinkManager />
-          </div>
+          <SubServerManager />
         );
-      case 'deletion-requests':
+      
+      case 'application-seasons':
         return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Kontolöschungsanträge</h2>
-            <AccountDeletionRequestManager />
-          </div>
+          <ApplicationSeasonsManager />
         );
-      case 'absences':
+      
+      case 'account-deletion-requests':
         return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Team-Abmeldungen</h2>
-            <Card>
-              <CardHeader>
-                <CardTitle>Übersicht der Abmeldungen</CardTitle>
-                <CardDescription>
-                  Sieh ein, welche Teammitglieder sich vom Meeting abgemeldet haben
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <TeamAbsencesList />
-              </CardContent>
-            </Card>
-            <ModeratorAbsencePanel />
-          </div>
+          <AccountDeletionRequestsManager />
         );
+      
+      case 'id-change-requests':
+        return (
+          <IdChangeRequestsManager />
+        );
+      
+      case 'partnerships':
+        return (
+          <PartnershipRequestsManager />
+        );
+      
+      case 'store':
+        return (
+          <StoreItemsWrapper />
+        );
+        
       default:
-        return <DashboardOverview userCount={userCount} adminUsers={adminUsers} />;
-    }
-  } else if (isModerator) {
-    // Moderator-specific sections
-    switch (activeSection) {
-      case 'dashboard':
         return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Moderator Dashboard</h2>
-            <Card>
-              <CardHeader>
-                <CardTitle>Willkommen im Moderatorenbereich</CardTitle>
-                <CardDescription>
-                  Hier kannst du Partnerschaften verwalten und dich von Team-Meetings abmelden
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ServerStats isAdmin={false} />
-              </CardContent>
-            </Card>
+          <div className="text-center py-10">
+            <h2 className="text-2xl font-semibold text-gray-800">Willkommen im Admin-Bereich</h2>
+            <p className="text-gray-500 mt-2">Wähle eine Option aus dem Menü, um fortzufahren.</p>
           </div>
         );
-      case 'absence-form':
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold">Vom Team-Meeting abmelden</h2>
-            <ModeratorAbsencePanel />
-          </div>
-        );
-      default:
-        return <div>Bereich nicht gefunden</div>;
     }
-  }
+  };
   
-  return null;
+  return (
+    <div>
+      {renderContent()}
+    </div>
+  );
 };
 
 export default AdminContent;

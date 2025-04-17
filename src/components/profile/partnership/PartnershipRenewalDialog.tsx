@@ -1,6 +1,8 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Calendar, ChevronsRight, Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -13,9 +15,9 @@ import {
 } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { addMonths } from 'date-fns';
-import { format } from 'date-fns';
+import { addMonths, format, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { DatePicker } from '@/components/ui/date-picker';
 
 interface PartnershipRenewalDialogProps {
   partnerApplication: any;
@@ -28,6 +30,7 @@ const PartnershipRenewalDialog = ({ partnerApplication, isExpired, onRenewalSubm
   const [reason, setReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [expirationDate, setExpirationDate] = useState<Date>(addMonths(new Date(), 1));
 
   const handleSubmit = async () => {
     if (!reason.trim()) {
@@ -52,7 +55,8 @@ const PartnershipRenewalDialog = ({ partnerApplication, isExpired, onRenewalSubm
           reason: reason,
           is_renewal: true,
           is_active: false,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          expiration_date: expirationDate.toISOString() // Add the expiration date
         })
         .eq('id', partnerApplication.id)
         .select()
@@ -80,8 +84,6 @@ const PartnershipRenewalDialog = ({ partnerApplication, isExpired, onRenewalSubm
     }
   };
 
-  const suggestedNewDate = addMonths(new Date(), 1);
-
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -102,14 +104,16 @@ const PartnershipRenewalDialog = ({ partnerApplication, isExpired, onRenewalSubm
           </DialogHeader>
           
           <div className="space-y-4 py-4">
-            <div className="flex items-center space-x-2">
-              <Calendar className="h-5 w-5 text-blue-600" />
-              <div>
-                <p className="text-sm font-medium">Neues vorgeschlagenes Ablaufdatum</p>
-                <p className="text-sm text-gray-500">
-                  {format(suggestedNewDate, 'PPP', { locale: de })}
-                </p>
-              </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Gewünschtes Ablaufdatum</label>
+              <DatePicker 
+                date={expirationDate} 
+                setDate={setExpirationDate} 
+                className="w-full"
+              />
+              <p className="text-xs text-gray-500">
+                Das Datum, zu dem die Partnerschaft enden soll.
+              </p>
             </div>
             
             <div>
@@ -147,6 +151,9 @@ const PartnershipRenewalDialog = ({ partnerApplication, isExpired, onRenewalSubm
             <p className="text-sm">
               Durch das Absenden dieser Anfrage wird deine Partnerschaft als "In Bearbeitung" markiert, 
               bis das Team deine Anfrage geprüft hat.
+            </p>
+            <p className="text-sm mt-2">
+              <span className="font-medium">Gewünschtes Ablaufdatum:</span> {format(expirationDate, 'PPP', { locale: de })}
             </p>
           </div>
           

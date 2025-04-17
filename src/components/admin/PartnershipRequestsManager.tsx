@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -102,7 +101,9 @@ const PartnershipRequestsManager = () => {
   const handleApproveRequest = async (request) => {
     try {
       // Calculate expiration date (default is 1 month, but admins can override)
-      const expirationDate = addDays(new Date(), extensionDuration);
+      const expirationDate = request.expiration_date 
+        ? new Date(request.expiration_date)
+        : addDays(new Date(), extensionDuration);
       
       // Update the request status
       const { error: updateError } = await supabase
@@ -126,22 +127,22 @@ const PartnershipRequestsManager = () => {
 
       if (checkError) throw checkError;
 
+      // If no partner server exists, create one
       if (!existingServer) {
-        // Extract server name from advertisement or invite
-        const serverName = request.advertisement 
-          ? request.advertisement.split('\n')[0].substring(0, 50) 
-          : `Partner Server (${request.discord_invite})`;
+        // Extract server name from advertisement or discord ID
+        const serverName = request.discord_id || `Partner Server (${request.discord_invite})`;
         
         const { error: insertError } = await supabase
           .from('partner_servers')
           .insert([{
             name: serverName,
-            description: request.advertisement || request.reason.substring(0, 100) + (request.reason.length > 100 ? '...' : ''),
+            description: request.advertisement || request.reason || '',
             website: `https://discord.gg/${request.discord_invite}`,
             type: 'partner',
             partner_application_id: request.id,
             is_active: true,
-            members: request.member_count || 0
+            members: request.member_count || 0,
+            logo_url: '/placeholder.svg' // Default logo
           }]);
 
         if (insertError) throw insertError;
@@ -150,7 +151,7 @@ const PartnershipRequestsManager = () => {
         const { error: updateServerError } = await supabase
           .from('partner_servers')
           .update({ 
-            description: request.advertisement || request.reason.substring(0, 100) + (request.reason.length > 100 ? '...' : ''),
+            description: request.advertisement || request.reason || '',
             website: `https://discord.gg/${request.discord_invite}`,
             is_active: true,
             members: request.member_count || 0
@@ -241,7 +242,6 @@ const PartnershipRequestsManager = () => {
       toast({
         title: 'Fehler',
         description: 'Die Partnerschaft konnte nicht beendet werden.',
-        variant: 'destructive',
       });
     }
   };
