@@ -27,6 +27,7 @@ const ModeratorTab: React.FC<ModeratorTabProps> = ({ navigate }) => {
           <Button 
             onClick={() => redirectToAdminPanel('partnerships')} 
             className="w-full justify-start"
+            type="button"
           >
             <Handshake className="h-4 w-4 mr-2" />
             Partnerschaften verwalten
@@ -35,6 +36,7 @@ const ModeratorTab: React.FC<ModeratorTabProps> = ({ navigate }) => {
           <Button 
             onClick={() => redirectToAdminPanel('team-settings')} 
             className="w-full justify-start"
+            type="button"
           >
             <Calendar className="h-4 w-4 mr-2" />
             Teammeetings verwalten
@@ -43,6 +45,7 @@ const ModeratorTab: React.FC<ModeratorTabProps> = ({ navigate }) => {
           <Button 
             onClick={() => redirectToAdminPanel('store')} 
             className="w-full justify-start"
+            type="button"
           >
             <ShoppingBag className="h-4 w-4 mr-2" />
             Clothing Store verwalten

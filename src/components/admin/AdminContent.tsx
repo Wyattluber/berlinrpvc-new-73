@@ -3,7 +3,6 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users } from 'lucide-react';
-import AdminUsersManager from './AdminUsersManager';
 import NewsManager from './NewsManager';
 import SubServerManager from './SubServerManager';
 import ApplicationSeasonsManager from './ApplicationSeasonsManager';
@@ -34,21 +33,12 @@ const AdminContent = ({
       case 'dashboard':
         return renderDashboardContent();
       
-      case 'admin-users':
-        return (
-          <AdminUsersManager 
-            adminUsers={adminUsers}
-            handleUpdateRole={handleUpdateRole}
-            handleDeleteUser={handleDeleteUser}
-          />
-        );
-      
       case 'news':
         return (
           <NewsManager />
         );
       
-      case 'sub-server':
+      case 'sub_servers':
         return (
           <SubServerManager />
         );
@@ -58,12 +48,12 @@ const AdminContent = ({
           <ApplicationSeasonsManager />
         );
       
-      case 'account-deletion-requests':
+      case 'deletion-requests':
         return (
           <AccountDeletionRequestsManager />
         );
       
-      case 'id-change-requests':
+      case 'change-requests':
         return (
           <IdChangeRequestsManager />
         );

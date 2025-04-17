@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, CheckCircle, Loader2, Calendar, RefreshCw } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Loader2, Calendar, RefreshCw, Image as ImageIcon } from 'lucide-react';
 import { format, addMonths, isPast } from 'date-fns';
 import { de } from 'date-fns/locale';
 
@@ -33,6 +33,7 @@ const partnershipFormSchema = z.object({
   advertisement: z.string().min(10, { message: "Bitte gib mindestens 10 Zeichen an" }),
   has_other_partners: z.enum(["true", "false"]),
   other_partners: z.string().optional(),
+  logo: z.any().optional(),
 });
 
 type PartnershipFormValues = z.infer<typeof partnershipFormSchema>;
@@ -45,6 +46,8 @@ const PartnershipRequestForm = ({ partnershipDescription = '' }) => {
   const [userDiscordId, setUserDiscordId] = useState('');
   const expirationDate = addMonths(new Date(), 1);
   const [isRenewal, setIsRenewal] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   const form = useForm<PartnershipFormValues>({
     resolver: zodResolver(partnershipFormSchema),
@@ -117,6 +120,47 @@ const PartnershipRequestForm = ({ partnershipDescription = '' }) => {
     checkExistingApplication();
   }, [session, form]);
 
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setLogoFile(file);
+      
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+      
+      form.setValue('logo', file);
+    }
+  };
+
+  const uploadLogo = async (file: File): Promise<string | null> => {
+    if (!file || !session) return null;
+    
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${session.user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `partner-logos/${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('partner-assets')
+        .upload(filePath, file);
+        
+      if (uploadError) throw uploadError;
+      
+      const { data } = supabase.storage
+        .from('partner-assets')
+        .getPublicUrl(filePath);
+        
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      return null;
+    }
+  };
+
   const onSubmit = async (values: PartnershipFormValues) => {
     if (!session) {
       toast({
@@ -129,6 +173,20 @@ const PartnershipRequestForm = ({ partnershipDescription = '' }) => {
 
     setLoading(true);
     try {
+      // Upload logo if present
+      let logoUrl = null;
+      if (logoFile) {
+        logoUrl = await uploadLogo(logoFile);
+        if (!logoUrl) {
+          toast({
+            title: 'Fehler',
+            description: 'Logo konnte nicht hochgeladen werden.',
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+      
       // Convert string to boolean for database storage
       const hasOtherPartnersBoolean = values.has_other_partners === 'true';
       
@@ -146,7 +204,8 @@ const PartnershipRequestForm = ({ partnershipDescription = '' }) => {
         other_partners: hasOtherPartnersBoolean ? values.other_partners : null,
         status: 'pending',
         is_active: true,
-        is_renewal: isRenewal
+        is_renewal: isRenewal,
+        logo_url: logoUrl
       };
 
       let action;
@@ -344,6 +403,47 @@ const PartnershipRequestForm = ({ partnershipDescription = '' }) => {
                   </FormControl>
                   <FormDescription>
                     Nur den Einladungscode eingeben, der nach "discord.gg/" folgt
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="logo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Discord Server Logo</FormLabel>
+                  <FormControl>
+                    <div className="space-y-3">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleLogoChange}
+                        className="w-full"
+                      />
+                      
+                      {logoPreview && (
+                        <div className="relative h-32 w-32 mx-auto bg-gray-100 rounded-md overflow-hidden border border-gray-200">
+                          <img 
+                            src={logoPreview} 
+                            alt="Server Logo Vorschau" 
+                            className="h-full w-full object-contain"
+                          />
+                        </div>
+                      )}
+                      
+                      {!logoPreview && (
+                        <div className="flex flex-col items-center justify-center h-32 w-32 mx-auto bg-gray-100 rounded-md border border-dashed border-gray-300">
+                          <ImageIcon className="h-8 w-8 text-gray-400" />
+                          <span className="text-sm text-gray-500 mt-1">Logo Vorschau</span>
+                        </div>
+                      )}
+                    </div>
+                  </FormControl>
+                  <FormDescription>
+                    Lade das Logo deines Servers hoch (optional)
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
