@@ -10,7 +10,7 @@ interface AdminTabProps {
 
 const AdminTab: React.FC<AdminTabProps> = ({ navigate }) => {
   const goToAdminPanel = () => {
-    window.location.href = 'https://berlinrpvc-new-51.lovable.app/login';
+    navigate('/admin/dashboard');
   };
 
   return (

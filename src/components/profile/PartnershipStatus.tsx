@@ -4,8 +4,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Calendar } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { format, addMonths, isPast, differenceInDays } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { toast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 import { PartnerStatusBadge, PartnerStatusIcon } from './partnership/PartnerStatusBadge';
 import PartnershipRenewalDialog from './partnership/PartnershipRenewalDialog';
@@ -16,6 +29,7 @@ const PartnershipStatus = () => {
   const [loading, setLoading] = useState(true);
   const [partnerApplication, setPartnerApplication] = useState(null);
   const [partnerServer, setPartnerServer] = useState(null);
+  const [confirmEndOpen, setConfirmEndOpen] = useState(false);
 
   useEffect(() => {
     const fetchPartnershipDetails = async () => {
@@ -58,6 +72,60 @@ const PartnershipStatus = () => {
 
     fetchPartnershipDetails();
   }, [session]);
+
+  const handleEndPartnership = async () => {
+    if (!partnerApplication) return;
+    
+    try {
+      setLoading(true);
+      
+      // Update the partner application
+      const { error: updateError } = await supabase
+        .from('partner_applications')
+        .update({ 
+          is_active: false
+        })
+        .eq('id', partnerApplication.id);
+
+      if (updateError) throw updateError;
+      
+      // Update the partner server if it exists
+      if (partnerServer) {
+        const { error: serverError } = await supabase
+          .from('partner_servers')
+          .update({ is_active: false })
+          .eq('id', partnerServer.id);
+          
+        if (serverError) throw serverError;
+      }
+      
+      toast({
+        title: "Partnerschaft beendet",
+        description: "Deine Partnerschaft wurde erfolgreich beendet.",
+      });
+      
+      // Update local state
+      setPartnerApplication({
+        ...partnerApplication,
+        is_active: false
+      });
+      
+      setConfirmEndOpen(false);
+    } catch (error) {
+      console.error('Error ending partnership:', error);
+      toast({
+        title: "Fehler",
+        description: "Die Partnerschaft konnte nicht beendet werden.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRenewalSubmitted = (updatedApplication) => {
+    setPartnerApplication(updatedApplication);
+  };
 
   if (loading) {
     return (
@@ -107,10 +175,6 @@ const PartnershipStatus = () => {
   const statusText = isPendingRenewal ? 'Verlängerung läuft' :
     partnerApplication.status === 'approved' ? (isActivePartnership ? 'Aktiv' : 'Inaktiv') :
     partnerApplication.status === 'rejected' ? 'Abgelehnt' : 'In Bearbeitung';
-
-  const handleRenewalSubmitted = (updatedApplication) => {
-    setPartnerApplication(updatedApplication);
-  };
 
   return (
     <Card>
@@ -181,14 +245,41 @@ const PartnershipStatus = () => {
             </div>
           )}
 
-          {/* Renewal Button */}
-          {partnerApplication.status === 'approved' && isActivePartnership && (isExpirationSoon || isExpired) && !isPendingRenewal && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <PartnershipRenewalDialog 
-                partnerApplication={partnerApplication}
-                isExpired={isExpired}
-                onRenewalSubmitted={handleRenewalSubmitted}
-              />
+          {/* Partnership action buttons */}
+          {partnerApplication.status === 'approved' && partnerApplication.is_active && (
+            <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
+              {/* Renewal Button */}
+              {(isExpirationSoon || isExpired) && !isPendingRenewal && (
+                <PartnershipRenewalDialog 
+                  partnerApplication={partnerApplication}
+                  isExpired={isExpired}
+                  onRenewalSubmitted={handleRenewalSubmitted}
+                />
+              )}
+              
+              {/* End Partnership Button */}
+              <AlertDialog open={confirmEndOpen} onOpenChange={setConfirmEndOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="w-full">
+                    Partnerschaft beenden
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Partnerschaft beenden</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Bist du sicher, dass du deine Partnerschaft beenden möchtest? 
+                      Diese Aktion kann nicht rückgängig gemacht werden.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleEndPartnership}>
+                      Beenden
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           )}
           

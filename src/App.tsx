@@ -24,10 +24,8 @@ import Impressum from "./pages/Impressum";
 import Datenschutz from "./pages/Datenschutz";
 import CancelDeletion from "./pages/CancelDeletion";
 import ClothingStore from "./pages/ClothingStore";
+import AdminDashboard from "./pages/AdminDashboard";
 import { ApplicationProvider } from "@/contexts/ApplicationContext";
-
-// External admin panel URL
-const EXTERNAL_ADMIN_URL = "https://berlinrpvc-new-51.lovable.app/login";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -104,11 +102,26 @@ const AppLoadingErrorManager = () => {
           <Route path="/impressum" element={<Impressum />} />
           <Route path="/datenschutz" element={<Datenschutz />} />
           
-          {/* Redirect all admin paths to the external admin panel */}
+          {/* Admin routes */}
           <Route 
-            path="/admin/*" 
-            element={<Navigate to={EXTERNAL_ADMIN_URL} replace />} 
+            path="/admin/dashboard" 
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } 
           />
+          <Route 
+            path="/admin/dashboard/:section" 
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Legacy route for backward compatibility */}
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
           
           {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />

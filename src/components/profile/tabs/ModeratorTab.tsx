@@ -11,7 +11,7 @@ interface ModeratorTabProps {
 const ModeratorTab: React.FC<ModeratorTabProps> = ({ navigate }) => {
   // Redirect to admin panel dashboard with specific section
   const redirectToAdminPanel = (section: string) => {
-    window.location.href = `https://berlinrpvc-new-51.lovable.app/login?section=${section}`;
+    navigate(`/admin/dashboard/${section}`);
   };
   
   return (
