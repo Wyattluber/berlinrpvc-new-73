@@ -2,11 +2,14 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from 'lucide-react';
-import { TeamSettingsForm } from '@/components/admin/TeamSettingsForm';
-import { TeamAbsencesList } from '@/components/admin/TeamAbsencesList';
-import { TeamAbsenceForm } from '@/components/admin/TeamAbsenceForm';
+import TeamSettingsForm from '@/components/admin/TeamSettingsForm';
+import TeamAbsencesList from '@/components/admin/TeamAbsencesList';
+import TeamAbsenceForm from '@/components/admin/TeamAbsenceForm';
+import { useAuth } from '@/contexts/AuthContext';
 
 const TeamMeetingsManagement = () => {
+  const { session } = useAuth();
+  
   return (
     <div className="space-y-6">
       <Card>
@@ -32,7 +35,7 @@ const TeamMeetingsManagement = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <TeamAbsenceForm />
+          {session?.user && <TeamAbsenceForm userId={session.user.id} />}
         </CardContent>
       </Card>
       

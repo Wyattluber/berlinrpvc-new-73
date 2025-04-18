@@ -1,197 +1,257 @@
-
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { Link } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Rocket, Users, ShieldCheck, Handshake, FileText, MessageSquare, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import { z } from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
 import { supabase } from '@/integrations/supabase/client';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { InfoIcon, UserCheckIcon, ShieldAlertIcon, Users, Link as LinkIcon, Loader2 } from 'lucide-react';
-import PartnershipRequestForm from '@/components/PartnershipRequestForm';
-import { 
-  getApplicationTexts, 
-  DEFAULT_TEAM_DESCRIPTION, 
-  DEFAULT_PARTNERSHIP_DESCRIPTION,
-  DEFAULT_REQUIREMENTS_DESCRIPTION 
-} from '@/lib/admin/applicationTexts';
+import { useNavigate } from 'react-router-dom';
+import PartnershipRequestForm from '@/components/admin/PartnershipRequestsForm';
 
 const Apply = () => {
-  const { session } = useAuth();
+  const isMobile = useIsMobile();
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
-  const [applicationTab, setApplicationTab] = useState('team');
-  const [loading, setLoading] = useState(true);
-  const [teamDescription, setTeamDescription] = useState(DEFAULT_TEAM_DESCRIPTION);
-  const [partnershipDescription, setPartnershipDescription] = useState(DEFAULT_PARTNERSHIP_DESCRIPTION);
-  const [requirementsDescription, setRequirementsDescription] = useState(DEFAULT_REQUIREMENTS_DESCRIPTION);
 
-  useEffect(() => {
-    // Set initial tab from URL query parameter if present
-    const searchParams = new URLSearchParams(location.search);
-    const tabParam = searchParams.get('tab');
-    if (tabParam === 'partnership') {
-      setApplicationTab('partnership');
-    }
-    
-    const loadTexts = async () => {
-      setLoading(true);
-      try {
-        const texts = await getApplicationTexts();
-        if (texts) {
-          setTeamDescription(texts.team_description || DEFAULT_TEAM_DESCRIPTION);
-          setPartnershipDescription(texts.partnership_description || DEFAULT_PARTNERSHIP_DESCRIPTION);
-          setRequirementsDescription(texts.requirements_description || DEFAULT_REQUIREMENTS_DESCRIPTION);
-        }
-      } catch (error) {
-        console.error('Error loading application texts:', error);
-      } finally {
-        setLoading(false);
+  const formSchema = z.object({
+    username: z.string().min(2, {
+      message: "Username must be at least 2 characters.",
+    }),
+    email: z.string().email({
+      message: "Please enter a valid email address.",
+    }),
+  })
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      username: "",
+      email: "",
+    },
+  })
+
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    toast({
+      title: "You submitted the following values:",
+      description: (
+        <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
+          <code className="text-white">{JSON.stringify(values, null, 2)}</code>
+        </pre>
+      ),
+    })
+  }
+
+  const handleEmailSubmit = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          shouldCreateUser: false,
+          emailRedirectTo: `${window.location.origin}/profile`,
+        },
+      });
+
+      if (error) {
+        console.error('Error sending magic link:', error);
+        toast({
+          title: "Error",
+          description: "Failed to send magic link.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Magic link sent to your email!",
+        });
+        navigate('/profile');
       }
-    };
-
-    loadTexts();
-  }, [location.search]);
-
-  const handleApplyClick = () => {
-    if (session) {
-      navigate('/apply/form');
-    } else {
-      navigate('/login', { state: { from: '/apply/form' } });
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      toast({
+        title: "Unexpected Error",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  const formatDescription = (text: string) => {
-    return text.split('\n').map((line, index) => (
-      <React.Fragment key={index}>
-        {line}
-        <br />
-      </React.Fragment>
-    ));
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <Navbar />
-      
-      <main className="flex-grow bg-gradient-to-b from-gray-50 to-white py-10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-12">
-              <h1 className="text-3xl md:text-4xl font-bold mb-4">Werde Teil von BerlinRP-VC</h1>
-              <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-                Es gibt verschiedene Möglichkeiten, wie du ein Teil unserer Community werden kannst. 
-                Wähle unten die Option, die am besten zu dir passt.
-              </p>
-            </div>
-            
-            {loading ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-              </div>
-            ) : (
-              <Tabs 
-                defaultValue="team" 
-                value={applicationTab} 
-                onValueChange={setApplicationTab}
-                className="mx-auto mb-10"
-              >
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="team" className="text-sm md:text-base">
-                    <UserCheckIcon className="h-4 w-4 mr-2 hidden md:inline" />
-                    Team Bewerbung
-                  </TabsTrigger>
-                  <TabsTrigger value="partnership" className="text-sm md:text-base">
-                    <LinkIcon className="h-4 w-4 mr-2 hidden md:inline" />
-                    Partnerschaft
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="team" className="mt-6">
-                  <Card className="shadow-lg">
-                    <CardHeader>
-                      <CardTitle className="text-2xl md:text-3xl">Bewirb dich für das Team</CardTitle>
-                      <CardDescription>
-                        Werde ein aktives Teammitglied und hilf uns den Server zu verbessern
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <Alert>
-                        <InfoIcon className="h-4 w-4" />
-                        <AlertTitle>Hinweis zur Bewerbung</AlertTitle>
-                        <AlertDescription>
-                          Bevor du dich bewirbst, stelle sicher, dass du die Regeln und Anforderungen von BerlinRP-VC kennst und akzeptierst.
-                        </AlertDescription>
-                      </Alert>
-                      
-                      <div className="prose max-w-none text-gray-700">
-                        <h3 className="text-xl font-medium mb-3">Deine Aufgaben als Moderator</h3>
-                        <div className="whitespace-pre-line">
-                          {formatDescription(teamDescription)}
-                        </div>
-                      </div>
-                      
-                      <div className="prose max-w-none text-gray-700 mt-6">
-                        <h3 className="text-xl font-medium mb-3">Allgemeine Anforderungen</h3>
-                        <div className="whitespace-pre-line">
-                          {formatDescription(requirementsDescription)}
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-center pt-2 pb-6">
-                      <Button size="lg" onClick={handleApplyClick}>
-                        {session ? "Jetzt bewerben" : "Anmelden & Bewerben"}
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="partnership" className="mt-6">
-                  {session ? (
-                    <PartnershipRequestForm partnershipDescription={partnershipDescription} />
-                  ) : (
-                    <Card className="shadow-lg">
-                      <CardHeader>
-                        <CardTitle className="text-2xl md:text-3xl">Partnerschaft mit BerlinRP-VC</CardTitle>
-                        <CardDescription>
-                          Beantrage eine Partnerschaft für deinen Server oder deine Community
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-6">
-                        <Alert>
-                          <InfoIcon className="h-4 w-4" />
-                          <AlertTitle>Bitte melde dich an</AlertTitle>
-                          <AlertDescription>
-                            Du musst angemeldet sein, um eine Partnerschaftsanfrage zu stellen.
-                          </AlertDescription>
-                        </Alert>
-                        
-                        <div className="prose max-w-none text-gray-700">
-                          <div className="whitespace-pre-line">
-                            {formatDescription(partnershipDescription)}
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="flex justify-center pt-2 pb-6">
-                        <Button 
-                          size="lg" 
-                          onClick={() => navigate('/login', { state: { from: '/apply' } })}
-                        >
-                          Anmelden & Partnerschaft beantragen
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  )}
-                </TabsContent>
-              </Tabs>
-            )}
-          </div>
-        </div>
-      </main>
-      
-      <Footer />
+    <div className="container mx-auto py-12 px-4 sm:px-6 lg:px-8">
+      <div className="mb-12 text-center">
+        <h1 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-4">
+          Werde Teil von BerlinRP-VC
+        </h1>
+        <p className="text-lg text-gray-600 dark:text-gray-300">
+          Entdecke die Möglichkeiten, dich in unserer Community einzubringen.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Teammitglied werden */}
+        <Card className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
+          <CardHeader className="py-4">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <Users className="h-5 w-5 text-blue-500" />
+              Teammitglied werden
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <CardDescription className="text-gray-600 dark:text-gray-400">
+              Hilf uns, BerlinRP-VC noch besser zu machen. Wir suchen engagierte
+              Teammitglieder für verschiedene Bereiche.
+            </CardDescription>
+            <Button asChild className="mt-4 w-full">
+              <Link to="/apply/form">Jetzt bewerben</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Moderator werden */}
+        <Card className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
+          <CardHeader className="py-4">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-green-500" />
+              Moderator werden
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <CardDescription className="text-gray-600 dark:text-gray-400">
+              Unterstütze uns bei der Moderation und sorge für eine faire und
+              angenehme Atmosphäre auf unseren Servern.
+            </CardDescription>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button className="mt-4 w-full">
+                  Als Moderator bewerben
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Moderator werden</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Um Moderator zu werden, musst du dich zuerst anmelden. Bitte gib deine E-Mail-Adresse ein, um einen Magic Link zu erhalten.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="grid gap-2">
+                  <Label htmlFor="email">E-mail</Label>
+                  <Input
+                    id="email"
+                    placeholder="me@example.com"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                  <AlertDialogAction disabled={isLoading} onClick={handleEmailSubmit}>
+                    {isLoading ? (
+                      <>
+                        Wird gesendet...
+                        <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                      </>
+                    ) : (
+                      "Senden"
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </CardContent>
+        </Card>
+
+        {/* Partner werden */}
+        <Card className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
+          <CardHeader className="py-4">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <Handshake className="h-5 w-5 text-yellow-500" />
+              Partner werden
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <CardDescription className="text-gray-600 dark:text-gray-400">
+              Werde Partner von BerlinRP-VC und profitiere von unserer Reichweite
+              und Community.
+            </CardDescription>
+            <Button asChild className="mt-4 w-full">
+              <Link to="/partners">Mehr erfahren</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      <section className="mt-12">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
+          Häufig gestellte Fragen
+        </h2>
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="item-1">
+            <AccordionTrigger>Wie kann ich mich als Teammitglied bewerben?</AccordionTrigger>
+            <AccordionContent>
+              Um dich als Teammitglied zu bewerben, fülle bitte das Bewerbungsformular
+              auf unserer Website aus. Wir werden uns so schnell wie möglich bei dir
+              melden.
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="item-2">
+            <AccordionTrigger>Welche Vorteile habe ich als Moderator?</AccordionTrigger>
+            <AccordionContent>
+              Als Moderator hast du die Möglichkeit, aktiv die Community mitzugestalten
+              und für eine positive Atmosphäre zu sorgen. Zudem erhältst du exklusive
+              Einblicke und kannst dich mit anderen Moderatoren austauschen.
+            </AccordionContent>
+          </AccordionItem>
+          <AccordionItem value="item-3">
+            <AccordionTrigger>Wie funktioniert eine Partnerschaft mit BerlinRP-VC?</AccordionTrigger>
+            <AccordionContent>
+              Eine Partnerschaft mit uns bietet dir die Möglichkeit, deine Marke oder
+              dein Projekt einem breiten Publikum vorzustellen. Kontaktiere uns für
+              weitere Informationen und individuelle Vereinbarungen.
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </section>
+
+      <section className="mt-12">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
+          Partnerschaftsanfrage
+        </h2>
+        <PartnershipRequestForm />
+      </section>
     </div>
   );
 };

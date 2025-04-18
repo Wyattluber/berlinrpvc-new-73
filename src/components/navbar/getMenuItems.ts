@@ -1,49 +1,48 @@
+import {
+  Home,
+  FileCheck,
+  Handshake,
+  Users,
+  UserPlus,
+  LogOut,
+  Settings,
+  Servers,
+  ShoppingBag,
+} from 'lucide-react';
 
-import { LayoutDashboard, ShoppingBag, Server, LifeBuoy, Users, UserCircle } from 'lucide-react';
+export type MenuItem = {
+  to: string;
+  icon: React.ComponentType<any>;
+  label: string;
+  adminOnly?: boolean;
+};
 
+// Add ClothingStore to the menu items
 export const getMenuItems = () => {
   return [
-    {
-      title: 'Start',
-      path: '/',
-    },
-    {
-      title: 'Bewerben',
-      path: '/apply',
-    },
-    {
-      title: 'Partner',
-      path: '/partners',
-    },
-    {
-      title: 'Subserver',
-      path: '/subservers',
-    },
-    {
-      title: 'Clothing Store',
-      path: '/clothingstore',
-    },
+    { to: '/', icon: Home, label: 'Startseite' },
+    { to: '/apply', icon: FileCheck, label: 'Bewerben' },
+    { to: '/partners', icon: Handshake, label: 'Partner' },
+    { to: '/subservers', icon: Servers, label: 'Subserver' },
+    { to: '/clothingstore', icon: ShoppingBag, label: 'Clothing Store' }
   ];
 };
 
 export const getUserMenuItems = (session: any, isAdmin: boolean) => {
-  if (!session) return [];
-  
-  const userMenuItems = [
-    {
-      title: 'Profil',
-      path: '/profile',
-      icon: UserCircle,
-    },
-  ];
-  
-  if (isAdmin) {
-    userMenuItems.push({
-      title: 'Admin-Dashboard',
-      path: '/admin/dashboard',
-      icon: LayoutDashboard,
-    });
+  const userMenuItems: MenuItem[] = [];
+
+  if (session) {
+    userMenuItems.push(
+      { to: '/profile', icon: Settings, label: 'Profil' },
+      { to: '/', icon: LogOut, label: 'Logout' }
+    );
+  } else {
+    userMenuItems.push({ to: '/login', icon: UserPlus, label: 'Login' });
   }
-  
+
+  if (isAdmin) {
+    userMenuItems.push({ to: '/admin/dashboard', icon: Users, label: 'Admin', adminOnly: true });
+  }
+
   return userMenuItems;
 };
