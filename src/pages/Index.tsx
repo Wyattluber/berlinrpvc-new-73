@@ -63,7 +63,7 @@ const Index = () => {
                 size="lg" 
                 className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 border-0 shadow-lg"
               >
-                <Link to="/apply" className="flex items-center gap-2">
+                <Link to="https://discord.gg/berlinrpvc" className="flex items-center gap-2">
                   <span>Jetzt dabei sein</span>
                   <ArrowRight size={18} />
                 </Link>
