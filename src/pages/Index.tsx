@@ -59,15 +59,6 @@ const Index = () => {
                 Wir werden ab Samstag den 19.04.25 den Server wieder füllen, nachdem viel in Discord und die Website an Zeit geflossen sind. 
                 <span className="block font-bold mt-4 text-xl md:text-2xl text-blue-600">But... WE'RE BACK!!!!</span>
               </p>
-              <Button 
-                size="lg" 
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 border-0 shadow-lg"
-              >
-                <Link to="https://discord.gg/berlinrpvc" className="flex items-center gap-2">
-                  <span>Jetzt dabei sein</span>
-                  <ArrowRight size={18} />
-                </Link>
-              </Button>
             </div>
           </div>
         </section>
