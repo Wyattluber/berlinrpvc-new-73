@@ -1,19 +1,49 @@
 
-import { Home, Users, Server, BookOpen, ShoppingBag, User, Shield } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Server, LifeBuoy, Users, UserCircle } from 'lucide-react';
 
-export const getMenuItems = () => [
-  { to: "/", icon: Home, label: "Startseite" },
-  { to: "/subservers", icon: Server, label: "Subserver" },
-  { to: "/partners", icon: Users, label: "Partner" },
-  { to: "/clothingstore", icon: ShoppingBag, label: "Clothing Store" },
-];
+export const getMenuItems = () => {
+  return [
+    {
+      title: 'Start',
+      path: '/',
+    },
+    {
+      title: 'Bewerben',
+      path: '/apply',
+    },
+    {
+      title: 'Partner',
+      path: '/partners',
+    },
+    {
+      title: 'Subserver',
+      path: '/subservers',
+    },
+    {
+      title: 'Clothing Store',
+      path: '/clothingstore',
+    },
+  ];
+};
 
 export const getUserMenuItems = (session: any, isAdmin: boolean) => {
-  return session ? [
-    { to: "/profile", icon: User, label: "Mein Profil" },
-    ...(isAdmin ? [{ to: "/admin/dashboard", icon: Shield, label: "Admin Panel" }] : []),
-  ] : [
-    { to: "/login", icon: User, label: "Login" },
-    { to: "/apply", icon: BookOpen, label: "Bewerben", highlight: true },
+  if (!session) return [];
+  
+  const userMenuItems = [
+    {
+      title: 'Profil',
+      path: '/profile',
+      icon: UserCircle,
+    },
   ];
+  
+  if (isAdmin) {
+    userMenuItems.push({
+      title: 'Admin-Dashboard',
+      path: '/admin/dashboard',
+      icon: LayoutDashboard,
+    });
+  }
+  
+  return userMenuItems;
 };

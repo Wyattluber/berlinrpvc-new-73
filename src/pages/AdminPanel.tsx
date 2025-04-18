@@ -3,8 +3,9 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 
 const AdminPanel = () => {
-  // Instead of using useEffect to redirect, use Navigate component
-  return <Navigate to="/admin/dashboard" replace />;
+  // Redirect to external admin panel
+  window.location.href = 'https://berlinrpvc-new-51.lovable.app/login';
+  return null;
 };
 
 export default AdminPanel;

@@ -25,6 +25,7 @@ import Datenschutz from "./pages/Datenschutz";
 import CancelDeletion from "./pages/CancelDeletion";
 import ClothingStore from "./pages/ClothingStore";
 import AdminDashboard from "./pages/AdminDashboard";
+import ModeratorPanel from "./pages/ModeratorPanel";
 import { ApplicationProvider } from "@/contexts/ApplicationContext";
 
 const queryClient = new QueryClient({
@@ -101,6 +102,16 @@ const AppLoadingErrorManager = () => {
           <Route path="/clothingstore" element={<ClothingStore />} />
           <Route path="/impressum" element={<Impressum />} />
           <Route path="/datenschutz" element={<Datenschutz />} />
+          
+          {/* Moderator Panel routes */}
+          <Route 
+            path="/moderator/dashboard" 
+            element={
+              <ProtectedRoute>
+                <ModeratorPanel />
+              </ProtectedRoute>
+            } 
+          />
           
           {/* Admin routes */}
           <Route 

@@ -1,618 +1,360 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
+import * as z from 'zod';
+import { useDropzone } from 'react-dropzone';
+import { Loader2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, CheckCircle, Loader2, Calendar, RefreshCw, Image as ImageIcon } from 'lucide-react';
-import { format, addMonths, isPast } from 'date-fns';
-import { de } from 'date-fns/locale';
+import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
-const partnershipFormSchema = z.object({
-  discord_id: z.string().min(1, { message: "Discord ID ist erforderlich" }),
-  discord_invite: z.string()
-    .min(1, { message: "Discord Einladungslink ist erforderlich" })
-    .regex(/^[a-zA-Z0-9]+$/, { 
-      message: "Bitte nur den Einladungscode eingeben (z.B. 'abcdef123')" 
-    }),
-  member_count: z.string()
-    .min(1, { message: "Anzahl der Mitglieder ist erforderlich" })
-    .refine((val) => !isNaN(Number(val)), { message: "Muss eine Zahl sein" }),
-  reason: z.string().min(20, { message: "Bitte gib mindestens 20 Zeichen an" }),
-  requirements: z.string().min(10, { message: "Bitte gib mindestens 10 Zeichen an" }),
-  expectations: z.string().min(10, { message: "Bitte gib mindestens 10 Zeichen an" }),
-  advertisement: z.string().min(10, { message: "Bitte gib mindestens 10 Zeichen an" }),
-  has_other_partners: z.enum(["true", "false"]),
-  other_partners: z.string().optional(),
-  logo: z.any().optional(),
+const partnerFormSchema = z.object({
+  discordId: z.string().min(1, {
+    message: 'Discord ID ist erforderlich',
+  }),
+  discordInvite: z.string().min(1, {
+    message: 'Discord Einladungslink ist erforderlich',
+  }),
+  memberCount: z.coerce.number().min(1, {
+    message: 'Bitte gib eine gültige Mitgliederzahl ein',
+  }),
+  reason: z.string().min(10, {
+    message: 'Bitte gib einen ausführlichen Grund an (min. 10 Zeichen)',
+  }),
+  expectations: z.string().min(10, {
+    message: 'Bitte beschreibe deine Erwartungen (min. 10 Zeichen)',
+  }),
+  advertisement: z.string().min(10, {
+    message: 'Bitte gib einen Text für die Partnerwerbung an (min. 10 Zeichen)',
+  }),
 });
 
-type PartnershipFormValues = z.infer<typeof partnershipFormSchema>;
+type PartnerFormValues = z.infer<typeof partnerFormSchema>;
 
-const PartnershipRequestForm = ({ partnershipDescription = '' }) => {
+const PartnershipRequestForm = () => {
   const { session } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [existingApplication, setExistingApplication] = useState(null);
-  const [userDiscordId, setUserDiscordId] = useState('');
-  const expirationDate = addMonths(new Date(), 1);
-  const [isRenewal, setIsRenewal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-
-  const form = useForm<PartnershipFormValues>({
-    resolver: zodResolver(partnershipFormSchema),
+  const [uploadProgress, setUploadProgress] = useState(0);
+  
+  const form = useForm<PartnerFormValues>({
+    resolver: zodResolver(partnerFormSchema),
     defaultValues: {
-      discord_id: '',
-      discord_invite: '',
-      member_count: '',
+      discordId: '',
+      discordInvite: '',
+      memberCount: undefined,
       reason: '',
-      requirements: '',
       expectations: '',
       advertisement: '',
-      has_other_partners: 'false',
-      other_partners: '',
     },
   });
-
-  useEffect(() => {
-    const checkExistingApplication = async () => {
-      if (!session) return;
-
-      setLoading(true);
-      try {
-        // Check if user has already submitted a partnership application
-        const { data, error } = await supabase
-          .from('partner_applications')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
-
-        if (error) throw error;
-
-        if (data) {
-          setExistingApplication(data);
-          
-          // Check if the application is expired or inactive
-          const createdDate = new Date(data.created_at);
-          const expirationDate = addMonths(createdDate, 1);
-          const isExpired = isPast(expirationDate);
-          
-          if (data.status === 'approved' && (isExpired || !data.is_active)) {
-            setIsRenewal(true);
-          }
-        }
-
-        // Get user discord ID from profile
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('discord_id')
-          .eq('id', session.user.id)
-          .maybeSingle();
-
-        if (profileError) throw profileError;
-
-        if (profileData?.discord_id) {
-          setUserDiscordId(profileData.discord_id);
-          form.setValue('discord_id', profileData.discord_id);
-        }
-      } catch (error) {
-        console.error('Error checking existing application:', error);
-        toast({
-          title: 'Fehler',
-          description: 'Daten konnten nicht geladen werden.',
-          variant: 'destructive',
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkExistingApplication();
-  }, [session, form]);
-
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
+  
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles.length > 0) {
+      const file = acceptedFiles[0];
       setLogoFile(file);
       
-      // Create preview URL
+      // Create a preview
       const reader = new FileReader();
       reader.onload = () => {
         setLogoPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
-      
-      form.setValue('logo', file);
     }
-  };
-
-  const uploadLogo = async (file: File): Promise<string | null> => {
-    if (!file || !session) return null;
-    
+  }, []);
+  
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'image/jpeg': [],
+      'image/png': [],
+      'image/gif': [],
+    },
+    maxFiles: 1,
+    maxSize: 5 * 1024 * 1024, // 5MB
+  });
+  
+  const uploadLogo = async (file: File, partnerId: string): Promise<string | null> => {
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${session.user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `partner-logos/${fileName}`;
+      const fileName = `${partnerId}.${fileExt}`;
+      const filePath = `${fileName}`;
       
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError, data } = await supabase.storage
         .from('partner-assets')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true,
+        });
         
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Error uploading logo:', uploadError);
+        return null;
+      }
       
-      const { data } = supabase.storage
+      const { data: urlData } = supabase.storage
         .from('partner-assets')
         .getPublicUrl(filePath);
         
-      return data.publicUrl;
+      return urlData.publicUrl;
     } catch (error) {
-      console.error('Error uploading logo:', error);
+      console.error('Error in logo upload:', error);
       return null;
     }
   };
-
-  const onSubmit = async (values: PartnershipFormValues) => {
+  
+  const onSubmit = async (values: PartnerFormValues) => {
     if (!session) {
       toast({
-        title: 'Nicht angemeldet',
-        description: 'Du musst angemeldet sein, um eine Partnerschaftsanfrage zu stellen.',
+        title: 'Fehler',
+        description: 'Du musst eingeloggt sein, um eine Partnerschaft zu beantragen.',
         variant: 'destructive',
       });
       return;
     }
-
-    setLoading(true);
+    
+    setIsSubmitting(true);
+    setUploadProgress(10);
+    
     try {
-      // Upload logo if present
+      // First, insert the partnership application
+      const { data: partnerData, error: partnerError } = await supabase
+        .from('partner_applications')
+        .insert([
+          {
+            user_id: session.user.id,
+            discord_id: values.discordId,
+            discord_invite: values.discordInvite,
+            member_count: values.memberCount,
+            reason: values.reason,
+            expectations: values.expectations,
+            advertisement: values.advertisement,
+            is_renewal: false,
+            is_active: false,
+            status: 'pending',
+          },
+        ])
+        .select()
+        .single();
+        
+      if (partnerError) throw partnerError;
+      setUploadProgress(50);
+      
+      // If a logo was provided, upload it
       let logoUrl = null;
-      if (logoFile) {
-        logoUrl = await uploadLogo(logoFile);
-        if (!logoUrl) {
-          toast({
-            title: 'Fehler',
-            description: 'Logo konnte nicht hochgeladen werden.',
-            variant: 'destructive',
-          });
-          return;
+      if (logoFile && partnerData) {
+        logoUrl = await uploadLogo(logoFile, partnerData.id);
+        setUploadProgress(80);
+        
+        // Update the partner application with the logo URL
+        if (logoUrl) {
+          const { error: updateError } = await supabase
+            .from('partner_applications')
+            .update({ logo_url: logoUrl })
+            .eq('id', partnerData.id);
+            
+          if (updateError) {
+            console.error('Error updating logo URL:', updateError);
+          }
         }
       }
+      setUploadProgress(100);
       
-      // Convert string to boolean for database storage
-      const hasOtherPartnersBoolean = values.has_other_partners === 'true';
-      
-      // Prepare the data to be inserted
-      const partnershipData = {
-        user_id: session.user.id,
-        discord_id: values.discord_id,
-        discord_invite: values.discord_invite,
-        member_count: parseInt(values.member_count),
-        reason: values.reason,
-        requirements: values.requirements,
-        expectations: values.expectations,
-        advertisement: values.advertisement,
-        has_other_partners: hasOtherPartnersBoolean,
-        other_partners: hasOtherPartnersBoolean ? values.other_partners : null,
-        status: 'pending',
-        is_active: true,
-        is_renewal: isRenewal,
-        logo_url: logoUrl
-      };
-
-      let action;
-      
-      if (isRenewal && existingApplication) {
-        // Update existing record for renewal
-        action = supabase
-          .from('partner_applications')
-          .update(partnershipData)
-          .eq('id', existingApplication.id);
-      } else {
-        // Insert new record
-        action = supabase
-          .from('partner_applications')
-          .insert([partnershipData]);
-      }
-
-      const { error } = await action;
-      if (error) throw error;
-
       toast({
-        title: isRenewal ? 'Verlängerung eingereicht' : 'Erfolgreich eingereicht',
-        description: isRenewal 
-          ? 'Deine Partnerschaftsverlängerung wurde erfolgreich eingereicht.' 
-          : 'Deine Partnerschaftsanfrage wurde erfolgreich eingereicht.',
+        title: 'Anfrage eingereicht',
+        description: 'Deine Partnerschaftsanfrage wurde erfolgreich eingereicht.',
       });
       
-      setSubmitted(true);
+      form.reset();
+      setLogoFile(null);
+      setLogoPreview(null);
     } catch (error) {
       console.error('Error submitting partnership request:', error);
       toast({
         title: 'Fehler',
-        description: 'Deine Partnerschaftsanfrage konnte nicht eingereicht werden.',
+        description: 'Fehler beim Einreichen der Partnerschaftsanfrage. Bitte versuche es später erneut.',
         variant: 'destructive',
       });
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
+      setUploadProgress(0);
     }
   };
-
-  const handleRenewal = () => {
-    // Pre-fill form with existing data
-    if (existingApplication) {
-      form.setValue('discord_id', existingApplication.discord_id || '');
-      form.setValue('discord_invite', existingApplication.discord_invite || '');
-      form.setValue('member_count', existingApplication.member_count?.toString() || '');
-      form.setValue('reason', existingApplication.reason || '');
-      form.setValue('requirements', existingApplication.requirements || '');
-      form.setValue('expectations', existingApplication.expectations || '');
-      form.setValue('advertisement', existingApplication.advertisement || '');
-      form.setValue('has_other_partners', existingApplication.has_other_partners ? 'true' : 'false');
-      form.setValue('other_partners', existingApplication.other_partners || '');
-    }
-    setSubmitted(false);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        <span className="ml-2">Lade Formular...</span>
-      </div>
-    );
-  }
-
-  if (submitted || (existingApplication && !isRenewal)) {
-    return (
-      <Card className="w-full max-w-3xl mx-auto">
-        <CardHeader>
-          <CardTitle className="text-center text-2xl">Partnerschaftsanfrage</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col items-center text-center">
-          <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
-          <h3 className="text-xl font-bold mb-2">Anfrage eingereicht</h3>
-          <p className="text-gray-600 mb-4">
-            Deine Partnerschaftsanfrage wurde erfolgreich eingereicht und wird von unserem Team überprüft.
-            Du kannst den Status deiner Anfrage in deinem Profil einsehen.
-          </p>
-          
-          {existingApplication && (
-            <div className="mt-4 p-4 bg-gray-100 rounded-lg w-full">
-              <h4 className="font-semibold mb-1">Status: <span className={
-                existingApplication.status === 'approved' ? 'text-green-600' : 
-                existingApplication.status === 'rejected' ? 'text-red-600' : 
-                'text-yellow-600'
-              }>
-                {existingApplication.status === 'approved' ? 'Angenommen' : 
-                existingApplication.status === 'rejected' ? 'Abgelehnt' : 
-                'In Bearbeitung'}
-              </span></h4>
-              <p className="text-sm text-gray-500">Eingereicht am: {new Date(existingApplication.created_at).toLocaleDateString('de-DE')}</p>
-              
-              {existingApplication.status === 'approved' && (
-                <>
-                  <div className="mt-2 p-3 bg-blue-50 rounded-md border border-blue-100">
-                    <div className="flex items-center text-blue-700 mb-1">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      <p className="font-medium">Gültigkeitszeitraum</p>
-                    </div>
-                    <p className="text-sm text-blue-600">
-                      Deine Partnerschaft ist gültig bis: {format(addMonths(new Date(existingApplication.created_at), 1), 'PPP', { locale: de })}
-                    </p>
-                  </div>
-                  
-                  {isRenewal && (
-                    <div className="mt-4">
-                      <Button 
-                        onClick={handleRenewal}
-                        className="w-full"
-                      >
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Partnerschaft verlängern
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  }
-
+  
   return (
-    <Card className="w-full max-w-3xl mx-auto">
-      <CardHeader>
-        <CardTitle className="text-center text-2xl">
-          {isRenewal ? 'Partnerschaft mit BerlinRP-VC verlängern' : 'Partnerschaft mit BerlinRP-VC'}
-        </CardTitle>
-        <CardDescription className="text-center">
-          {isRenewal 
-            ? 'Fülle das Formular aus, um deine bestehende Partnerschaft zu verlängern' 
-            : 'Fülle das Formular aus, um eine Partnerschaft mit unserem Server zu beantragen'}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {partnershipDescription && (
-          <div className="prose max-w-none text-gray-700 mb-6">
-            <div className="whitespace-pre-line">{partnershipDescription}</div>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="discordId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Discord Server ID</FormLabel>
+                <FormControl>
+                  <Input placeholder="z.B. 1283167094854258741" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="discordInvite"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Discord Einladungslink (nur der Code)</FormLabel>
+                <FormControl>
+                  <Input placeholder="z.B. berlinrpvc" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        
+        <FormField
+          control={form.control}
+          name="memberCount"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Anzahl der Mitglieder</FormLabel>
+              <FormControl>
+                <Input type="number" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <div>
+          <FormLabel>Server Logo (optional)</FormLabel>
+          <div
+            {...getRootProps()}
+            className={`border-2 border-dashed rounded-md p-6 mt-2 cursor-pointer text-center transition-colors ${
+              isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400'
+            }`}
+          >
+            <input {...getInputProps()} />
+            
+            {logoPreview ? (
+              <div className="flex flex-col items-center">
+                <img 
+                  src={logoPreview} 
+                  alt="Logo Preview" 
+                  className="w-24 h-24 object-contain mb-4"
+                />
+                <p className="text-sm text-gray-500">Klicken zum Ändern</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center">
+                <Upload className="h-10 w-10 text-gray-400 mb-2" />
+                <p className="text-gray-500">
+                  {isDragActive
+                    ? 'Datei hier ablegen'
+                    : 'Logo hier ablegen oder klicken zum Auswählen'}
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  PNG, JPG oder GIF, max. 5MB
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <FormField
+          control={form.control}
+          name="reason"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Warum möchtest du eine Partnerschaft eingehen?</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="Beschreibe, warum du eine Partnerschaft mit uns eingehen möchtest..." 
+                  className="min-h-[100px]"
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="expectations"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Was erwartest du von der Partnerschaft?</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="Beschreibe deine Erwartungen an die Partnerschaft..." 
+                  className="min-h-[100px]"
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="advertisement"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Werbung für den Partnerbereich</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="Gib hier den Text ein, den wir in unserem Partnerbereich anzeigen sollen..." 
+                  className="min-h-[150px]"
+                  {...field} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <Button 
+          type="submit" 
+          className="w-full" 
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Anfrage wird eingereicht...
+            </>
+          ) : (
+            'Partnerschaftsanfrage einreichen'
+          )}
+        </Button>
+        
+        {isSubmitting && uploadProgress > 0 && (
+          <div className="w-full bg-gray-200 rounded-full h-2.5 mt-4">
+            <div
+              className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
+            ></div>
           </div>
         )}
-
-        <Alert className="mb-6 bg-blue-50 border-blue-200">
-          <Calendar className="h-4 w-4 text-blue-500" />
-          <AlertTitle className="text-blue-700">Zeitlich begrenzte Partnerschaft</AlertTitle>
-          <AlertDescription className="text-blue-600">
-            Bitte beachte, dass Partnerschaften für einen Zeitraum von einem Monat gültig sind und danach automatisch enden.
-            {isRenewal 
-              ? ' Mit dieser Verlängerung kannst du die Partnerschaft fortsetzen.' 
-              : ` Die Partnerschaft ist gültig bis: ${format(expirationDate, 'PPP', { locale: de })}`}
-          </AlertDescription>
-        </Alert>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="discord_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Discord ID</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Deine Discord ID" 
-                      {...field} 
-                      disabled={!!userDiscordId}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    {userDiscordId ? "Aus deinem Profil übernommen" : "Deine Discord-Benutzer ID"}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="discord_invite"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Discord Einladungscode</FormLabel>
-                  <FormControl>
-                    <div className="flex">
-                      <div className="bg-gray-100 flex items-center px-3 rounded-l-md border border-r-0 border-input">
-                        https://discord.gg/
-                      </div>
-                      <Input 
-                        className="rounded-l-none" 
-                        placeholder="abcdef123" 
-                        {...field} 
-                      />
-                    </div>
-                  </FormControl>
-                  <FormDescription>
-                    Nur den Einladungscode eingeben, der nach "discord.gg/" folgt
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="logo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Discord Server Logo</FormLabel>
-                  <FormControl>
-                    <div className="space-y-3">
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleLogoChange}
-                        className="w-full"
-                      />
-                      
-                      {logoPreview && (
-                        <div className="relative h-32 w-32 mx-auto bg-gray-100 rounded-md overflow-hidden border border-gray-200">
-                          <img 
-                            src={logoPreview} 
-                            alt="Server Logo Vorschau" 
-                            className="h-full w-full object-contain"
-                          />
-                        </div>
-                      )}
-                      
-                      {!logoPreview && (
-                        <div className="flex flex-col items-center justify-center h-32 w-32 mx-auto bg-gray-100 rounded-md border border-dashed border-gray-300">
-                          <ImageIcon className="h-8 w-8 text-gray-400" />
-                          <span className="text-sm text-gray-500 mt-1">Logo Vorschau</span>
-                        </div>
-                      )}
-                    </div>
-                  </FormControl>
-                  <FormDescription>
-                    Lade das Logo deines Servers hoch (optional)
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="member_count"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Anzahl der Mitglieder</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Anzahl der Mitglieder auf deinem Server" 
-                      type="number"
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Gib die aktuelle Anzahl der Mitglieder auf deinem Discord-Server an
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="reason"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Warum möchtest du eine Partnerschaft mit BerlinRP-VC eingehen?</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Beschreibe warum du eine Partnerschaft mit uns möchtest..." 
-                      {...field} 
-                      rows={4}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="expectations"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Was erwartest du von dieser Partnerschaft?</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Beschreibe, was du von dieser Partnerschaft erwartest..." 
-                      {...field} 
-                      rows={4}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="requirements"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Was sind deine Anforderungen in dieser Partnerschaft?</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Beschreibe deine Erwartungen und Anforderungen..." 
-                      {...field} 
-                      rows={4}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="advertisement"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Deine Partnerwerbung</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Schreibe eine kurze Werbung für deinen Server, die wir in unserem Partnerbereich verwenden können..." 
-                      {...field} 
-                      rows={4}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Dieser Text wird in unserem Partnerbereich angezeigt
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="has_other_partners"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Hast du Partnerschaften mit anderen Servern?</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className="flex flex-col space-y-1"
-                    >
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="true" />
-                        </FormControl>
-                        <FormLabel className="font-normal">Ja</FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-3 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="false" />
-                        </FormControl>
-                        <FormLabel className="font-normal">Nein</FormLabel>
-                      </FormItem>
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {form.watch('has_other_partners') === 'true' && (
-              <FormField
-                control={form.control}
-                name="other_partners"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Mit welchen Servern hast du Partnerschaften?</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Liste die Server auf, mit denen du bereits Partnerschaften hast..." 
-                        {...field} 
-                        rows={3}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Wird eingereicht...
-                </>
-              ) : isRenewal ? "Partnerschaftsverlängerung beantragen" : "Partnerschaftsanfrage einreichen"}
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+      </form>
+    </Form>
   );
 };
 

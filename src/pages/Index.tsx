@@ -1,11 +1,10 @@
-
 import React from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import ServerStats from '../components/ServerStats';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, ArrowRight } from 'lucide-react';
 
 const Index = () => {
   return (
@@ -44,6 +43,30 @@ const Index = () => {
                   <span>Discord Beitreten</span>
                   <ExternalLink size={18} className="transition-transform duration-300 group-hover:translate-x-1" />
                 </a>
+              </Button>
+            </div>
+          </div>
+        </section>
+        
+        {/* We are back Section */}
+        <section className="py-12 bg-gradient-to-r from-purple-100 to-blue-100">
+          <div className="container mx-auto px-4">
+            <div className="max-w-4xl mx-auto text-center">
+              <h2 className="text-3xl md:text-4xl font-bold mb-6 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                We are back!
+              </h2>
+              <p className="text-lg md:text-xl mb-8 text-gray-700">
+                Wir werden ab Samstag den 19.04.25 den Server wieder füllen, nachdem viel in Discord und die Website an Zeit geflossen sind. 
+                <span className="block font-bold mt-4 text-xl md:text-2xl text-blue-600">But... WE'RE BACK!!!!</span>
+              </p>
+              <Button 
+                size="lg" 
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 border-0 shadow-lg"
+              >
+                <Link to="/apply" className="flex items-center gap-2">
+                  <span>Jetzt dabei sein</span>
+                  <ArrowRight size={18} />
+                </Link>
               </Button>
             </div>
           </div>

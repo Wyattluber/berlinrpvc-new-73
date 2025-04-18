@@ -3,17 +3,9 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Handshake, Calendar, ShoppingBag } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
-interface ModeratorTabProps {
-  navigate: any;
-}
-
-const ModeratorTab: React.FC<ModeratorTabProps> = ({ navigate }) => {
-  // Redirect to admin panel dashboard with specific section
-  const redirectToAdminPanel = (section: string) => {
-    navigate(`/admin/dashboard/${section}`);
-  };
-  
+const ModeratorTab = () => {
   return (
     <Card>
       <CardHeader>
@@ -25,30 +17,36 @@ const ModeratorTab: React.FC<ModeratorTabProps> = ({ navigate }) => {
       <CardContent>
         <div className="space-y-4">
           <Button 
-            onClick={() => redirectToAdminPanel('partnerships')} 
+            asChild
             className="w-full justify-start"
             type="button"
           >
-            <Handshake className="h-4 w-4 mr-2" />
-            Partnerschaften verwalten
+            <Link to="/moderator/dashboard">
+              <Handshake className="h-4 w-4 mr-2" />
+              Partnerschaften verwalten
+            </Link>
           </Button>
           
           <Button 
-            onClick={() => redirectToAdminPanel('team-settings')} 
+            asChild
             className="w-full justify-start"
             type="button"
           >
-            <Calendar className="h-4 w-4 mr-2" />
-            Teammeetings verwalten
+            <Link to="/moderator/dashboard">
+              <Calendar className="h-4 w-4 mr-2" />
+              Teammeetings verwalten
+            </Link>
           </Button>
           
           <Button 
-            onClick={() => redirectToAdminPanel('store')} 
+            asChild
             className="w-full justify-start"
             type="button"
           >
-            <ShoppingBag className="h-4 w-4 mr-2" />
-            Clothing Store verwalten
+            <Link to="/moderator/dashboard">
+              <ShoppingBag className="h-4 w-4 mr-2" />
+              Clothing Store verwalten
+            </Link>
           </Button>
         </div>
       </CardContent>

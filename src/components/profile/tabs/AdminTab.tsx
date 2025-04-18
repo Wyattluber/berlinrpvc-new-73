@@ -2,29 +2,26 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Shield } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 
-interface AdminTabProps {
-  navigate: any;
-}
-
-const AdminTab: React.FC<AdminTabProps> = ({ navigate }) => {
-  const goToAdminPanel = () => {
-    navigate('/admin/dashboard');
-  };
-
+const AdminTab = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Admin Dashboard</CardTitle>
+        <CardTitle>Admin-Funktionen</CardTitle>
         <CardDescription>
-          Zugriff auf Verwaltungsfunktionen
+          Zugriff auf Administrator-Funktionen
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Button onClick={goToAdminPanel}>
-          <Shield className="h-4 w-4 mr-2" />
-          Admin Dashboard öffnen
+        <Button 
+          className="w-full justify-start"
+          asChild
+        >
+          <a href="https://berlinrpvc-new-51.lovable.app/login" target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Admin Dashboard öffnen
+          </a>
         </Button>
       </CardContent>
     </Card>
