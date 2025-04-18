@@ -45,25 +45,24 @@ const ProfileContent: React.FC<ProfileContentProps> = ({
       
       <TabsContent value="admin">
         {isAdmin && (
-          <AdminTab navigate={navigate} />
+          <AdminTab />
         )}
       </TabsContent>
       
       <TabsContent value="moderator">
         {(isAdmin || isModerator) && (
-          <ModeratorTab navigate={navigate} />
+          <ModeratorTab />
         )}
       </TabsContent>
       
       <TabsContent value="applications">
         <ApplicationsTab 
           applications={applications}
-          navigate={navigate}
         />
       </TabsContent>
       
       <TabsContent value="partnership">
-        <PartnershipTab navigate={navigate} />
+        <PartnershipTab />
       </TabsContent>
     </Tabs>
   );

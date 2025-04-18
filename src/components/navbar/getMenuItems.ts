@@ -1,3 +1,4 @@
+
 import {
   Home,
   FileCheck,
@@ -6,7 +7,7 @@ import {
   UserPlus,
   LogOut,
   Settings,
-  Servers,
+  Server,
   ShoppingBag,
 } from 'lucide-react';
 
@@ -23,7 +24,7 @@ export const getMenuItems = () => {
     { to: '/', icon: Home, label: 'Startseite' },
     { to: '/apply', icon: FileCheck, label: 'Bewerben' },
     { to: '/partners', icon: Handshake, label: 'Partner' },
-    { to: '/subservers', icon: Servers, label: 'Subserver' },
+    { to: '/subservers', icon: Server, label: 'Subserver' },
     { to: '/clothingstore', icon: ShoppingBag, label: 'Clothing Store' }
   ];
 };

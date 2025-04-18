@@ -34,7 +34,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import PartnershipRequestForm from '@/components/admin/PartnershipRequestsForm';
+import PartnershipRequestForm from '@/components/PartnershipRequestForm';
 
 const Apply = () => {
   const isMobile = useIsMobile();
