@@ -116,7 +116,7 @@ const Index = () => {
               <div className="md:w-1/2 mb-8 md:mb-0 md:pr-8">
                 <div className="relative rounded-lg overflow-hidden shadow-xl">
                   <img 
-                    src="/lovable-uploads/dd1f41c8-840e-4e30-a847-665d1ef1d0b1.png" 
+                    src="https://i.postimg.cc/kXb9STQy/Berlin-RP-VC.png" 
                     alt="BerlinRP-VC Community" 
                     className="rounded-lg shadow-lg w-full h-auto max-w-md mx-auto"
                     onError={(e) => {
