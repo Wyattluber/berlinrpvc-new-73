@@ -58,11 +58,14 @@ const ProfileContent: React.FC<ProfileContentProps> = ({
       <TabsContent value="applications">
         <ApplicationsTab 
           applications={applications}
+          navigate={navigate}
         />
       </TabsContent>
       
       <TabsContent value="partnership">
-        <PartnershipTab />
+        <PartnershipTab 
+          navigate={navigate}
+        />
       </TabsContent>
     </Tabs>
   );
