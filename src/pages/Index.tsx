@@ -110,41 +110,45 @@ const Index = () => {
         </section>
         
         {/* About Section */}
-        <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
-          <div className="container mx-auto px-4">
-            <div className="flex flex-col md:flex-row items-center">
-              <div className="md:w-1/2 mb-8 md:mb-0 md:pr-8">
-                <div className="relative rounded-lg overflow-hidden shadow-xl">
-                  <img 
-                    src="https://i.postimg.cc/kXb9STQy/Berlin-RP-VC.png" 
-                    alt="BerlinRP-VC Community" 
-                    className="rounded-lg shadow-lg w-full h-auto max-w-md mx-auto"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.onerror = null;
-                      target.src = 'https://via.placeholder.com/600x400?text=Community+Image';
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-blue-900/80 to-transparent"></div>
-                </div>
-              </div>
-              <div className="md:w-1/2">
-                <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">Über Unsere Community</h2>
-                <p className="text-gray-700 mb-4">
-                  Der BerlinRP-VC Server bietet dir eine realistische Simulation des Berliner Roleplays mit Voice-Chat. 
-                  Werde Teil unserer aktiven Community und erlebe spannende Einsätze, Teamwork und Freundschaften.
-                </p>
-                <p className="text-gray-700 mb-6">
-                  Egal ob du als Sanitäter, Feuerwehrmann oder Polizist aktiv werden möchtest - bei uns findest du 
-                  deinen Platz im Team!
-                </p>
-                <Button className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 border-0 shadow-md hover:shadow-lg transition-all duration-300">
-                  <Link to="/partners">Unsere Partner</Link>
-                </Button>
-              </div>
-            </div>
+<section className="py-16 bg-gradient-to-b from-gray-50 to-white">
+  <div className="container mx-auto px-4">
+    <div className="flex flex-col md:flex-row items-center">
+      <div className="md:w-1/2 mb-8 md:mb-0 md:pr-8">
+        <div className="relative rounded-lg overflow-hidden shadow-xl">
+          <img 
+            src="/lovable-uploads/dd1f41c8-840e-4e30-a847-665d1ef1d0b1.png" 
+            alt="BerlinRP-VC Community" 
+            className="rounded-lg shadow-lg w-full h-auto max-w-md mx-auto"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.onerror = null;
+              target.src = 'https://via.placeholder.com/600x400?text=Community+Image';
+            }}
+          />
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="w-full h-full bg-gradient-to-r from-black/15 via-transparent to-black/15"></div>
+            <div className="w-full h-full bg-gradient-to-t from-black/20 via-transparent to-transparent absolute inset-0"></div>
           </div>
-        </section>
+        </div>
+      </div>
+      <div className="md:w-1/2">
+        <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">Über Unsere Community</h2>
+        <p className="text-gray-700 mb-4">
+          Der BerlinRP-VC Server bietet dir eine realistische Simulation des Berliner Roleplays mit Voice-Chat. 
+          Werde Teil unserer aktiven Community und erlebe spannende Einsätze, Teamwork und Freundschaften.
+        </p>
+        <p className="text-gray-700 mb-6">
+          Egal ob du als Sanitäter, Feuerwehrmann oder Polizist aktiv werden möchtest - bei uns findest du 
+          deinen Platz im Team!
+        </p>
+        <Button className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 border-0 shadow-md hover:shadow-lg transition-all duration-300">
+          <Link to="/partners">Unsere Partner</Link>
+        </Button>
+      </div>
+    </div>
+  </div>
+</section>
+
         
         {/* CTA Section */}
         <section className="bg-gradient-to-r from-purple-700 to-blue-700 text-white py-16 text-center relative overflow-hidden">
