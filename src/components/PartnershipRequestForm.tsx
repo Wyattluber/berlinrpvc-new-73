@@ -21,9 +21,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 const partnerFormSchema = z.object({
-  discordId: z.string().min(1, {
-    message: 'Discord ID ist erforderlich',
-  }),
   discordInvite: z.string().min(1, {
     message: 'Discord Einladungslink ist erforderlich',
   }),
@@ -53,7 +50,6 @@ const PartnershipRequestForm = () => {
   const form = useForm<PartnerFormValues>({
     resolver: zodResolver(partnerFormSchema),
     defaultValues: {
-      discordId: '',
       discordInvite: '',
       memberCount: undefined,
       reason: '',
@@ -136,7 +132,6 @@ const PartnershipRequestForm = () => {
         .insert([
           {
             user_id: session.user.id,
-            discord_id: values.discordId,
             discord_invite: values.discordInvite,
             member_count: values.memberCount,
             reason: values.reason,
@@ -197,35 +192,19 @@ const PartnershipRequestForm = () => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="discordId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Discord Server ID</FormLabel>
-                <FormControl>
-                  <Input placeholder="z.B. 1283167094854258741" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="discordInvite"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Discord Einladungslink (nur der Code)</FormLabel>
-                <FormControl>
-                  <Input placeholder="z.B. berlinrpvc" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <FormField
+          control={form.control}
+          name="discordInvite"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Discord Einladungslink (vollständiger Link)</FormLabel>
+              <FormControl>
+                <Input placeholder="z.B. https://discord.gg/berlinrpvc" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         
         <FormField
           control={form.control}

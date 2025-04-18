@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import PartnershipRequestForm from '@/components/PartnershipRequestForm';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Apply = () => {
   const isMobile = useIsMobile();
@@ -23,14 +24,36 @@ const Apply = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("team-member");
-
+  const { session } = useAuth();
+  
   const handleModeratorApplication = () => {
-    // Redirect to login page first, which uses Discord authentication
-    toast({
-      title: "Weiterleitung",
-      description: "Du wirst zur Login-Seite weitergeleitet, um dich mit Discord anzumelden.",
-    });
-    navigate('/login');
+    if (!session) {
+      // If not logged in, redirect to login page with Discord authentication
+      toast({
+        title: "Anmeldung erforderlich",
+        description: "Du musst dich zuerst mit Discord anmelden, um dich bewerben zu können.",
+      });
+      navigate('/login');
+      return;
+    }
+    
+    // If logged in, redirect to the application form
+    navigate('/moderator/application');
+  };
+  
+  const handleDiscordManagerApplication = () => {
+    if (!session) {
+      toast({
+        title: "Anmeldung erforderlich",
+        description: "Du musst dich zuerst mit Discord anmelden, um dich bewerben zu können.",
+      });
+      navigate('/login');
+      return;
+    }
+    
+    // Check if user is already a moderator (in a real app, you'd fetch this from the database)
+    // For now, we'll just show a message
+    navigate('/discord-manager/application');
   };
 
   return (
@@ -100,7 +123,7 @@ const Apply = () => {
                       </CardDescription>
                       <Button 
                         className="w-full"
-                        onClick={handleModeratorApplication}
+                        onClick={handleDiscordManagerApplication}
                       >
                         Als Discord Manager bewerben
                       </Button>
@@ -115,7 +138,7 @@ const Apply = () => {
                   </h3>
                   <p className="text-sm text-blue-700 dark:text-blue-400">
                     Für die Bewerbung als Discord Manager musst du bereits als Moderator akzeptiert worden sein.
-                    Bitte melde dich erst an, um fortzufahren.
+                    Bei deiner Bewerbung wird geprüft, ob du die notwendigen Voraussetzungen erfüllst.
                   </p>
                 </div>
               </CardContent>
@@ -135,22 +158,55 @@ const Apply = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-4">
-                <div className="mb-6">
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Vorteile einer Partnerschaft:</h3>
-                  <ul className="list-disc pl-5 space-y-1 text-gray-600 dark:text-gray-400">
-                    <li>Erhöhte Sichtbarkeit in unserer Community</li>
-                    <li>Cross-Promotion auf unseren Plattformen</li>
-                    <li>Zugang zu gemeinsamen Events</li>
-                    <li>Exklusive Zusammenarbeitsmöglichkeiten</li>
-                  </ul>
+                <div className="space-y-4">
+                  <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <h3 className="font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-1 mb-2">
+                      <Info className="h-4 w-4" />
+                      Anforderungen für eine Partnerschaft
+                    </h3>
+                    <ul className="list-disc pl-5 space-y-1 text-amber-700 dark:text-amber-400 text-sm">
+                      <li>Deine Werbung wird in unserem Partnerchannel veröffentlicht</li>
+                      <li>Unser Kanal muss in deinem Server im Kanal 🤝｜eigenwerbung abonniert und verlinkt sein</li>
+                      <li>Alle 2 Tage wird eine Nachricht mit @everyone Ping von unserem Server in eurem Partnerchannel gesendet</li>
+                      <li>Gegenseitige Promotion und aktiver Austausch zwischen den Communities</li>
+                    </ul>
+                  </div>
+                  
+                  <div className="mb-6">
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2">Vorteile einer Partnerschaft:</h3>
+                    <ul className="list-disc pl-5 space-y-1 text-gray-600 dark:text-gray-400">
+                      <li>Erhöhte Sichtbarkeit in unserer Community</li>
+                      <li>Cross-Promotion auf unseren Plattformen</li>
+                      <li>Zugang zu gemeinsamen Events</li>
+                      <li>Exklusive Zusammenarbeitsmöglichkeiten</li>
+                    </ul>
+                  </div>
+                  <Button asChild className="w-full md:w-auto">
+                    <Link to="/partners">Mehr über Partnerschaften erfahren</Link>
+                  </Button>
                 </div>
-                <Button asChild className="w-full md:w-auto">
-                  <Link to="/partners">Mehr über Partnerschaften erfahren</Link>
-                </Button>
               </CardContent>
             </Card>
             
-            <PartnershipRequestForm />
+            {!session ? (
+              <Card className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden mb-6">
+                <CardContent className="p-6 text-center">
+                  <Info className="h-10 w-10 mx-auto mb-4 text-blue-500" />
+                  <h3 className="text-lg font-medium mb-2">Anmeldung erforderlich</h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                    Du musst dich anmelden, um eine Partnerschaftsanfrage zu stellen.
+                  </p>
+                  <Button 
+                    onClick={() => navigate('/login')}
+                    className="mx-auto"
+                  >
+                    Zur Anmeldung
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <PartnershipRequestForm />
+            )}
           </TabsContent>
         </Tabs>
 
@@ -163,7 +219,7 @@ const Apply = () => {
               <AccordionTrigger>Wie kann ich mich als Teammitglied bewerben?</AccordionTrigger>
               <AccordionContent>
                 Um dich als Teammitglied zu bewerben, wähle die gewünschte Position aus und klicke auf den entsprechenden Bewerbungs-Button.
-                Du wirst zum Discord-Login weitergeleitet, um deine Identität zu bestätigen.
+                Du wirst zum Discord-Login weitergeleitet, um deine Identität zu bestätigen, falls du nicht bereits angemeldet bist.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="item-2">
@@ -187,8 +243,10 @@ const Apply = () => {
               <AccordionTrigger>Wie funktioniert eine Partnerschaft mit BerlinRP-VC?</AccordionTrigger>
               <AccordionContent>
                 Eine Partnerschaft mit uns bietet dir die Möglichkeit, deine Marke oder
-                dein Projekt einem breiten Publikum vorzustellen. Kontaktiere uns für
-                weitere Informationen und individuelle Vereinbarungen.
+                dein Projekt einem breiten Publikum vorzustellen. Unsere Werbung wird in eurem Partnerchannel 
+                veröffentlicht, und eure Werbung bei uns. Euer Kanal muss unseren Kanal 🤝｜eigenwerbung abonnieren 
+                und verlinken. Alle 2 Tage wird eine Nachricht mit @everyone Ping von unserem Server in eurem 
+                Partnerchannel gesendet.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="item-5">
@@ -197,6 +255,15 @@ const Apply = () => {
                 Als Discord Manager bist du verantwortlich für die Gestaltung und Funktionalität unseres Discord-Servers.
                 Du bringst Neuerungen in Teammeetings ein, überwachst die Einhaltung der Regeln und kannst Teamler auf Fehler
                 hinweisen. Diese Position erfordert vorherige Erfahrung als Moderator.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="item-6">
+              <AccordionTrigger>Welche Anforderungen gibt es für eine Partnerschaft?</AccordionTrigger>
+              <AccordionContent>
+                Für eine Partnerschaft müssen folgende Anforderungen erfüllt sein: Deine Werbung wird in unserem 
+                Partnerchannel veröffentlicht. Unser Kanal muss in deinem Server im Kanal 🤝｜eigenwerbung abonniert 
+                und verlinkt sein. Alle 2 Tage wird eine Nachricht mit @everyone Ping von unserem Server in eurem 
+                Partnerchannel gesendet. Wir erwarten zudem aktiven Austausch zwischen unseren Communities.
               </AccordionContent>
             </AccordionItem>
           </Accordion>

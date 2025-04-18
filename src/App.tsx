@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -26,6 +25,8 @@ import CancelDeletion from "./pages/CancelDeletion";
 import ClothingStore from "./pages/ClothingStore";
 import AdminDashboard from "./pages/AdminDashboard";
 import ModeratorPanel from "./pages/ModeratorPanel";
+import ModeratorApplication from "./pages/ModeratorApplication";
+import DiscordManagerApplication from "./pages/DiscordManagerApplication";
 import { ApplicationProvider } from "@/contexts/ApplicationContext";
 
 const queryClient = new QueryClient({
@@ -102,39 +103,9 @@ const AppLoadingErrorManager = () => {
           <Route path="/clothingstore" element={<ClothingStore />} />
           <Route path="/impressum" element={<Impressum />} />
           <Route path="/datenschutz" element={<Datenschutz />} />
-          
-          {/* Moderator Panel routes */}
-          <Route 
-            path="/moderator/dashboard" 
-            element={
-              <ProtectedRoute>
-                <ModeratorPanel />
-              </ProtectedRoute>
-            } 
-          />
-          
-          {/* Admin routes */}
-          <Route 
-            path="/admin/dashboard" 
-            element={
-              <ProtectedRoute>
-                <AdminDashboard />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/admin/dashboard/:section" 
-            element={
-              <ProtectedRoute>
-                <AdminDashboard />
-              </ProtectedRoute>
-            } 
-          />
-          
-          {/* Legacy route for backward compatibility */}
-          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-          
-          {/* Catch-all route */}
+          <Route path="/account-deletion/cancel/:token" element={<CancelDeletion />} />
+          <Route path="/moderator/application" element={<ModeratorApplication />} />
+          <Route path="/discord-manager/application" element={<DiscordManagerApplication />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
