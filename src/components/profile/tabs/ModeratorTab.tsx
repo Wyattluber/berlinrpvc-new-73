@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Handshake, Calendar, ShoppingBag, Palette } from 'lucide-react';
+import { Handshake, Calendar, ShoppingBag, Layout } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const ModeratorTab = () => {
@@ -55,8 +55,8 @@ const ModeratorTab = () => {
             type="button"
           >
             <Link to="/moderator/dashboard">
-              <Palette className="h-4 w-4 mr-2" />
-              Discord Design verwalten
+              <Layout className="h-4 w-4 mr-2" />
+              Discord Manager verwalten
             </Link>
           </Button>
         </div>
