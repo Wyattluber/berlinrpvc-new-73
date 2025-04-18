@@ -116,7 +116,7 @@ const Index = () => {
       <div className="md:w-1/2 mb-8 md:mb-0 md:pr-8">
         <div className="relative rounded-lg overflow-hidden shadow-xl">
           <img 
-            src="/lovable-uploads/dd1f41c8-840e-4e30-a847-665d1ef1d0b1.png" 
+            src="https://i.postimg.cc/3R091fKK/Chat-GPT-Image-13-Apr-2025-13-15-37.png" 
             alt="BerlinRP-VC Community" 
             className="rounded-lg shadow-lg w-full h-auto max-w-md mx-auto"
             onError={(e) => {
@@ -125,10 +125,6 @@ const Index = () => {
               target.src = 'https://via.placeholder.com/600x400?text=Community+Image';
             }}
           />
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="w-full h-full bg-gradient-to-r from-black/15 via-transparent to-black/15"></div>
-            <div className="w-full h-full bg-gradient-to-t from-black/20 via-transparent to-transparent absolute inset-0"></div>
-          </div>
         </div>
       </div>
       <div className="md:w-1/2">
