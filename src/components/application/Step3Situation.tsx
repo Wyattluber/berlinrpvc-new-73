@@ -94,6 +94,7 @@ const Step3Situation: React.FC<Step3Props> = ({ onBack }) => {
           activity_level: applicationData.activityLevel,
           frp_understanding: applicationData.frpUnderstanding,
           vdm_understanding: applicationData.vdmUnderstanding,
+          rdm_understanding: applicationData.rdmUnderstanding,
           taschen_rp_understanding: applicationData.taschenRpUnderstanding,
           server_age_understanding: applicationData.serverAgeUnderstanding,
           situation_handling: data.situation_handling,

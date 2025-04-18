@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 const serverRulesSchema = z.object({
   frp_understanding: z.string().min(30, { message: "Bitte antworte mit mindestens 30 Zeichen." }),
   vdm_understanding: z.string().min(30, { message: "Bitte antworte mit mindestens 30 Zeichen." }),
+  rdm_understanding: z.string().min(30, { message: "Bitte antworte mit mindestens 30 Zeichen." }),
   taschen_rp_understanding: z.string().min(30, { message: "Bitte antworte mit mindestens 30 Zeichen." }),
   bodycam_understanding: z.string().min(30, { message: "Bitte antworte mit mindestens 30 Zeichen." }),
   server_age_understanding: z.coerce.number({ 
@@ -37,6 +38,7 @@ const Step2RulesUnderstanding: React.FC<Step2Props> = ({ onNext, onBack }) => {
     defaultValues: {
       frp_understanding: applicationData.frpUnderstanding || '',
       vdm_understanding: applicationData.vdmUnderstanding || '',
+      rdm_understanding: applicationData.rdmUnderstanding || '',
       taschen_rp_understanding: applicationData.taschenRpUnderstanding || '',
       bodycam_understanding: applicationData.bodycamUnderstanding || '',
       server_age_understanding: applicationData.serverAgeUnderstanding ? Number(applicationData.serverAgeUnderstanding) : undefined,
@@ -48,6 +50,7 @@ const Step2RulesUnderstanding: React.FC<Step2Props> = ({ onNext, onBack }) => {
     updateApplicationData({
       frpUnderstanding: data.frp_understanding,
       vdmUnderstanding: data.vdm_understanding,
+      rdmUnderstanding: data.rdm_understanding,
       taschenRpUnderstanding: data.taschen_rp_understanding,
       bodycamUnderstanding: data.bodycam_understanding,
       serverAgeUnderstanding: data.server_age_understanding,
@@ -82,6 +85,20 @@ const Step2RulesUnderstanding: React.FC<Step2Props> = ({ onNext, onBack }) => {
               <FormLabel>Was verstehst du unter Vehicle Deathmatch (VDM)?</FormLabel>
               <FormControl>
                 <Textarea placeholder="Erkläre dein Verständnis von Vehicle Deathmatch..." {...field} rows={3} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="rdm_understanding"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Was verstehst du unter Random Deathmatch (RDM)?</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Erkläre dein Verständnis von Random Deathmatch..." {...field} rows={3} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -135,9 +152,9 @@ const Step2RulesUnderstanding: React.FC<Step2Props> = ({ onNext, onBack }) => {
           name="friend_rule_violation"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Nenne ein Beispiel für einen Regelbruch, wenn ein Freund beteiligt ist.</FormLabel>
+              <FormLabel>Ein Freund von dir verstößt gegen die Regeln. Was machst du?</FormLabel>
               <FormControl>
-                <Textarea placeholder="Beschreibe ein Szenario..." {...field} rows={3} />
+                <Textarea placeholder="Beschreibe, wie du in dieser Situation reagieren würdest..." {...field} rows={3} />
               </FormControl>
               <FormMessage />
             </FormItem>

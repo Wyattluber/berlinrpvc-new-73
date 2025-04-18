@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -65,6 +66,7 @@ const ModeratorPanel = () => {
             <p className="text-gray-500 mt-2">Bitte warte einen Moment.</p>
           </div>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -78,6 +80,7 @@ const ModeratorPanel = () => {
           <ModeratorContent />
         </div>
       </div>
+      <Footer />
     </div>
   );
 };

@@ -106,6 +106,14 @@ const AppLoadingErrorManager = () => {
           <Route path="/account-deletion/cancel/:token" element={<CancelDeletion />} />
           <Route path="/moderator/application" element={<ModeratorApplication />} />
           <Route path="/discord-manager/application" element={<DiscordManagerApplication />} />
+          <Route 
+            path="/moderator/panel" 
+            element={
+              <ProtectedRoute>
+                <ModeratorPanel />
+              </ProtectedRoute>
+            } 
+          />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
@@ -131,5 +139,4 @@ const App = () => {
 
 export default App;
 
-// Import auth helpers for logging
 import './lib/auth';
