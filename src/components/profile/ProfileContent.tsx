@@ -6,6 +6,7 @@ import ApplicationsTab from '@/components/profile/tabs/ApplicationsTab';
 import AdminTab from '@/components/profile/tabs/AdminTab';
 import ModeratorTab from '@/components/profile/tabs/ModeratorTab';
 import PartnershipTab from '@/components/profile/tabs/PartnershipTab';
+import ModinfoTab from '@/components/profile/tabs/ModinfoTab';
 
 interface ProfileContentProps {
   activeTab: string;
@@ -52,6 +53,12 @@ const ProfileContent: React.FC<ProfileContentProps> = ({
       <TabsContent value="moderator">
         {(isAdmin || isModerator) && (
           <ModeratorTab />
+        )}
+      </TabsContent>
+      
+      <TabsContent value="modinfo">
+        {(isAdmin || isModerator) && (
+          <ModinfoTab />
         )}
       </TabsContent>
       

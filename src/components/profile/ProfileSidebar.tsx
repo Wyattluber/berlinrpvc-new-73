@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Shield, Settings, ClipboardList, HandshakeIcon } from 'lucide-react';
+import { User, Shield, Settings, ClipboardList, HandshakeIcon, Calendar } from 'lucide-react';
 
 interface ProfileSidebarProps {
   isAdmin: boolean;
@@ -45,6 +45,15 @@ const ProfileSidebar: React.FC<ProfileSidebarProps> = ({
               >
                 <Settings className="h-4 w-4 mr-2" />
                 Moderator
+              </TabsTrigger>
+            )}
+            {(isAdmin || isModerator) && (
+              <TabsTrigger 
+                value="modinfo" 
+                className="justify-start"
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                Mod-Info
               </TabsTrigger>
             )}
             <TabsTrigger 

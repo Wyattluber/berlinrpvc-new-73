@@ -42,6 +42,7 @@ const TeamAbsencesList = () => {
     setLoading(true);
     try {
       const absences = await fetchTeamAbsences();
+      console.log('Loaded team absences:', absences);
       setAbsences(absences);
     } catch (error) {
       console.error('Error fetching absences:', error);

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Handshake, Calendar, ShoppingBag, Layout } from 'lucide-react';
+import { Handshake, Calendar, ShoppingBag, Layout, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const ModeratorTab = () => {
@@ -16,6 +16,17 @@ const ModeratorTab = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
+          <Button 
+            asChild
+            className="w-full justify-start"
+            type="button"
+          >
+            <Link to="/moderator/panel?section=applications">
+              <Users className="h-4 w-4 mr-2" />
+              Bewerbungen verwalten
+            </Link>
+          </Button>
+          
           <Button 
             asChild
             className="w-full justify-start"

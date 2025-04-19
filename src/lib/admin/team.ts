@@ -159,25 +159,50 @@ export const submitTeamAbsence = async (
 
 // Add fetchTeamAbsences function
 export const fetchTeamAbsences = async () => {
-  const { data, error } = await supabase
-    .from('team_absences')
-    .select(`
-      *,
-      profiles:user_id (username, avatar_url)
-    `)
-    .order('created_at', { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from('team_absences')
+      .select(`
+        *,
+        profiles:user_id (username, avatar_url)
+      `)
+      .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching team absences:', error);
-    throw new Error(`Error fetching team absences: ${error.message}`);
+    if (error) {
+      console.error('Error fetching team absences:', error);
+      throw new Error(`Error fetching team absences: ${error.message}`);
+    }
+
+    // Format the data to include the username directly
+    const formattedAbsences = data?.map(absence => ({
+      ...absence,
+      username: absence.profiles?.username || 'Unbekannter Benutzer'
+    }));
+
+    return formattedAbsences || [];
+  } catch (error) {
+    console.error('Error in fetchTeamAbsences:', error);
+    return [];
   }
-
-  // Format the data to include the username directly
-  const formattedAbsences = data?.map(absence => ({
-    ...absence,
-    username: absence.profiles?.username || 'Unbekannter Benutzer'
-  }));
-
-  return formattedAbsences || [];
 };
 
+// Get user's team absences
+export const getUserTeamAbsences = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('team_absences')
+      .select('*')
+      .eq('user_id', userId)
+      .order('start_date', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching user team absences:', error);
+      throw new Error(`Error fetching user team absences: ${error.message}`);
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getUserTeamAbsences:', error);
+    return [];
+  }
+};

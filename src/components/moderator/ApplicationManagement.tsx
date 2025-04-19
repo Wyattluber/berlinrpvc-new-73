@@ -32,7 +32,11 @@ const ApplicationManagement = () => {
         .eq('status', activeTab)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching applications:', error);
+        throw error;
+      }
+      
       console.log('Fetched applications:', data);
       setApplications(data || []);
     } catch (error) {
