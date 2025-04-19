@@ -1,94 +1,91 @@
 
 import React, { useState } from 'react';
-import { format } from 'date-fns';
-import { de } from 'date-fns/locale';
-import { Card } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { CalendarIcon, Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { submitTeamAbsence } from '@/lib/admin/team';
-import { Loader2 } from 'lucide-react';
-import { 
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+
+const absenceFormSchema = z.object({
+  startDate: z.date({
+    required_error: "Bitte wähle ein Datum für den Beginn deiner Abwesenheit.",
+  }),
+  endDate: z.date({
+    required_error: "Bitte wähle ein Datum für das Ende deiner Abwesenheit.",
+  }).refine(date => date >= new Date(), {
+    message: "Das Enddatum muss in der Zukunft liegen.",
+  }),
+  reason: z.string().min(10, {
+    message: "Bitte gib einen Grund mit mindestens 10 Zeichen an.",
+  }),
+}).refine(data => data.startDate <= data.endDate, {
+  message: "Das Startdatum muss vor oder gleich dem Enddatum sein.",
+  path: ["endDate"],
+});
+
+type AbsenceFormValues = z.infer<typeof absenceFormSchema>;
 
 interface TeamAbsenceFormProps {
   userId: string;
+  onSuccess?: () => void;
 }
 
-const TeamAbsenceForm: React.FC<TeamAbsenceFormProps> = ({ userId }) => {
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [reason, setReason] = useState('');
+const TeamAbsenceForm: React.FC<TeamAbsenceFormProps> = ({ userId, onSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [startDateOpen, setStartDateOpen] = useState(false);
-  const [endDateOpen, setEndDateOpen] = useState(false);
+  
+  const form = useForm<AbsenceFormValues>({
+    resolver: zodResolver(absenceFormSchema),
+    defaultValues: {
+      startDate: new Date(),
+      endDate: new Date(),
+      reason: '',
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!startDate || !endDate) {
-      toast({
-        title: "Fehlende Daten",
-        description: "Bitte wähle Start- und Enddatum aus.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (startDate > endDate) {
-      toast({
-        title: "Ungültiger Zeitraum",
-        description: "Das Startdatum muss vor dem Enddatum liegen.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!reason.trim()) {
-      toast({
-        title: "Fehlende Daten",
-        description: "Bitte gib einen Grund für deine Abwesenheit an.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
+  const onSubmit = async (values: AbsenceFormValues) => {
     setIsSubmitting(true);
-    
     try {
-      const result = await submitTeamAbsence(userId, startDate, endDate, reason);
+      const { error } = await supabase
+        .from('team_absences')
+        .insert({
+          user_id: userId,
+          start_date: values.startDate.toISOString(),
+          end_date: values.endDate.toISOString(),
+          reason: values.reason,
+          status: 'pending'
+        });
+
+      if (error) throw error;
       
-      if (result.success) {
-        toast({
-          title: "Erfolgreich eingereicht",
-          description: "Deine Abwesenheit wurde erfolgreich eingereicht und wird überprüft."
-        });
-        
-        // Reset form
-        setStartDate(undefined);
-        setEndDate(undefined);
-        setReason('');
-      } else {
-        toast({
-          title: "Fehler",
-          description: result.message || "Ein unerwarteter Fehler ist aufgetreten.",
-          variant: "destructive"
-        });
+      toast({
+        title: "Abwesenheit eingereicht",
+        description: "Deine Abwesenheit wurde erfolgreich eingereicht.",
+      });
+      
+      form.reset({
+        startDate: new Date(),
+        endDate: new Date(),
+        reason: '',
+      });
+      
+      if (onSuccess) {
+        onSuccess();
       }
     } catch (error) {
       console.error('Error submitting absence:', error);
       toast({
         title: "Fehler",
-        description: "Deine Abwesenheit konnte nicht eingereicht werden.",
-        variant: "destructive"
+        description: "Deine Abwesenheit konnte nicht gespeichert werden.",
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
@@ -96,92 +93,124 @@ const TeamAbsenceForm: React.FC<TeamAbsenceFormProps> = ({ userId }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="start-date">Startdatum</Label>
-          <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                id="start-date"
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !startDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {startDate ? format(startDate, 'PPP', { locale: de }) : <span>Datum auswählen</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={startDate}
-                onSelect={(date) => {
-                  setStartDate(date);
-                  setStartDateOpen(false);
-                }}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="startDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Beginn der Abwesenheit</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP", { locale: de })
+                        ) : (
+                          <span>Datum auswählen</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="endDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Ende der Abwesenheit</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value, "PPP", { locale: de })
+                        ) : (
+                          <span>Datum auswählen</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={field.onChange}
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
         
-        <div className="space-y-2">
-          <Label htmlFor="end-date">Enddatum</Label>
-          <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                id="end-date"
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !endDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {endDate ? format(endDate, 'PPP', { locale: de }) : <span>Datum auswählen</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={endDate}
-                onSelect={(date) => {
-                  setEndDate(date);
-                  setEndDateOpen(false);
-                }}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="absence-reason">Grund für die Abwesenheit</Label>
-        <Textarea
-          id="absence-reason"
-          placeholder="Bitte gib den Grund für deine Abwesenheit an..."
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          rows={3}
-          className="resize-none"
+        <FormField
+          control={form.control}
+          name="reason"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Grund für die Abwesenheit</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Bitte gib einen Grund für deine Abwesenheit an..."
+                  className="resize-none"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
-      
-      <Button type="submit" disabled={isSubmitting} className="w-full">
-        {isSubmitting ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Wird eingereicht...
-          </>
-        ) : (
-          'Abwesenheit einreichen'
-        )}
-      </Button>
-    </form>
+        
+        <Button 
+          type="submit" 
+          className="w-full" 
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Wird gespeichert...
+            </>
+          ) : (
+            'Abwesenheit einreichen'
+          )}
+        </Button>
+      </form>
+    </Form>
   );
 };
 

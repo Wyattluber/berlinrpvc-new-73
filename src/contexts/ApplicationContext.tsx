@@ -1,25 +1,20 @@
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-export interface ApplicationData {
-  // Basic Info
+interface ApplicationData {
   robloxUsername: string;
   robloxId: string;
   discordId: string;
-  age: number | undefined;
-  activityLevel: number;
+  age: string;
+  activityLevel: string;
   isUnder12: boolean;
-  
-  // Rules Understanding
   frpUnderstanding: string;
   vdmUnderstanding: string;
   rdmUnderstanding: string;
   taschenRpUnderstanding: string;
-  serverAgeUnderstanding: number | undefined;
-  
-  // Situations
-  situationHandling: string;
+  serverAgeUnderstanding: string;
   bodycamUnderstanding: string;
+  situationHandling: string;
   friendRuleViolation: string;
   otherServerNames: string;
   otherServerInvites: string;
@@ -36,80 +31,108 @@ interface ApplicationContextType {
   goToPreviousStep: () => void;
   resetForm: () => void;
   setIsUnder12: (value: boolean) => void;
+  setCurrentStep: (step: number) => void; // This is needed but will be restricted
 }
 
 const defaultApplicationData: ApplicationData = {
   robloxUsername: '',
   robloxId: '',
   discordId: '',
-  age: undefined,
-  activityLevel: 1,
+  age: '',
+  activityLevel: '',
   isUnder12: false,
-  
   frpUnderstanding: '',
   vdmUnderstanding: '',
   rdmUnderstanding: '',
   taschenRpUnderstanding: '',
-  serverAgeUnderstanding: undefined,
-  
-  situationHandling: '',
+  serverAgeUnderstanding: '',
   bodycamUnderstanding: '',
+  situationHandling: '',
   friendRuleViolation: '',
   otherServerNames: '',
   otherServerInvites: '',
   adminExperience: '',
   notes: '',
-  acceptTerms: false,
+  acceptTerms: false
 };
 
-const ApplicationContext = createContext<ApplicationContextType | undefined>(undefined);
+export const ApplicationContext = createContext<ApplicationContextType>({
+  currentStep: 1,
+  applicationData: defaultApplicationData,
+  updateApplicationData: () => {},
+  goToNextStep: () => {},
+  goToPreviousStep: () => {},
+  resetForm: () => {},
+  setIsUnder12: () => {},
+  setCurrentStep: () => {}
+});
 
-export const ApplicationProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+export const useApplication = () => useContext(ApplicationContext);
+
+interface ApplicationProviderProps {
+  children: ReactNode;
+}
+
+export const ApplicationProvider: React.FC<ApplicationProviderProps> = ({ children }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [applicationData, setApplicationData] = useState<ApplicationData>(defaultApplicationData);
-  
+
   const updateApplicationData = (data: Partial<ApplicationData>) => {
-    setApplicationData(prev => ({ ...prev, ...data }));
+    setApplicationData(prevData => ({ ...prevData, ...data }));
   };
-  
+
   const goToNextStep = () => {
-    setCurrentStep(prev => Math.min(prev + 1, 3));
+    // Validate that the current step is complete before allowing progression
+    if (isStepComplete(currentStep, applicationData)) {
+      setCurrentStep(prev => prev < 3 ? prev + 1 : prev);
+    }
   };
-  
+
   const goToPreviousStep = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1));
+    setCurrentStep(prev => prev > 1 ? prev - 1 : prev);
   };
-  
+
   const resetForm = () => {
     setCurrentStep(1);
     setApplicationData(defaultApplicationData);
   };
-  
+
   const setIsUnder12 = (value: boolean) => {
-    setApplicationData(prev => ({ ...prev, isUnder12: value }));
+    updateApplicationData({ isUnder12: value });
   };
-  
+
+  // Function to check if the current step has all required fields completed
+  const isStepComplete = (step: number, data: ApplicationData): boolean => {
+    switch (step) {
+      case 1:
+        return !!(data.robloxUsername && data.discordId && data.age && data.activityLevel);
+      case 2:
+        return !!(
+          data.frpUnderstanding && 
+          data.vdmUnderstanding && 
+          data.rdmUnderstanding && 
+          data.taschenRpUnderstanding &&
+          data.serverAgeUnderstanding
+        );
+      default:
+        return true;
+    }
+  };
+
   return (
-    <ApplicationContext.Provider 
-      value={{ 
-        currentStep, 
-        applicationData, 
-        updateApplicationData, 
-        goToNextStep, 
+    <ApplicationContext.Provider
+      value={{
+        currentStep,
+        applicationData,
+        updateApplicationData,
+        goToNextStep,
         goToPreviousStep,
         resetForm,
-        setIsUnder12
+        setIsUnder12,
+        setCurrentStep
       }}
     >
       {children}
     </ApplicationContext.Provider>
   );
-};
-
-export const useApplication = (): ApplicationContextType => {
-  const context = useContext(ApplicationContext);
-  if (context === undefined) {
-    throw new Error('useApplication must be used within an ApplicationProvider');
-  }
-  return context;
 };

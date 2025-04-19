@@ -10,6 +10,8 @@ import { Calendar, Clock, AlertCircle, User } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import TeamAbsenceForm from '@/components/admin/TeamAbsenceForm';
 import { Separator } from '@/components/ui/separator';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 const ModinfoTab = () => {
   const { session } = useAuth();
@@ -22,16 +24,32 @@ const ModinfoTab = () => {
       setLoading(true);
       try {
         if (session?.user?.id) {
-          // Load user's absences
-          const userAbsences = await getUserTeamAbsences(session.user.id);
-          setAbsences(userAbsences);
+          // Load user's absences directly from the database
+          const { data: absencesData, error: absencesError } = await supabase
+            .from('team_absences')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .order('created_at', { ascending: false });
+          
+          if (absencesError) throw absencesError;
+          setAbsences(absencesData || []);
 
           // Load team meeting settings
-          const teamSettings = await getTeamSettings();
-          setSettings(teamSettings);
+          const { data: settingsData, error: settingsError } = await supabase
+            .from('team_settings')
+            .select('*')
+            .single();
+          
+          if (settingsError && settingsError.code !== 'PGRST116') throw settingsError;
+          setSettings(settingsData || null);
         }
       } catch (error) {
         console.error('Error loading moderator info:', error);
+        toast({
+          title: 'Fehler',
+          description: 'Daten konnten nicht geladen werden.',
+          variant: 'destructive',
+        });
       } finally {
         setLoading(false);
       }
@@ -124,7 +142,23 @@ const ModinfoTab = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {session?.user && <TeamAbsenceForm userId={session.user.id} />}
+          {session?.user && <TeamAbsenceForm userId={session.user.id} onSuccess={() => {
+            // Reload absences after form submission
+            setLoading(true);
+            supabase
+              .from('team_absences')
+              .select('*')
+              .eq('user_id', session.user.id)
+              .order('created_at', { ascending: false })
+              .then(({ data, error }) => {
+                if (error) {
+                  console.error('Error reloading absences:', error);
+                } else {
+                  setAbsences(data || []);
+                }
+                setLoading(false);
+              });
+          }} />}
         </CardContent>
       </Card>
 

@@ -123,7 +123,13 @@ const ApplicationForm = () => {
   }
 
   const renderStepContent = () => {
-    const { goToNextStep, goToPreviousStep } = useApplication();
+    const { goToNextStep, goToPreviousStep, currentStep, setCurrentStep } = useApplication();
+    
+    // Disable manual step changing
+    const safeSetActiveStep = (step: number) => {
+      // Don't allow manual step changes
+      return;
+    };
     
     switch (currentStep) {
       case 1:

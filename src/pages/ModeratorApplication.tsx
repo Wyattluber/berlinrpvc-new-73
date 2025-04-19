@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -285,11 +284,14 @@ const ModeratorApplication = () => {
             <CardContent>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <Tabs value={activeTab} onValueChange={setActiveTab}>
+                  <Tabs value={activeTab} onValueChange={(val) => {
+                    // Prevent direct tab switching by user
+                    // They must use the Next/Back buttons
+                  }}>
                     <TabsList className="grid w-full grid-cols-3 mb-6">
-                      <TabsTrigger value="personal">1. Persönliches</TabsTrigger>
-                      <TabsTrigger value="rules">2. Regelverständnis</TabsTrigger>
-                      <TabsTrigger value="experience">3. Erfahrung</TabsTrigger>
+                      <TabsTrigger value="personal" disabled={activeTab !== "personal"}>1. Persönliches</TabsTrigger>
+                      <TabsTrigger value="rules" disabled={activeTab !== "rules"}>2. Regelverständnis</TabsTrigger>
+                      <TabsTrigger value="experience" disabled={activeTab !== "experience"}>3. Erfahrung</TabsTrigger>
                     </TabsList>
                     
                     <TabsContent value="personal" className="space-y-4">

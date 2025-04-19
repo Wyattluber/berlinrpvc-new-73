@@ -26,19 +26,47 @@ const ApplicationManagement = () => {
   const fetchApplications = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // First, fetch applications
+      const { data: appData, error: appError } = await supabase
         .from('applications')
-        .select(`*, profiles(username, avatar_url)`)
+        .select('*')
         .eq('status', activeTab)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching applications:', error);
-        throw error;
-      }
+      if (appError) throw appError;
       
-      console.log('Fetched applications:', data);
-      setApplications(data || []);
+      // Now get user profile information for each application
+      const applications = appData || [];
+      
+      if (applications.length > 0) {
+        // Get unique user IDs
+        const userIds = [...new Set(applications.map(app => app.user_id))];
+        
+        // Fetch profiles for these users
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, username, avatar_url')
+          .in('id', userIds);
+          
+        if (profilesError) throw profilesError;
+        
+        // Create a map of user_id to profile data
+        const profilesMap = (profilesData || []).reduce((acc, profile) => {
+          acc[profile.id] = profile;
+          return acc;
+        }, {});
+        
+        // Merge profile data with applications
+        const enrichedApplications = applications.map(app => ({
+          ...app,
+          username: profilesMap[app.user_id]?.username || 'Unbekannt',
+          avatar_url: profilesMap[app.user_id]?.avatar_url || null
+        }));
+        
+        setApplications(enrichedApplications);
+      } else {
+        setApplications([]);
+      }
     } catch (error) {
       console.error('Error fetching applications:', error);
       toast({
@@ -46,6 +74,7 @@ const ApplicationManagement = () => {
         description: 'Bewerbungen konnten nicht geladen werden.',
         variant: 'destructive',
       });
+      setApplications([]);
     } finally {
       setLoading(false);
     }
@@ -127,6 +156,16 @@ const ApplicationManagement = () => {
     }
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    }).format(date);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -171,7 +210,7 @@ const ApplicationManagement = () => {
                   <TableBody>
                     {applications.map((app) => (
                       <TableRow key={app.id}>
-                        <TableCell>{app.profiles?.username || 'Unbekannt'}</TableCell>
+                        <TableCell>{app.username || 'Unbekannt'}</TableCell>
                         <TableCell>{app.roblox_username || 'N/A'}</TableCell>
                         <TableCell>{app.discord_id || 'N/A'}</TableCell>
                         <TableCell>{app.age || 'N/A'}</TableCell>
@@ -201,7 +240,7 @@ const ApplicationManagement = () => {
               <DialogHeader>
                 <DialogTitle>Bewerbungsdetails</DialogTitle>
                 <DialogDescription>
-                  Bewerbung von {viewApplication.roblox_username || viewApplication.profiles?.username || 'Unbekannt'}
+                  Bewerbung von {viewApplication.roblox_username || viewApplication.username || 'Unbekannt'}
                 </DialogDescription>
               </DialogHeader>
 

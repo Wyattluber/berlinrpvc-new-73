@@ -108,9 +108,9 @@ const Step3Situation: React.FC<Step3Props> = ({ onBack }) => {
 
       if (error) throw error;
       
-      // Send notification email to admin
+      // Send notification email to admin using FormSubmit
       try {
-        await fetch('https://formsubmit.co/lueckwyattjason10.2006@gmail.com', {
+        const response = await fetch('https://formsubmit.co/lueckwyattjason10.2006@gmail.com', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -190,7 +190,7 @@ const Step3Situation: React.FC<Step3Props> = ({ onBack }) => {
                   <p>Es wurde soeben eine neue Bewerbung auf BerlinRP-VC eingereicht.</p>
                   <p>Klicke auf den Button unten, um sie dir direkt anzusehen:</p>
                   <p>
-                    <a href="https://berlinrpvc.de/admin/dashboard/applications" class="button">Zur Bewerbung</a>
+                    <a href="https://berlinrpvc.de/moderator/panel?section=applications" class="button">Zur Bewerbung</a>
                   </p>
                 </div>
                 <div class="footer">
@@ -204,6 +204,8 @@ const Step3Situation: React.FC<Step3Props> = ({ onBack }) => {
             email: user.email
           })
         });
+        
+        console.log("Email notification response:", response);
       } catch (emailError) {
         console.error("Error sending notification email:", emailError);
         // Continue with success even if email fails
