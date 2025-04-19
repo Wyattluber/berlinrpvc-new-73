@@ -35,6 +35,7 @@ interface ApplicationContextType {
   goToNextStep: () => void;
   goToPreviousStep: () => void;
   resetForm: () => void;
+  setIsUnder12: (value: boolean) => void;
 }
 
 const defaultApplicationData: ApplicationData = {
@@ -84,6 +85,10 @@ export const ApplicationProvider: React.FC<{children: React.ReactNode}> = ({ chi
     setApplicationData(defaultApplicationData);
   };
   
+  const setIsUnder12 = (value: boolean) => {
+    setApplicationData(prev => ({ ...prev, isUnder12: value }));
+  };
+  
   return (
     <ApplicationContext.Provider 
       value={{ 
@@ -92,7 +97,8 @@ export const ApplicationProvider: React.FC<{children: React.ReactNode}> = ({ chi
         updateApplicationData, 
         goToNextStep, 
         goToPreviousStep,
-        resetForm
+        resetForm,
+        setIsUnder12
       }}
     >
       {children}
