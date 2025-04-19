@@ -126,12 +126,16 @@ const PartnershipRequestForm = () => {
     setUploadProgress(10);
     
     try {
+      // Extract Discord ID from user metadata if available
+      const discordId = session.user.user_metadata?.provider_id || '';
+      
       // First, insert the partnership application
       const { data: partnerData, error: partnerError } = await supabase
         .from('partner_applications')
         .insert([
           {
             user_id: session.user.id,
+            discord_id: discordId,
             discord_invite: values.discordInvite,
             member_count: values.memberCount,
             reason: values.reason,
@@ -145,7 +149,10 @@ const PartnershipRequestForm = () => {
         .select()
         .single();
         
-      if (partnerError) throw partnerError;
+      if (partnerError) {
+        throw partnerError;
+      }
+      
       setUploadProgress(50);
       
       // If a logo was provided, upload it
@@ -176,11 +183,11 @@ const PartnershipRequestForm = () => {
       form.reset();
       setLogoFile(null);
       setLogoPreview(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting partnership request:', error);
       toast({
         title: 'Fehler',
-        description: 'Fehler beim Einreichen der Partnerschaftsanfrage. Bitte versuche es später erneut.',
+        description: `Fehler beim Einreichen der Partnerschaftsanfrage: ${error.message || 'Unbekannter Fehler'}`,
         variant: 'destructive',
       });
     } finally {
