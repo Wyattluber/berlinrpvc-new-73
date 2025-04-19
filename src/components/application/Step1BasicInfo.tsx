@@ -120,6 +120,7 @@ const Step1BasicInfo: React.FC<Step1Props> = ({
                           value={field.value || userRobloxUsername}
                           className="pr-10"
                           readOnly={!!userRobloxUsername}
+                          disabled={!!userRobloxUsername}
                         />
                         {userRobloxUsername && (
                           <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -160,6 +161,7 @@ const Step1BasicInfo: React.FC<Step1Props> = ({
                           value={field.value || userRobloxId}
                           className="pr-10"
                           readOnly={!!userRobloxId}
+                          disabled={!!userRobloxId}
                         />
                         {userRobloxId && (
                           <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -206,6 +208,7 @@ const Step1BasicInfo: React.FC<Step1Props> = ({
                           value={field.value || userDiscordId}
                           className="pr-10"
                           readOnly={!!userDiscordId}
+                          disabled={!!userDiscordId}
                         />
                         {userDiscordId && (
                           <Lock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
