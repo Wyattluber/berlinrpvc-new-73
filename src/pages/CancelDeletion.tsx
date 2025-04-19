@@ -11,8 +11,8 @@ import { Loader2 } from 'lucide-react';
 
 const CancelDeletion = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [cancelLoading, setcancelLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [cancelLoading, setCancelLoading] = useState(false);
   const [continueLoading, setContinueLoading] = useState(false);
   const [deletionInfo, setDeletionInfo] = useState<any>(null);
   const [timeLeft, setTimeLeft] = useState<string>('');
@@ -24,7 +24,11 @@ const CancelDeletion = () => {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
-          navigate('/login');
+          toast({
+            title: "Nicht angemeldet",
+            description: "Du musst angemeldet sein, um diese Seite zu sehen."
+          });
+          navigate('/login', { state: { from: '/cancel-deletion' } });
           return;
         }
         
@@ -33,10 +37,23 @@ const CancelDeletion = () => {
           .select('*')
           .eq('user_id', session.user.id)
           .eq('status', 'pending')
-          .single();
+          .maybeSingle();
         
-        if (error) {
-          // If no deletion request is found, redirect to profile
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching deletion request:', error);
+          toast({
+            title: "Fehler",
+            description: "Es gab ein Problem beim Abrufen deines Löschungsantrags."
+          });
+          navigate('/profile');
+          return;
+        }
+        
+        if (!data) {
+          toast({
+            title: "Kein Löschungsantrag",
+            description: "Du hast keinen aktiven Löschungsantrag."
+          });
           navigate('/profile');
           return;
         }
@@ -52,6 +69,10 @@ const CancelDeletion = () => {
           if (remainingMs <= 0) {
             // Account should already be deleted, log out
             await supabase.auth.signOut();
+            toast({
+              title: "Konto bereits gelöscht",
+              description: "Dein Konto sollte bereits gelöscht sein."
+            });
             navigate('/login');
             return;
           }
@@ -97,7 +118,7 @@ const CancelDeletion = () => {
   
   const handleCancelDeletion = async () => {
     try {
-      setcancelLoading(true);
+      setCancelLoading(true);
       
       const { error } = await supabase
         .from('account_deletion_requests')
@@ -120,7 +141,7 @@ const CancelDeletion = () => {
         variant: "destructive"
       });
     } finally {
-      setcancelLoading(false);
+      setCancelLoading(false);
     }
   };
   

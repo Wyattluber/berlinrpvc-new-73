@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,7 +7,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { useApplication } from '@/contexts/ApplicationContext';
 import Step1BasicInfo from '@/components/application/Step1BasicInfo';
 import Step2RulesUnderstanding from '@/components/application/Step2RulesUnderstanding';
@@ -21,7 +22,7 @@ const ApplicationForm = () => {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [hasSubmittedApplication, setHasSubmittedApplication] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const { currentStep, goToNextStep, goToPreviousStep, applicationData } = useApplication();
+  const { currentStep, applicationData } = useApplication();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,7 +38,7 @@ const ApplicationForm = () => {
           description: "Du musst angemeldet sein, um eine Bewerbung einzureichen.",
           variant: "destructive"
         });
-        navigate('/login');
+        navigate('/login', { state: { from: '/apply' } });
         return;
       }
 
@@ -122,6 +123,8 @@ const ApplicationForm = () => {
   }
 
   const renderStepContent = () => {
+    const { goToNextStep, goToPreviousStep } = useApplication();
+    
     switch (currentStep) {
       case 1:
         return (

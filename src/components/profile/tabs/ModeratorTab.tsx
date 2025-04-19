@@ -21,7 +21,7 @@ const ModeratorTab = () => {
             className="w-full justify-start"
             type="button"
           >
-            <Link to="/moderator/panel">
+            <Link to="/moderator/panel?section=partnerships">
               <Handshake className="h-4 w-4 mr-2" />
               Partnerschaften verwalten
             </Link>
@@ -32,7 +32,7 @@ const ModeratorTab = () => {
             className="w-full justify-start"
             type="button"
           >
-            <Link to="/moderator/panel">
+            <Link to="/moderator/panel?section=meetings">
               <Calendar className="h-4 w-4 mr-2" />
               Teammeetings verwalten
             </Link>
@@ -43,7 +43,7 @@ const ModeratorTab = () => {
             className="w-full justify-start"
             type="button"
           >
-            <Link to="/moderator/panel">
+            <Link to="/moderator/panel?section=store">
               <ShoppingBag className="h-4 w-4 mr-2" />
               Clothing Store verwalten
             </Link>
@@ -54,7 +54,7 @@ const ModeratorTab = () => {
             className="w-full justify-start"
             type="button"
           >
-            <Link to="/moderator/panel">
+            <Link to="/moderator/panel?section=discord">
               <Layout className="h-4 w-4 mr-2" />
               Discord Manager verwalten
             </Link>
