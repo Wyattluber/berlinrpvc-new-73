@@ -66,8 +66,8 @@ const Step1BasicInfo: React.FC<Step1Props> = ({
       roblox_username: userRobloxUsername || applicationData.robloxUsername,
       roblox_id: userRobloxId || applicationData.robloxId,
       discord_id: userDiscordId || applicationData.discordId,
-      age: applicationData.age as number || undefined,
-      activity_level: applicationData.activityLevel || 5,
+      age: applicationData.age ? parseInt(applicationData.age as string) : undefined,
+      activity_level: applicationData.activityLevel ? parseInt(applicationData.activityLevel as string) : 5,
     },
   });
 
@@ -93,8 +93,8 @@ const Step1BasicInfo: React.FC<Step1Props> = ({
       robloxUsername: data.roblox_username,
       robloxId: data.roblox_id,
       discordId: data.discord_id,
-      age: data.age,
-      activityLevel: data.activity_level
+      age: data.age.toString(),
+      activityLevel: data.activity_level.toString()
     });
     
     onNext();

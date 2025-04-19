@@ -41,7 +41,7 @@ const Step2RulesUnderstanding: React.FC<Step2Props> = ({ onNext, onBack }) => {
       rdm_understanding: applicationData.rdmUnderstanding || '',
       taschen_rp_understanding: applicationData.taschenRpUnderstanding || '',
       bodycam_understanding: applicationData.bodycamUnderstanding || '',
-      server_age_understanding: applicationData.serverAgeUnderstanding ? Number(applicationData.serverAgeUnderstanding) : undefined,
+      server_age_understanding: applicationData.serverAgeUnderstanding ? parseInt(applicationData.serverAgeUnderstanding) : undefined,
       friend_rule_violation: applicationData.friendRuleViolation || '',
     },
   });
@@ -53,7 +53,7 @@ const Step2RulesUnderstanding: React.FC<Step2Props> = ({ onNext, onBack }) => {
       rdmUnderstanding: data.rdm_understanding,
       taschenRpUnderstanding: data.taschen_rp_understanding,
       bodycamUnderstanding: data.bodycam_understanding,
-      serverAgeUnderstanding: data.server_age_understanding,
+      serverAgeUnderstanding: data.server_age_understanding.toString(),
       friendRuleViolation: data.friend_rule_violation,
     });
     

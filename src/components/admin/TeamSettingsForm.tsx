@@ -68,7 +68,7 @@ const TeamSettingsForm = () => {
           description: 'Die Einstellungen wurden gespeichert.'
         });
       } else {
-        throw new Error(result.message);
+        throw new Error('Die Einstellungen konnten nicht gespeichert werden.');
       }
     } catch (error: any) {
       toast({

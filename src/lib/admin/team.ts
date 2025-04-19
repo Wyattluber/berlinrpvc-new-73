@@ -17,6 +17,32 @@ export const getUserTeamAbsences = async (userId: string) => {
   }
 };
 
+export const fetchTeamAbsences = async () => {
+  try {
+    // Join with profiles table to get usernames
+    const { data: absencesWithProfiles, error } = await supabase
+      .from('team_absences')
+      .select(`
+        *,
+        profiles:user_id (username)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    
+    // Format the data to include username directly in the absence object
+    const formattedAbsences = absencesWithProfiles.map(absence => ({
+      ...absence,
+      username: absence.profiles?.username || 'Unknown User'
+    }));
+    
+    return formattedAbsences;
+  } catch (error) {
+    console.error('Error fetching team absences:', error);
+    throw error;
+  }
+};
+
 export const getTeamSettings = async () => {
   try {
     const { data, error } = await supabase
